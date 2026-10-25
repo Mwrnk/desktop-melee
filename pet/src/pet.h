@@ -29,3 +29,12 @@ void pet_mac_screen_geometry(SDL_Window* window, float* width_pt, float* height_
 void pet_mac_dock_frame(float screen_w, float screen_h, float* left, float* right,
                         float* top, bool* exact);
 #endif
+
+/* Notch (camera housing) in points from the screen's left and top edges; on a
+ * Mac without a notch, left == right at the centre and height is the menu
+ * bar's. */
+void pet_mac_notch(float* left, float* right, float* height);
+/* The black island window around the notch (created hidden). */
+void pet_mac_island_create(float left, float right, float height);
+/* Polled on the main thread: whether the island should be showing. */
+bool pet_island_wanted(void);

@@ -22,3 +22,19 @@ bool pet_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
 /* The Dock's left and right edges in Melee units (x), for stretching the main
  * stage floor across it. False when not in overlay mode. */
 bool pet_dock_span(float* left, float* right);
+
+/* HUD camera, reported once when the HUD scene loads: distance from the eye
+ * to the HUD plane (Melee units) and vertical field of view (degrees). */
+void pet_set_hud_camera(float distance, float fov_deg);
+/* Called every frame the HUD camera renders; the notch island is shown while
+ * these keep coming and the HUD is visible. */
+void pet_hud_frame(bool visible);
+/* Stock icons inside the notch island: the translation and uniform scale (HUD
+ * units) for a player's stock group, P1 left of the notch and P2 right of it.
+ * False keeps Melee's own placement. */
+bool pet_hud_stock_anchor(int player, float* x, float* y, float* scale);
+/* The same for a player's percent (damage) group. */
+bool pet_hud_percent_anchor(int player, float* x, float* y, float* scale);
+/* True when this player's HUD lives in the notch island (its series emblem
+ * is then not drawn). */
+bool pet_hud_in_island(int player);

@@ -7,6 +7,7 @@
 #include "pc/widescreen.h"
 
 #include <SDL3/SDL_log.h>
+#include <SDL3/SDL_timer.h>
 
 static int s_overlay = -1;
 
@@ -14,6 +15,45 @@ static int s_overlay = -1;
 static float s_screen_w = 0.0f;
 static float s_screen_h = 0.0f;
 static float s_floor = 0.0f;
+/* Notch island, in points from the screen's left/top edges. */
+static float s_notch_left = 0.0f;
+static float s_notch_right = 0.0f;
+static float s_island_h = 0.0f;
+/* HUD camera (see pet_set_hud_camera) and the last HUD frame. */
+static float s_hud_distance = 0.0f;
+static float s_hud_fov = 0.0f;
+static volatile Uint64 s_hud_last_ms = 0;
+static volatile bool s_hud_visible = false;
+
+/* Melee's stock group layout (IfAll stock model): icon k's offset from the
+ * group origin is (-5.0 + 2.4 k, 7.5) HUD units. */
+#define STOCK_X0 (-5.0f)
+#define STOCK_Y (7.5f)
+#define STOCK_PITCH (2.4f)
+/* Icons shown per side of the notch (the match is 4 stocks). */
+#define ISLAND_STOCKS 4
+
+/* Melee's damage (percent) group layout: hundreds, tens and ones digits at
+ * x = -4.68, -1.53, 1.62 and the % sign at 5.04. Their animation settles the
+ * digits ~2.2 units above the group origin (the model's rest pose, -8.5, is
+ * only the first frame). A digit is ~2.8 units tall. The number is
+ * right-aligned, so its full extent (three digits and %) is reserved. */
+#define PCT_LEFT (-6.2f)
+#define PCT_RIGHT (6.3f)
+#define PCT_Y (2.2f)
+#define PCT_DIGIT_H (2.8f)
+
+/* Island layout, as fractions of the island height. Per side, from the
+ * notch outwards: pad, stocks, gap, percent, end. */
+#define ISLAND_PAD (0.40f)     /* gap between the notch and the first icon */
+#define ISLAND_PITCH (0.62f)   /* stock icon spacing */
+#define ISLAND_GAP (0.35f)     /* between the stocks and the percent */
+#define ISLAND_DIGIT_H (0.60f) /* percent digit height */
+#define ISLAND_END (0.40f)     /* black margin past the percent */
+#define ISLAND_PCT_W (ISLAND_DIGIT_H * (PCT_RIGHT - PCT_LEFT) / PCT_DIGIT_H)
+#define ISLAND_SIDE                                                                   \
+    (ISLAND_PAD + ISLAND_PITCH * ISLAND_STOCKS + ISLAND_GAP + ISLAND_PCT_W + ISLAND_END)
+
 /* Dock bar edges in points; equal when unknown. */
 static float s_dock_left = 0.0f;
 static float s_dock_right = 0.0f;
@@ -61,8 +101,87 @@ void pet_window_created(SDL_Window* window) {
     s_dock_right = dock_right;
     SDL_Log("pet: Dock %.0f..%.0f pt (%s)", dock_left, dock_right,
             exact ? "exact" : "estimated; grant Accessibility for the exact size");
+
+    pet_mac_notch(&s_notch_left, &s_notch_right, &s_island_h);
+    const float side = s_island_h * ISLAND_SIDE;
+    pet_mac_island_create(s_notch_left - side, s_notch_right + side, s_island_h);
+    SDL_Log("pet: notch %.0f..%.0f pt, island %.0f..%.0f x %.0f pt", s_notch_left,
+            s_notch_right, s_notch_left - side, s_notch_right + side, s_island_h);
 #endif
 }
+
+void pet_set_hud_camera(float distance, float fov_deg) {
+    s_hud_distance = distance;
+    s_hud_fov = fov_deg;
+}
+
+void pet_hud_frame(bool visible) {
+    s_hud_last_ms = SDL_GetTicks();
+    s_hud_visible = visible;
+}
+
+bool pet_island_wanted(void) {
+    return pet_overlay_enabled() && s_hud_visible && SDL_GetTicks() - s_hud_last_ms < 250;
+}
+
+/* Points per HUD unit on the HUD plane. The projection is widened to the
+ * window's aspect, so the scale is the same horizontally. 0 when unknown. */
+static float hud_ppu(int player) {
+    if (!pet_overlay_enabled() || (player != 0 && player != 1) || s_island_h <= 0.0f ||
+        s_hud_distance <= 0.0f || s_hud_fov <= 0.0f || s_screen_h <= 0.0f) {
+        return 0.0f;
+    }
+    const float half_h = s_hud_distance * tanf(0.5f * s_hud_fov * (float)M_PI / 180.0f);
+    return s_screen_h / (2.0f * half_h);
+}
+
+/* Screen point (from the left/top edges) to HUD coordinates. */
+static float hud_x(float x_pt, float ppu) { return (x_pt - 0.5f * s_screen_w) / ppu; }
+static float hud_y(float y_pt, float ppu) { return (0.5f * s_screen_h - y_pt) / ppu; }
+
+bool pet_hud_stock_anchor(int player, float* x, float* y, float* scale) {
+    const float ppu = hud_ppu(player);
+    if (ppu <= 0.0f) {
+        return false;
+    }
+    const float h = s_island_h;
+    const float pitch_pt = h * ISLAND_PITCH;
+    /* Centre of the first icon: P1's stocks run leftwards from the notch, so
+     * its first stock is the outermost; P2's start right next to it. */
+    const float first_pt = player == 0
+                               ? s_notch_left - h * ISLAND_PAD - pitch_pt * (ISLAND_STOCKS - 0.5f)
+                               : s_notch_right + h * ISLAND_PAD + 0.5f * pitch_pt;
+    const float s = pitch_pt / (STOCK_PITCH * ppu);
+    *scale = s;
+    *x = hud_x(first_pt, ppu) - STOCK_X0 * s;
+    *y = hud_y(0.5f * h, ppu) - STOCK_Y * s;
+    return true;
+}
+
+bool pet_hud_percent_anchor(int player, float* x, float* y, float* scale) {
+    const float ppu = hud_ppu(player);
+    if (ppu <= 0.0f) {
+        return false;
+    }
+    const float h = s_island_h;
+    const float inner = h * (ISLAND_PAD + ISLAND_PITCH * ISLAND_STOCKS + ISLAND_GAP);
+    const float s = h * ISLAND_DIGIT_H / (PCT_DIGIT_H * ppu);
+    /* The percent's reserved box sits just outside the stocks. */
+    float origin_pt;
+    if (player == 0) {
+        const float box_right = s_notch_left - inner;
+        origin_pt = box_right - PCT_RIGHT * s * ppu;
+    } else {
+        const float box_left = s_notch_right + inner;
+        origin_pt = box_left - PCT_LEFT * s * ppu;
+    }
+    *scale = s;
+    *x = hud_x(origin_pt, ppu);
+    *y = hud_y(0.5f * h, ppu) - PCT_Y * s;
+    return true;
+}
+
+bool pet_hud_in_island(int player) { return hud_ppu(player) > 0.0f; }
 
 void pet_set_screen_geometry(float width_pt, float height_pt, float floor_pt) {
     s_screen_w = width_pt;

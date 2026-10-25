@@ -28,6 +28,10 @@
 #include "pc/pc.h"
 #include "pc/widescreen.h"
 
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
+
 static struct ifAll_804A0FD8_t {
     /* 0x00 */ HSD_GObj* gobj;
     /* 0x04 */ HSD_GObj* gobj_2;
@@ -173,6 +177,9 @@ bool ifAll_IsHUDHidden(void)
 
 static void fn_802F36B8(HSD_GObj* gobj, intptr_t unused)
 {
+#ifdef TARGET_PC
+    pet_hud_frame(!ifAll_IsHUDHidden());
+#endif
     if (!ifAll_IsHUDHidden()) {
         if (HSD_CObjSetCurrent(GET_COBJ(gobj))) {
             HSD_GObj_80390ED0(gobj, 0x7);
@@ -263,6 +270,17 @@ void ifAll_802F390C(void)
     loadScene(&scene);
     ifAll_802F370C(scene);
     ifAll_804A0FD8.gobj = createCamera(DP(HSD_CObjDesc, DP(struct SceneCameraDesc, scene->cameras)[0].desc));
+#ifdef TARGET_PC
+    {
+        /* melee-pet: the HUD camera's mapping, for placing HUD parts in
+         * screen points (the notch island). */
+        HSD_CObj* cobj = GET_COBJ(ifAll_804A0FD8.gobj);
+        Vec3 eye, interest;
+        HSD_CObjGetEyePosition(cobj, &eye);
+        HSD_CObjGetInterest(cobj, &interest);
+        pet_set_hud_camera(eye.z - interest.z, HSD_CObjGetFov(cobj));
+    }
+#endif
     createLight(scene);
 
     ifStatus_802F7134();

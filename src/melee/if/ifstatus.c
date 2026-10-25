@@ -24,6 +24,10 @@
 #include <sysdolphin/baselib/random.h>
 #include <sysdolphin/baselib/tobj.h>
 
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
+
 /* 2F491C */ static void
 ifStatus_PercentOnDeathAnimationThink(IfDamageState* value, s32,
                                       IfDamageState*);
@@ -583,6 +587,27 @@ static inline IfDamageState* getPlayerByHUDParent(HSD_GObj* parent)
 
 void ifStatus_802F5DE0(HSD_GObj* player, intptr_t arg1)
 {
+#ifdef TARGET_PC
+    {
+        /* melee-pet: the percent lives in the notch island. Set every frame
+         * here, after the group's animation has rewritten its root. */
+        IfDamageState* state = getPlayerByHUDParent(player);
+        f32 ix, iy, is;
+        if (state != NULL &&
+            pet_hud_percent_anchor((int) (state - &ifStatus_GetHUDInfo()->players[0]),
+                                   &ix, &iy, &is))
+        {
+            HSD_JObj* jobj = HSD_GObjGetHSDObj(player);
+            Vec3 pos, scale;
+            pos.x = ix;
+            pos.y = iy;
+            pos.z = 0.0f;
+            scale.x = scale.y = scale.z = is;
+            HSD_JObjSetTranslate(jobj, &pos);
+            HSD_JObjSetScale(jobj, &scale);
+        }
+    }
+#endif
     if (!getPlayerByHUDParent(player)->flags.hide_all_digits) {
         HSD_GObj_JObjCallback(player, arg1);
     }
@@ -602,6 +627,13 @@ static inline IfDamageState* getPlayerByNext(HSD_GObj* gobj)
 void ifStatus_802F5E50(HSD_GObj* gobj, intptr_t arg1)
 {
     IfDamageState* player = getPlayerByNext(gobj);
+#ifdef TARGET_PC
+    /* melee-pet: no series emblem behind a percent that lives in the notch
+     * island; it would not fit. */
+    if (pet_hud_in_island((int) (player - &ifStatus_GetHUDInfo()->players[0]))) {
+        return;
+    }
+#endif
     if (!player->flags.hide_all_digits) {
         HSD_GObj_JObjCallback(gobj, arg1);
     }

@@ -28,6 +28,10 @@
 #include <sysdolphin/baselib/mobj.h>
 #include <sysdolphin/baselib/tobj.h>
 
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
+
 static struct ifStock_804A1378 ifStock_804A1378;
 static struct IfStockUserData ifStock_804A157C[6];
 static struct ifStock_804A1774 ifStock_804A1774;
@@ -485,6 +489,23 @@ void fn_802F94E0(HSD_GObj* gobj, intptr_t renderpass)
 {
     struct IfStockUserData* p = HSD_GObjGetUserData(gobj);
     struct HudIndex* x = ifStatus_GetHUDInfo();
+#ifdef TARGET_PC
+    {
+        /* melee-pet: stocks live in the notch island. Set every frame here,
+         * after any animation has rewritten the group's root. */
+        f32 ix, iy, is;
+        if (pet_hud_stock_anchor(p->player, &ix, &iy, &is)) {
+            HSD_JObj* jobj = gobj->hsd_obj;
+            Vec3 pos, scale;
+            pos.x = ix;
+            pos.y = iy;
+            pos.z = 0.0f;
+            scale.x = scale.y = scale.z = is;
+            HSD_JObjSetTranslate(jobj, &pos);
+            HSD_JObjSetScale(jobj, &scale);
+        }
+    }
+#endif
     if (!x->players[p->player].flags.hide_all_digits) {
         HSD_GObj_JObjCallback(gobj, renderpass);
     }
