@@ -24,4 +24,8 @@ void pet_set_screen_geometry(float width_pt, float height_pt, float floor_pt);
 #ifdef __APPLE__
 void pet_mac_screen_geometry(SDL_Window* window, float* width_pt, float* height_pt,
                              float* floor_pt);
+/* The Dock bar in points (y up from the screen bottom); exact when
+ * Accessibility is granted, otherwise estimated from the Dock's settings. */
+void pet_mac_dock_frame(float screen_w, float screen_h, float* left, float* right,
+                        float* top, bool* exact);
 #endif

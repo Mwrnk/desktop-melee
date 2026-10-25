@@ -14,6 +14,9 @@ static int s_overlay = -1;
 static float s_screen_w = 0.0f;
 static float s_screen_h = 0.0f;
 static float s_floor = 0.0f;
+/* Dock bar edges in points; equal when unknown. */
+static float s_dock_left = 0.0f;
+static float s_dock_right = 0.0f;
 
 bool pet_overlay_enabled(void) {
     if (s_overlay < 0) {
@@ -47,7 +50,17 @@ void pet_window_created(SDL_Window* window) {
     pet_overlay_mac_setup(window);
     float w, h, floor_pt;
     pet_mac_screen_geometry(window, &w, &h, &floor_pt);
+    float dock_left, dock_right, dock_top = floor_pt;
+    bool exact;
+    pet_mac_dock_frame(w, h, &dock_left, &dock_right, &dock_top, &exact);
+    if (exact) {
+        floor_pt = dock_top;
+    }
     pet_set_screen_geometry(w, h, floor_pt);
+    s_dock_left = dock_left;
+    s_dock_right = dock_right;
+    SDL_Log("pet: Dock %.0f..%.0f pt (%s)", dock_left, dock_right,
+            exact ? "exact" : "estimated; grant Accessibility for the exact size");
 #endif
 }
 
@@ -92,6 +105,16 @@ bool pet_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
     *eye_y = center_y;
     *eye_z = distance;
     *fov = fov_deg;
+    return true;
+}
+
+bool pet_dock_span(float* left, float* right) {
+    if (!pet_overlay_enabled() || s_screen_w <= 0.0f || s_dock_right <= s_dock_left) {
+        return false;
+    }
+    const float units_per_pt = screen_units() / s_screen_w;
+    *left = (s_dock_left - 0.5f * s_screen_w) * units_per_pt;
+    *right = (s_dock_right - 0.5f * s_screen_w) * units_per_pt;
     return true;
 }
 

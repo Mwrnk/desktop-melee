@@ -18,3 +18,7 @@ bool pet_hide_stage(void);
  * Final Destination's blastzone width). False when not in overlay mode. */
 bool pet_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
                 float* interest_y, float* interest_z, float* fov);
+
+/* The Dock's left and right edges in Melee units (x), for stretching the main
+ * stage floor across it. False when not in overlay mode. */
+bool pet_dock_span(float* left, float* right);
