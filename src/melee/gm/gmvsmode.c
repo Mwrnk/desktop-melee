@@ -197,6 +197,16 @@ void onEnterDebugVs(GameModeState* state)
             start->rules.stkind = (StKind) st;
         }
     }
+    /* MELEE_DEBUG_VS_CKIND=<CharacterKind>: both human ports play this
+     * character (2 is Fox); a ditto gives port 2 the first alt costume. */
+    if (getenv("MELEE_DEBUG_VS_CKIND") != NULL) {
+        int ck = atoi(getenv("MELEE_DEBUG_VS_CKIND"));
+        if (ck >= 0 && ck < CKind_Playable_Count) {
+            start->players[0].ckind = (CharacterKind) ck;
+            start->players[1].ckind = (CharacterKind) ck;
+            start->players[1].color = 1;
+        }
+    }
     if (getenv("MELEE_DEBUG_VS") != NULL && strcmp(getenv("MELEE_DEBUG_VS"), "cpu") == 0) {
         start->players[1].slot_type = Gm_PKind_Cpu;
     } else if (getenv("MELEE_DEBUG_VS") != NULL && strcmp(getenv("MELEE_DEBUG_VS"), "cpu4") == 0) {
