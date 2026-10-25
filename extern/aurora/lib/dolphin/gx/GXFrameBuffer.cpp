@@ -86,9 +86,15 @@ void copy_tex(const void* dest, GXBool clear) noexcept {
   });
 
   const auto clearColor = clear && g_gxState.colorUpdate;
-  const auto clearAlpha = clear && g_gxState.alphaUpdate && efb_has_alpha(g_gxState.pixelFmt);
+  auto clearAlpha = clear && g_gxState.alphaUpdate && efb_has_alpha(g_gxState.pixelFmt);
   const auto clearDepth = clear && g_gxState.depthUpdate;
-  gfx::resolve_pass_into(copy.handle, rect, clearColor, clearAlpha, clearDepth, g_gxState.clearColor,
+  auto clearColorValue = g_gxState.clearColor;
+  if (overlay_alpha() && !efb_has_alpha(g_gxState.pixelFmt)) {
+    // Desktop overlay: a clear also resets coverage, to transparent.
+    clearAlpha = clearColor;
+    clearColorValue = {0.f, 0.f, 0.f, 0.f};
+  }
+  gfx::resolve_pass_into(copy.handle, rect, clearColor, clearAlpha, clearDepth, clearColorValue,
                          clear_depth_value(), texCopyFmt, g_gxState.pixelFmt);
 }
 } // namespace aurora::gx

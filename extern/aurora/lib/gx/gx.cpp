@@ -120,7 +120,7 @@ wgpu::CompareFunction to_compare_function(GXCompare func) {
 }
 
 wgpu::BlendState to_blend_state(GXBlendMode mode, GXBlendFactor srcFac, GXBlendFactor dstFac, GXLogicOp op,
-                                u32 dstAlpha, bool dualSource) {
+                                u32 dstAlpha, bool dualSource, OverlayAlpha overlayAlpha) {
   wgpu::BlendComponent colorBlendComponent;
   switch (mode) {
     DEFAULT_FATAL("unsupported blend mode {}", underlying(mode));
@@ -186,7 +186,19 @@ wgpu::BlendState to_blend_state(GXBlendMode mode, GXBlendFactor srcFac, GXBlendF
     colorBlendComponent.dstFactor = remap(colorBlendComponent.dstFactor);
   }
   wgpu::BlendComponent alphaBlendComponent;
-  if (dstAlpha != UINT32_MAX) {
+  if (overlayAlpha == OverlayAlpha::Over) {
+    alphaBlendComponent = wgpu::BlendComponent{
+        .operation = wgpu::BlendOperation::Add,
+        .srcFactor = wgpu::BlendFactor::One,
+        .dstFactor = wgpu::BlendFactor::OneMinusSrcAlpha,
+    };
+  } else if (overlayAlpha == OverlayAlpha::Keep) {
+    alphaBlendComponent = wgpu::BlendComponent{
+        .operation = wgpu::BlendOperation::Add,
+        .srcFactor = wgpu::BlendFactor::Zero,
+        .dstFactor = wgpu::BlendFactor::One,
+    };
+  } else if (dstAlpha != UINT32_MAX) {
     alphaBlendComponent = wgpu::BlendComponent{
         .operation = wgpu::BlendOperation::Add,
         .srcFactor = wgpu::BlendFactor::Constant,
@@ -233,6 +245,8 @@ wgpu::PrimitiveState to_primitive_state(GXCullMode gx_cullMode) {
   };
 }
 } // namespace
+
+bool overlay_alpha() noexcept { return g_config.overlayWindow; }
 
 void set_viewport_policy(AuroraViewportPolicy policy) noexcept {
   sPendingViewportPolicy.store(policy, std::memory_order_release);
@@ -366,7 +380,8 @@ wgpu::RenderPipeline build_pipeline(const PipelineConfig& config, const gfx::Ren
       .depthBiasClamp = depthBiasClamp,
   };
   const auto blendState = to_blend_state(config.blendMode, config.blendFacSrc, config.blendFacDst, config.blendOp,
-                                         config.dstAlpha, options.dstAlphaMode == DstAlphaMode::DualSource);
+                                         config.dstAlpha, options.dstAlphaMode == DstAlphaMode::DualSource,
+                                         config.overlayAlpha);
   std::array<wgpu::ColorTargetState, gfx::MaxColorAttachments> colorTargets{};
   for (uint32_t i = 0; i < layout.colorAttachmentCount; ++i) {
     colorTargets[i] = {
@@ -524,7 +539,8 @@ void populate_pipeline_config(PipelineConfig& config, GXPrimitive primitive, GXV
   const auto cullMode = config.shaderConfig.lineMode == 0 ? g_gxState.cullMode : GX_CULL_NONE;
   const auto [polygonOffset, polygonOffsetScale] = polygon_offset_for_cull_mode(cullMode);
   const bool hasAlpha = efb_has_alpha(g_gxState.pixelFmt);
-  const bool alphaUpdate = hasAlpha && g_gxState.alphaUpdate;
+  bool alphaUpdate = hasAlpha && g_gxState.alphaUpdate;
+  u32 dstAlpha = alphaUpdate ? g_gxState.dstAlpha : UINT32_MAX;
   const auto blendFactor = [hasAlpha](GXBlendFactor factor) {
     if (!hasAlpha) {
       if (factor == GX_BL_DSTALPHA) {
@@ -536,7 +552,26 @@ void populate_pipeline_config(PipelineConfig& config, GXPrimitive primitive, GXV
     }
     return factor;
   };
+  OverlayAlpha overlayAlpha = OverlayAlpha::Off;
+  if (overlay_alpha() && !hasAlpha && g_gxState.colorUpdate) {
+    // The game ignores EFB alpha in RGB8 mode; use it for desktop coverage instead.
+    alphaUpdate = true;
+    const bool copyBlend = g_gxState.blendMode == GX_BM_NONE ||
+                           (g_gxState.blendMode == GX_BM_LOGIC && g_gxState.blendOp == GX_LO_COPY);
+    if (copyBlend) {
+      // Opaque surface: constant coverage 1, unless the game set its own constant
+      // (HSD_EraseRect sets 0 so erasing the screen makes it transparent).
+      dstAlpha = g_gxState.dstAlpha != UINT32_MAX ? g_gxState.dstAlpha : 0xFF;
+    } else if (g_gxState.blendMode == GX_BM_BLEND && blendFactor(g_gxState.blendFacDst) != GX_BL_ONE) {
+      dstAlpha = UINT32_MAX;
+      overlayAlpha = OverlayAlpha::Over;
+    } else {
+      dstAlpha = UINT32_MAX;
+      overlayAlpha = OverlayAlpha::Keep;
+    }
+  }
   config = {
+      .overlayAlpha = overlayAlpha,
       .shaderConfig = config.shaderConfig,
       .depthFunc = g_gxState.depthFunc,
       .cullMode = cullMode,
@@ -544,7 +579,7 @@ void populate_pipeline_config(PipelineConfig& config, GXPrimitive primitive, GXV
       .blendFacSrc = blendFactor(g_gxState.blendFacSrc),
       .blendFacDst = blendFactor(g_gxState.blendFacDst),
       .blendOp = g_gxState.blendOp,
-      .dstAlpha = alphaUpdate ? g_gxState.dstAlpha : UINT32_MAX,
+      .dstAlpha = dstAlpha,
       .polygonOffsetBits = std::bit_cast<uint32_t>(polygonOffset),
       .polygonOffsetScaleBits = std::bit_cast<uint32_t>(polygonOffsetScale),
       .polygonOffsetClampBits = std::bit_cast<uint32_t>(g_gxState.clamp),

@@ -15,6 +15,10 @@
 #include <dolphin/gx.h>
 #include <dolphin/mtx.h>
 
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
+
 #define FLT_EPSILON 1.00000001335e-10F
 
 typedef struct _HSD_ZList {
@@ -579,6 +583,13 @@ void HSD_EraseRect(f32 top, f32 bottom, f32 left, f32 right, f32 z,
     GXSetVtxDesc(GX_VA_TEX0, GX_DIRECT);
 
     color = erase_color;
+#ifdef TARGET_PC
+    if (pet_overlay_enabled()) {
+        /* Desktop overlay: erasing makes the screen transparent, not black. */
+        color = (GXColor) { 0, 0, 0, 0 };
+        GXSetDstAlpha(GX_ENABLE, 0);
+    }
+#endif
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
     GXPosition3f32(left, top, z);
     GXColor4u8(color.r, color.g, color.b, color.a);
@@ -593,6 +604,11 @@ void HSD_EraseRect(f32 top, f32 bottom, f32 left, f32 right, f32 z,
     GXColor4u8(color.r, color.g, color.b, color.a);
     GXTexCoord2u8(0, 1);
     GXEnd();
+#ifdef TARGET_PC
+    if (pet_overlay_enabled()) {
+        GXSetDstAlpha(GX_DISABLE, 0);
+    }
+#endif
 
     GXSetZTexture(GX_ZT_DISABLE, GX_TF_Z8, 0);
 

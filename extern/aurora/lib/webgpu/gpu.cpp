@@ -49,6 +49,7 @@ TextureWithSampler g_normalBuffer;
 static wgpu::BindGroupLayout g_CopyBindGroupLayout;
 wgpu::RenderPipeline g_CopyPipeline;
 wgpu::RenderPipeline g_CopyPremultipliedAlphaPipeline;
+wgpu::RenderPipeline g_CopyKeepAlphaPipeline;
 wgpu::BindGroup g_CopyBindGroup;
 static AuroraSampler g_Resampler = SAMPLER_BILINEAR;
 static wgpu::BindGroupLayout g_ResampleBindGroupLayout;
@@ -581,6 +582,8 @@ fn fs_premultiplied_alpha(in: VertexOutput) -> @location(0) vec4<f32> {
     return g_device.CreateRenderPipeline(&pipelineDescriptor);
   };
   g_CopyPipeline = make_copy_pipeline("XFB Copy Pipeline", "fs_opaque", nullptr);
+  // Overlay mode: the EFB already holds premultiplied colour with coverage alpha.
+  g_CopyKeepAlphaPipeline = make_copy_pipeline("XFB Keep Alpha Copy Pipeline", "fs_premultiplied_alpha", nullptr);
 
   const wgpu::BlendState premultipliedAlphaBlend{
       .color =
@@ -1158,6 +1161,17 @@ bool initialize(AuroraBackend auroraBackend, bool allowCpu) {
   Log.info("Using surface format {}, present mode {}", magic_enum::enum_name(surfaceFormat),
            magic_enum::enum_name(presentMode));
   const auto size = window::get_window_size();
+  auto alphaMode = wgpu::CompositeAlphaMode::Auto;
+  if (g_config.overlayWindow) {
+    for (size_t i = 0; i < g_surfaceCapabilities.alphaModeCount; ++i) {
+      if (g_surfaceCapabilities.alphaModes[i] == wgpu::CompositeAlphaMode::Premultiplied) {
+        alphaMode = wgpu::CompositeAlphaMode::Premultiplied;
+      }
+    }
+    if (alphaMode != wgpu::CompositeAlphaMode::Premultiplied) {
+      Log.warn("Overlay window: surface has no premultiplied alpha mode; it will be opaque");
+    }
+  }
   g_graphicsConfig = GraphicsConfig{
       .surfaceConfiguration =
           wgpu::SurfaceConfiguration{
@@ -1165,6 +1179,7 @@ bool initialize(AuroraBackend auroraBackend, bool allowCpu) {
               .usage = wgpu::TextureUsage::RenderAttachment,
               .width = size.native_fb_width,
               .height = size.native_fb_height,
+              .alphaMode = alphaMode,
               .presentMode = presentMode,
           },
       .depthFormat = wgpu::TextureFormat::Depth32Float,
@@ -1194,6 +1209,7 @@ void shutdown() {
   g_CopyBindGroupLayout = {};
   g_CopyPipeline = {};
   g_CopyPremultipliedAlphaPipeline = {};
+  g_CopyKeepAlphaPipeline = {};
   g_CopyBindGroup = {};
   g_ResampleBindGroupLayout = {};
   g_ResamplePipeline = {};

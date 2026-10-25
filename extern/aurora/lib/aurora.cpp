@@ -384,7 +384,8 @@ void end_frame() noexcept {
       wgpu::BindGroup presentBindGroup;
       if (rmlBindGroup && !rmlOverlay) {
         presentBindGroup = rmlBindGroup;
-      } else if (webgpu::get_resampler() == SAMPLER_BILINEAR) {
+      } else if (webgpu::get_resampler() == SAMPLER_BILINEAR || g_config.overlayWindow) {
+        // The resample shaders write opaque alpha; the overlay needs the EFB's coverage alpha.
         presentBindGroup = webgpu::g_CopyBindGroup;
       } else {
         const auto& resampledSource = webgpu::resample_present_source(encoder, viewport);
@@ -406,7 +407,7 @@ void end_frame() noexcept {
         };
         const auto pass = encoder.BeginRenderPass(&renderPassDescriptor);
         // Copy EFB -> XFB (swapchain)
-        pass.SetPipeline(webgpu::g_CopyPipeline);
+        pass.SetPipeline(g_config.overlayWindow ? webgpu::g_CopyKeepAlphaPipeline : webgpu::g_CopyPipeline);
         pass.SetBindGroup(0, presentBindGroup, 0, nullptr);
         /* The acquired texture's own size, not the configured one: a browser
          * canvas that the page resized (SDL follows its CSS size) hands back

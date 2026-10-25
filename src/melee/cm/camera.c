@@ -46,6 +46,10 @@
 #include <sysdolphin/baselib/random.h>
 #include <sysdolphin/baselib/wobj.h>
 
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
+
 /* 029AAC */ static void Camera_80029AAC(CameraBounds* bounds,
                                          CameraTransformState* transform,
                                          f32 speed);
@@ -1055,6 +1059,32 @@ void Camera_8002A4AC(HSD_GObj* gobj)
     CameraTransformState* transform = &game_camera.transform;
 
     cobj = GET_COBJ(gobj);
+#ifdef TARGET_PC
+    {
+        /* melee-pet overlay: a fixed camera that maps the screen 1:1 onto the
+         * desktop, instead of zooming to follow the fighters. Screen shake
+         * (game_camera.translation) still applies. */
+        f32 ex, ey, ez, ix, iy, iz, fov;
+        if (pet_camera(&ex, &ey, &ez, &ix, &iy, &iz, &fov)) {
+            Vec3 eye, interest;
+            eye.x = ex + game_camera.translation.x;
+            eye.y = ey + game_camera.translation.y;
+            eye.z = ez;
+            interest.x = ix + game_camera.translation.x;
+            interest.y = iy + game_camera.translation.y;
+            interest.z = iz;
+            HSD_CObjSetFov(cobj, fov);
+            HSD_CObjSetInterest(cobj, &interest);
+            HSD_CObjSetEyePosition(cobj, &eye);
+            HSD_CObjSetNear(cobj, 1.0f);
+            HSD_CObjSetFar(cobj, 16384.0f);
+            HSD_CObjSetFov(cm_804D6464, fov);
+            HSD_CObjSetInterest(cm_804D6464, &interest);
+            HSD_CObjSetEyePosition(cm_804D6464, &eye);
+            return;
+        }
+    }
+#endif
     switch (game_camera.mode) {
     case CAMERA_STANDARD:
     case CAMERA_FIXED:

@@ -376,6 +376,19 @@ bool create_window(AuroraBackend backend) {
     posX = SDL_WINDOWPOS_UNDEFINED;
     posY = SDL_WINDOWPOS_UNDEFINED;
   }
+#if !TARGET_OS_IOS && !TARGET_OS_TV && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
+  if (g_config.overlayWindow) {
+    flags &= ~(SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN);
+    flags |= SDL_WINDOW_BORDERLESS | SDL_WINDOW_TRANSPARENT | SDL_WINDOW_ALWAYS_ON_TOP;
+    SDL_Rect bounds;
+    if (SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &bounds)) {
+      posX = bounds.x;
+      posY = bounds.y;
+      width = bounds.w;
+      height = bounds.h;
+    }
+  }
+#endif
 
   const auto props = SDL_CreateProperties();
   TRY(SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, g_config.appName), "Failed to set {}: {}",

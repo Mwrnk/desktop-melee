@@ -32,7 +32,7 @@ constexpr uint32_t GXPipelineConfigVersion = 13;
 #endif
 struct PipelineConfig {
   uint32_t version = GXPipelineConfigVersion;
-  uint32_t msaaSamples = 1; // deprecated
+  OverlayAlpha overlayAlpha = OverlayAlpha::Off; // was msaaSamples (unused, always 1)
   ShaderConfig shaderConfig;
   GXCompare depthFunc;
   GXCullMode cullMode;

@@ -120,6 +120,10 @@
 #include <sysdolphin/baselib/spline.h>
 #include <sysdolphin/baselib/wobj.h>
 
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
+
 /* 1BFFA8 */ static void Ground_OnStart(void);
 /* 1BFFAC */ static void Ground_801BFFAC(s32);
 /* 1C0478 */ static void mem_free(void* ptr);
@@ -1083,6 +1087,11 @@ void Ground_801C1E2C(HSD_GObj* gobj, intptr_t code)
 {
     bool stage_is_something;
     HSD_JObj* jobj;
+#ifdef TARGET_PC
+    if (pet_hide_stage()) {
+        return;
+    }
+#endif
     if (Camera_80030A78()) {
         return;
     }

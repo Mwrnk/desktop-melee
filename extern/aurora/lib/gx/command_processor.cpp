@@ -559,7 +559,8 @@ static void push_gx_draw(GXPrimitive prim, GXVtxFmt fmt, u16 vtxCount, gfx::Rang
       .vtxCount = vtxCount,
       .indexCount = numIndices,
       .instanceCount = instanceCount,
-      .dstAlpha = state.dstAlpha,
+      // Overlay mode substitutes its own constant coverage alpha in the pipeline config.
+      .dstAlpha = overlay_alpha() ? cache.config.dstAlpha : state.dstAlpha,
       .tag = sMarkerTag,
       .uberTev = cache.config.shaderConfig.uberTev != 0,
   });

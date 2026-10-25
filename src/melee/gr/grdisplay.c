@@ -15,6 +15,10 @@
 #include <sysdolphin/baselib/mtx.h>
 #include <sysdolphin/baselib/state.h>
 
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
+
 /* 1C5B90 */ static void grDisplay_801C5B90(HSD_JObj* jobj, Mtx vmtx, u32 arg2,
                                             u32 rendermode);
 
@@ -79,6 +83,11 @@ void grDisplay_801C5DB0(HSD_GObj* gobj, intptr_t code)
     HSD_GObj* fighter;
     u32 unused[14];
 
+#ifdef TARGET_PC
+    if (pet_hide_stage()) {
+        return;
+    }
+#endif
     gp = GET_GROUND(gobj);
     if (gp->x11_flags.b012 == Camera_8003108C()) {
         if (gp->x18 != NULL) {

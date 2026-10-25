@@ -54,6 +54,7 @@ extern TextureWithSampler g_depthBuffer;
 extern TextureWithSampler g_normalBuffer;
 extern wgpu::RenderPipeline g_CopyPipeline;
 extern wgpu::RenderPipeline g_CopyPremultipliedAlphaPipeline;
+extern wgpu::RenderPipeline g_CopyKeepAlphaPipeline;
 extern wgpu::BindGroup g_CopyBindGroup;
 extern wgpu::Instance g_instance;
 extern wgpu::AdapterInfo g_adapterInfo;

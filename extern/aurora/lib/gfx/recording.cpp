@@ -586,6 +586,10 @@ void begin_recording(FramePacket& packet, size_t frameSlot) {
   pass.label = pass_label("EFB");
   set_efb_targets(pass);
   pass.colorAttachments[SceneColorAttachmentIndex].clearValue = gx::g_gxState.clearColor;
+  if (gx::overlay_alpha()) {
+    // Desktop overlay: every frame starts fully transparent.
+    pass.colorAttachments[SceneColorAttachmentIndex].clearValue = {0.f, 0.f, 0.f, 0.f};
+  }
   pass.clearDepthValue = gx::clear_depth_value();
   if (g_preserveFrameBuffer) {
     for (uint32_t i = 0; i < pass.colorAttachmentCount; ++i) {

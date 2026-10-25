@@ -95,6 +95,12 @@ typedef struct {
   bool pauseOnFocusLost;
   bool allowTextureDumps;
   bool allowCpuAdapter;
+  /*
+   * Desktop overlay: a borderless, transparent, always-on-top window covering the primary display.
+   * The EFB is cleared to alpha 0, draws write coverage alpha, and the surface is presented with
+   * premultiplied alpha, so only what the game draws is visible over the desktop.
+   */
+  bool overlayWindow;
   int32_t windowPosX;
   int32_t windowPosY;
   uint32_t windowWidth;

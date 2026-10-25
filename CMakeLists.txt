@@ -284,6 +284,8 @@ endif ()
 
 target_include_directories(melee PRIVATE extern/monocypher)
 
+include(pet/pet.cmake)
+
 target_compile_options(melee PRIVATE
         ${MELEE_FP_FLAGS}
         $<$<AND:$<COMPILE_LANGUAGE:C>,$<NOT:$<BOOL:${WIN32}>>,$<NOT:$<BOOL:${ANDROID}>>,$<NOT:$<BOOL:${APPLE}>>>:-fno-pie>)

@@ -573,4 +573,15 @@ u8 comp_type_size(GXAttr attr, GXCompType type) noexcept;
 u8 comp_cnt_count(GXAttr attr, GXCompCnt cnt) noexcept;
 
 constexpr bool efb_has_alpha(GXPixelFmt format) noexcept { return format == GX_PF_RGBA6_Z24; }
+
+// Desktop overlay (AuroraConfig::overlayWindow): an RGB8 EFB's unused alpha channel carries
+// coverage, so the presented frame can be composited over the desktop with premultiplied alpha.
+bool overlay_alpha() noexcept;
+// How a draw writes coverage alpha in overlay mode. Stored in PipelineConfig where the unused
+// msaaSamples field was (always 1), so Off keeps every non-overlay pipeline hash unchanged.
+enum class OverlayAlpha : uint32_t {
+  Off = 1,  // GX semantics (or opaque: constant alpha 1 through dstAlpha)
+  Over = 2, // blended: a = srcA + dstA * (1 - srcA)
+  Keep = 3, // additive / subtractive: leave coverage as is (light adds onto the desktop)
+};
 } // namespace aurora::gx

@@ -25,6 +25,7 @@
 #include "pc/pc.h"
 #include "pc/android_hooks.h"
 #include "pc/launcher.h"
+#include "pet.h"
 
 int melee_main(void);
 
@@ -582,8 +583,10 @@ MELEE_EXPORT int main(int argc, char* argv[]) {
      * hidapi hint so SDL's rescaling driver leaves it for our raw path. */
     pc_gcadapter_init();
     pc_launcher_configure(&config);
+    pet_configure(&config);
 
     const AuroraInfo info = aurora_initialize(argc, argv, &config);
+    pet_window_created(info.window);
 
     /* Built-in fallback mappings for common 3rd-party GameCube adapters
      * (DragonRise / Mayflash in PC mode) so they work out-of-the-box even if
@@ -696,6 +699,7 @@ MELEE_EXPORT int main(int argc, char* argv[]) {
     pc_android_set_launcher_active(false);
 
     pc_menu_init(info.window);
+    pet_after_menu_init();
     pc_platform_init();
     aurora_card_set_present(card);
     int rc = melee_main();
