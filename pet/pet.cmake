@@ -1,6 +1,14 @@
 # melee-pet additions, included from the root CMakeLists.txt after the melee
 # target. Our code lives in pet/; upstream files only get small hooks.
-target_sources(melee PRIVATE pet/src/pet.c pet/src/assets.c pet/src/gctex.c)
+target_sources(melee PRIVATE pet/src/pet.c pet/src/assets.c pet/src/gctex.c
+        pet/src/disc_check.cpp)
+
+# The disc check's command-line tester (pet/tests/disc_check_test.sh builds it).
+# Same sources and links as upstream's launcher_data_test.
+add_executable(pet_disc_check EXCLUDE_FROM_ALL pet/tools/disc_check_main.c
+        pet/src/disc_check.cpp src/pc/launcher_data.cpp src/pc/disc_open.c)
+target_include_directories(pet_disc_check PRIVATE src pet/src)
+target_link_libraries(pet_disc_check PRIVATE aurora::dvd ${MELEE_CRYPTO_LIBS})
 target_include_directories(melee PRIVATE pet/src)
 # The game code (built by GCC) calls pet_hide_stage() and friends, and
 # includes our game mode (GM_PET), which is built as game code too.
