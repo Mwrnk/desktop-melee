@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The melee-pet popover: header, tab bar, footer and the Sound tab (the other
+// The Desktop Melee popover: header, tab bar, footer and the Sound tab (the other
 // tabs have their own files). Text uses the system font until the game has
 // decoded Melee's own glyphs.
 import AppKit
@@ -145,7 +145,7 @@ struct PetPanel: View {
                 .renderingMode(.template)
                 .foregroundStyle(.primary)
             VStack(alignment: .leading, spacing: 1) {
-                MText("melee pet", size: 26)
+                MText("Desktop Melee", size: 26)
                 MText("Running on your desktop", size: 16)
                     .foregroundStyle(.secondary)
             }
@@ -185,8 +185,10 @@ struct PetPanel: View {
 
     private var footer: some View {
         HStack {
-            MText("melee-pet", size: 15)
-                .foregroundStyle(.tertiary)
+            Button {
+                MenuSound.confirm.play()
+                WelcomeController.shared.showAgain(at: .controls)
+            } label: { MText("How to play", size: 18) }
             Spacer()
             Button {
                 MenuSound.back.play()

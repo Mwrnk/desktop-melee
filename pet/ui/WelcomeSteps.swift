@@ -22,7 +22,7 @@ struct WelcomeView: View {
                     case .disc: WelcomeDiscStep(controller: controller)
                     case .controls: WelcomeControlsStep(controller: controller)
                     case .permission: WelcomePermissionStep(controller: controller)
-                    default: EmptyView()
+                    case .ready: WelcomeReadyStep(controller: controller)
                     }
                 }
             }
@@ -479,6 +479,70 @@ struct WelcomePermissionStep: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
+        }
+    }
+}
+
+// MARK: - 5. Ready
+
+struct WelcomeReadyStep: View {
+    @ObservedObject var controller: WelcomeController
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            MenuBarSketch()
+                .frame(height: 120)
+            MText("You're set", size: 42)
+            MParagraph("Desktop Melee lives in your menu bar. Use it to pick characters, change controls and start a match.",
+                       size: 21, width: 392)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            WelcomeButton("Start a match") { controller.startMatch() }
+            MText("or press Start on your controller", size: 16)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+/// The top of a screen: the menu bar, with an arrow at the Smash icon.
+struct MenuBarSketch: View {
+    @ObservedObject private var assets = GameAssets.shared
+
+    var body: some View {
+        GeometryReader { g in
+            let w = g.size.width
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(white: 0.09))
+                Rectangle()
+                    .fill(Color(white: 0.2))
+                    .frame(width: w, height: 30)
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12, topTrailingRadius: 12))
+                // Other menu bar items, then the Smash icon.
+                ForEach(0..<3) { i in
+                    Capsule().fill(Color(white: 0.35))
+                        .frame(width: 18, height: 8)
+                        .offset(x: w - 40 - CGFloat(i) * 28, y: 11)
+                }
+                Group {
+                    if assets.ready, let emblem = GameImages.template("emblem", height: 18) {
+                        Image(nsImage: emblem).renderingMode(.template)
+                    } else {
+                        Image(nsImage: SmashEmblem.image(size: 18)).renderingMode(.template)
+                    }
+                }
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .offset(x: w - 150, y: 4)
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(PlayerColor.p1)
+                    .offset(x: w - 154, y: 40)
+                MText("Smash icon", size: 18)
+                    .foregroundStyle(.secondary)
+                    .offset(x: w - 262, y: 74)
+            }
         }
     }
 }

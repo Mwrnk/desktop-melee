@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The menu bar app: a Smash emblem in the menu bar that opens the melee-pet
+// The menu bar app: a Smash emblem in the menu bar that opens the Desktop Melee
 // popover. Runs inside the game process, on the main thread (the game loop's
 // thread, which pumps AppKit events every frame through SDL).
 import AppKit
@@ -25,7 +25,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         super.init()
         if let button = statusItem.button {
             button.image = SmashEmblem.image(size: 18)
-            button.image?.accessibilityDescription = "melee-pet"
+            button.image?.accessibilityDescription = "Desktop Melee"
             button.target = self
             button.action = #selector(togglePopover(_:))
         }
@@ -43,7 +43,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             guard ready else { return }
             DispatchQueue.main.async {
                 if let emblem = GameImages.template("emblem", height: 17) {
-                    emblem.accessibilityDescription = "melee-pet"
+                    emblem.accessibilityDescription = "Desktop Melee"
                     self?.statusItem.button?.image = emblem
                 }
             }

@@ -93,6 +93,39 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         step = next
         if next == .disc, disc == .empty { startCandidateCheck() }
         if next == .permission { watchAccessibility() }
+        if next == .ready {
+            DiscMemory.onboardingDone = true
+            // "Or press Start on your controller."
+            pet_set_start_starts_match(true)
+        }
+    }
+
+    // MARK: Step 5, and How to play
+
+    /// Start a match (the Match tab's Start) and close the window.
+    func startMatch() {
+        DiscMemory.onboardingDone = true
+        pet_request_match()
+        window?.close()
+    }
+
+    /// The menu bar's How to play: the window again, at `at` (the game is up).
+    func showAgain(at next: WelcomeStep) {
+        let window = makeWindow()
+        loading = false
+        firstRun = false
+        pressed = []
+        keyboardOpen = false
+        axGranted = false
+        window.level = .popUpMenu
+        goTo(next)
+        if step == .controls {
+            pet_set_start_starts_match(false)
+            startPadPolling()
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
     }
 
     // MARK: Step 4
@@ -306,6 +339,10 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         stopCheck()
         endPhaseTwo()
+        // Closed after the disc: the player has seen enough of it.
+        if !modal, step.rawValue >= WelcomeStep.controls.rawValue {
+            DiscMemory.onboardingDone = true
+        }
         if modal {
             // Closed before a disc was accepted: the game quits.
             result = nil
@@ -356,6 +393,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_4.png")
         sample.axGranted = true
         WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_4_granted.png")
+        sample.step = .ready
+        WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_5.png")
         let loading = WelcomeController()
         loading.isSample = true
         loading.step = .disc
