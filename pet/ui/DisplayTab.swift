@@ -37,15 +37,31 @@ final class DisplaySettings: ObservableObject {
         pet_set_fighter_size(Float(size))
         pet_set_island_enabled(island)
         pet_set_screen(screen)
-        // A display plugged in or out: the overlay goes back to the chosen
-        // screen, or to the primary while it is missing.
+        // A display plugged in or out, or the Dock resized: the overlay goes
+        // back to the chosen screen (or the primary while it is missing) and
+        // is laid out again. AppKit also posts this when nothing changed (over
+        // and over while a modal alert is up, since laying out re-triggers
+        // it), so only act on a real change.
+        screenLayout = Self.screenLayout()
         screenChanges = NotificationCenter.default
             .publisher(for: NSApplication.didChangeScreenParametersNotification)
             .sink { [weak self] _ in
                 guard let self else { return }
+                let layout = Self.screenLayout()
+                guard layout != self.screenLayout else { return }
+                self.screenLayout = layout
                 self.refreshScreens()
                 pet_set_screen(self.screen)
             }
+    }
+
+    private var screenLayout: [String] = []
+
+    /// Each screen's name, frame and usable area.
+    private static func screenLayout() -> [String] {
+        NSScreen.screens.map {
+            "\($0.localizedName) \(NSStringFromRect($0.frame)) \(NSStringFromRect($0.visibleFrame))"
+        }
     }
 
     func refreshScreens() {

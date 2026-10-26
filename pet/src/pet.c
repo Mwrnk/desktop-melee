@@ -361,6 +361,7 @@ void pet_after_menu_init(void) {
 }
 
 void pet_request_quit(void) {
+    SDL_Log("pet: quit requested from the menu bar");
     SDL_Event event;
     SDL_zero(event);
     event.type = SDL_EVENT_QUIT;
@@ -512,15 +513,12 @@ const char* pet_port_device(int port) {
 const char* pc_prefs_get_disc(void);
 
 const char* pet_choose_disc(const char* command_line_disc) {
-    if (!pet_overlay_enabled() || command_line_disc != NULL) {
+    if (!pet_overlay_enabled()) {
         return command_line_disc;
     }
-    const char* saved = pc_prefs_get_disc();
-    if (saved != NULL && saved[0] != '\0' && access(saved, R_OK) == 0) {
-        return saved;
-    }
 #ifdef __APPLE__
-    return pet_mac_pick_disc();
+    return pet_ui_choose_disc(command_line_disc != NULL ? command_line_disc
+                                                        : pc_prefs_get_disc());
 #else
     return NULL;
 #endif

@@ -49,12 +49,14 @@ bool pet_island_wanted(void);
 void pet_set_match_setup(const PetMatchSetup* setup);
 bool pet_match_active(void);
 
-/* The disc to boot in overlay mode: the command line's, else the one the
- * launcher last booted, else one picked in a native file dialog (first run).
- * NULL if the picker was cancelled. Other modes get command_line_disc back. */
+/* The disc to boot in overlay mode: only one that passed the disc check.
+ * The command line's disc, else the one the launcher last booted, if it is
+ * remembered as checked; otherwise the player picks one (pet/ui). NULL if
+ * they gave up. Other modes get command_line_disc back. */
 const char* pet_choose_disc(const char* command_line_disc);
 #ifdef __APPLE__
-const char* pet_mac_pick_disc(void);
+/* pet/ui/DiscMemory.swift: candidate may be NULL or "". */
+const char* pet_ui_choose_disc(const char* candidate);
 #endif
 #ifdef __APPLE__
 #include <stdint.h>

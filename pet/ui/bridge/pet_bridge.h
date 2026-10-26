@@ -9,6 +9,9 @@ void pc_prefs_get_audio(float* volume, float* music, float* sfx, bool* mute, boo
 void pc_prefs_set_audio(float volume, float music, float sfx, bool mute, bool reverb);
 void pc_prefs_save(void);
 
+/* The disc check (pet/src/disc_check.cpp). */
+#include "../../src/disc_check.h"
+
 /* Ask the game to shut down cleanly. */
 void pet_request_quit(void);
 
