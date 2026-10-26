@@ -11,9 +11,9 @@ import SwiftUI
 // MARK: - Settings
 
 final class DisplaySettings: ObservableObject {
-    /// Fighter size in percent. Below 100 the Dock floor reaches past Final
-    /// Destination's side blastzones, so that is the floor of the range.
-    static let sizes: ClosedRange<Double> = 100...200
+    /// Fighter size in percent (the blastzones are the screen edges at any
+    /// size, so smaller fighters just get more room).
+    static let sizes: ClosedRange<Double> = 50...200
 
     private static let defaults = UserDefaults(suiteName: "melee-pet") ?? .standard
 
@@ -120,7 +120,7 @@ struct DisplayTab: View {
                 .disabled(display.sizeLocked)
                 MParagraph(display.sizeLocked
                            ? "Set by MELEE_PET_SCALE in the environment."
-                           : "Bigger fighters can leave the screen before they are KO'd.",
+                           : "The screen edges are the blastzones: bigger fighters are KO'd sooner.",
                            size: 15, width: 300)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -2353,6 +2353,18 @@ void Ground_801C3BB4(void)
             break;
         }
     }
+#ifdef TARGET_PC
+    {
+        /* melee-pet overlay: the screen edges are the blastzones. */
+        f32 l, r, t, b;
+        if (pet_blastzones(&l, &r, &t, &b)) {
+            lft = l - stage_info.cam_info.cam_x_offset;
+            rgt = r - stage_info.cam_info.cam_x_offset;
+            top = t - stage_info.cam_info.cam_y_offset;
+            bot = b - stage_info.cam_info.cam_y_offset;
+        }
+    }
+#endif
     stage_info.blast_zone.top = top;
     stage_info.blast_zone.bottom = bot;
     stage_info.blast_zone.left = lft;

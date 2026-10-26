@@ -23,6 +23,10 @@ bool pet_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
  * stage floor across it. False when not in overlay mode. */
 bool pet_dock_span(float* left, float* right);
 
+/* The blastzones (Melee units): the overlay's screen edges, at the size the
+ * current match uses. False when not in overlay mode. */
+bool pet_blastzones(float* left, float* right, float* top, float* bottom);
+
 /* HUD camera, reported once when the HUD scene loads: distance from the eye
  * to the HUD plane (Melee units) and vertical field of view (degrees). */
 void pet_set_hud_camera(float distance, float fov_deg);

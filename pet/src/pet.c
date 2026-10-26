@@ -337,6 +337,21 @@ bool pet_dock_span(float* left, float* right) {
     return true;
 }
 
+bool pet_blastzones(float* left, float* right, float* top, float* bottom) {
+    if (!pet_overlay_enabled() || s_screen_w <= 0.0f || s_screen_h <= 0.0f) {
+        return false;
+    }
+    /* The camera maps x = 0 to the screen's middle and y = 0 to the floor. */
+    const float units_per_pt = screen_units() / s_screen_w;
+    *left = -0.5f * screen_units();
+    *right = 0.5f * screen_units();
+    *top = (s_screen_h - s_floor) * units_per_pt;
+    *bottom = -s_floor * units_per_pt;
+    SDL_Log("pet: blastzones x %.0f..%.0f, y %.0f..%.0f units (screen edges)", *left, *right,
+            *bottom, *top);
+    return true;
+}
+
 void pet_after_menu_init(void) {
     if (!pet_overlay_enabled()) {
         return;
