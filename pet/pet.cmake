@@ -19,6 +19,7 @@ if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
             pet/ui/MatchTab.swift
             pet/ui/PlayersTab.swift
             pet/ui/ControlsTab.swift
+            pet/ui/DisplayTab.swift
             pet/ui/GameAssets.swift
             pet/ui/Emblem.swift)
     set_target_properties(pet_ui PROPERTIES

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The melee-pet popover. Step 1 of pet/menubar-design.md: the shell, the tab
-// bar and the Sound tab. Text uses the system font until Melee's own glyphs
-// are decoded (step 3).
+// The melee-pet popover: header, tab bar, footer and the Sound tab (the other
+// tabs have their own files). Text uses the system font until the game has
+// decoded Melee's own glyphs.
 import AppKit
 import PetBridge
 import SwiftUI
@@ -60,17 +60,6 @@ enum PetTab: String, CaseIterable, Identifiable {
         case .display: return "display"
         }
     }
-
-    /// The build step (pet/menubar-design.md) that fills this tab in.
-    var step: Int {
-        switch self {
-        case .match: return 2
-        case .players: return 4
-        case .controls: return 5
-        case .sound: return 1
-        case .display: return 6
-        }
-    }
 }
 
 // MARK: - Panel
@@ -80,6 +69,7 @@ struct PetPanel: View {
     @ObservedObject var match: MatchSettings
     @ObservedObject var players: PlayerSettings
     @ObservedObject var controls: ControlsSettings
+    @ObservedObject var display: DisplaySettings
     @ObservedObject private var assets = GameAssets.shared
     @State private var tab: PetTab
     @State private var tabHeight: CGFloat = 0
@@ -106,12 +96,14 @@ struct PetPanel: View {
         case .players: PlayersTab(players: players, match: match)
         case .controls: ControlsTab(controls: controls, players: players, match: match)
         case .sound: SoundTab(audio: audio)
-        default: ComingSoon(tab: tab)
+        case .display: DisplayTab(display: display, match: match)
         }
     }
 
     init(audio: AudioSettings, match: MatchSettings, players: PlayerSettings,
-         controls: ControlsSettings, initialTab: PetTab = .match, scrolls: Bool = true) {
+         controls: ControlsSettings, display: DisplaySettings, initialTab: PetTab = .match,
+         scrolls: Bool = true) {
+        self.display = display
         self.scrolls = scrolls
         self.audio = audio
         self.match = match
@@ -290,22 +282,6 @@ struct VolumeRow: View {
 }
 
 // MARK: - Placeholder
-
-struct ComingSoon: View {
-    let tab: PetTab
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: tab.symbol)
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.tertiary)
-            MText(tab.rawValue, size: 22)
-            MText("Coming in step \(tab.step)", size: 16)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, minHeight: 180)
-    }
-}
 
 /// A + or − button whose whole tile is clickable, with hover and press
 /// feedback. Dimmed and inert at the end of its range.

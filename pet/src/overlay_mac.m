@@ -10,6 +10,13 @@
 
 #include "pet.h"
 
+/* The overlay window, and the screen it is on (the menu's choice). */
+static NSWindow* s_overlay;
+
+static NSScreen* overlay_screen(void) {
+    return s_overlay.screen != nil ? s_overlay.screen : NSScreen.mainScreen;
+}
+
 void pet_overlay_mac_setup(SDL_Window* window) {
     NSWindow* nswindow = (__bridge NSWindow*)SDL_GetPointerProperty(
         SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
@@ -17,6 +24,7 @@ void pet_overlay_mac_setup(SDL_Window* window) {
         SDL_Log("pet: no NSWindow for the overlay");
         return;
     }
+    s_overlay = nswindow;
     /* Clicks, drags and scrolls go to the windows underneath. */
     nswindow.ignoresMouseEvents = YES;
     nswindow.opaque = NO;
@@ -74,7 +82,8 @@ void pet_mac_screen_geometry(SDL_Window* window, float* width_pt, float* height_
 /* The Dock bar's frame from the Accessibility API (exact; needs the user to
  * grant Accessibility once). Returns false when not permitted. Output is in
  * points with y up from the bottom of the primary screen. */
-static bool dock_frame_ax(float screen_h, float* left, float* right, float* top) {
+static bool dock_frame_ax(NSScreen* screen, float* left, float* right, float* top,
+                          bool* on_screen) {
     /* MELEE_PET_AX_PROMPT=0: never show the permission dialog (test runs). */
     const char* prompt_env = getenv("MELEE_PET_AX_PROMPT");
     const bool prompt = !(prompt_env != NULL && prompt_env[0] == '0');
@@ -107,10 +116,18 @@ static bool dock_frame_ax(float screen_h, float* left, float* right, float* top)
                 CGSize s;
                 if (AXValueGetValue(pos, kAXValueCGPointType, &p) &&
                     AXValueGetValue(size, kAXValueCGSizeType, &s) && s.width > 0) {
-                    /* AX uses top-left origin coordinates. */
-                    *left = (float)p.x;
-                    *right = (float)(p.x + s.width);
-                    *top = screen_h - (float)p.y;
+                    /* AX: top-left origin at the primary screen's top-left.
+                     * To Cocoa (y up from the primary's bottom), then to the
+                     * overlay screen's own frame. */
+                    const NSRect frame = screen.frame;
+                    const double primary_h = NSScreen.screens.firstObject.frame.size.height;
+                    const double top_y = primary_h - p.y;
+                    const double mid_x = p.x + 0.5 * s.width;
+                    *left = (float)(p.x - frame.origin.x);
+                    *right = (float)(p.x + s.width - frame.origin.x);
+                    *top = (float)(top_y - frame.origin.y);
+                    *on_screen = mid_x >= NSMinX(frame) && mid_x <= NSMaxX(frame) &&
+                                 top_y > NSMinY(frame) && top_y <= NSMaxY(frame);
                     found = true;
                 }
             }
@@ -159,16 +176,35 @@ static void dock_frame_estimate(float screen_w, float* left, float* right) {
     *right = 0.5f * (screen_w + width);
 }
 
-void pet_mac_dock_frame(float screen_w, float screen_h, float* left, float* right,
+bool pet_mac_dock_frame(float screen_w, float screen_h, float* left, float* right,
                         float* top, bool* exact) {
-    *exact = dock_frame_ax(screen_h, left, right, top);
-    if (!*exact) {
-        dock_frame_estimate(screen_w, left, right);
+    (void)screen_h;
+    NSScreen* screen = overlay_screen();
+    bool on_screen = false;
+    *exact = dock_frame_ax(screen, left, right, top, &on_screen);
+    if (*exact) {
+        return on_screen;
     }
+    /* Estimated: a bottom Dock shows as an inset at the bottom of its
+     * screen; a hidden Dock leaves none, and then it lives on the primary. */
+    const bool inset = NSMinY(screen.visibleFrame) - NSMinY(screen.frame) > 1.0;
+    const bool any_inset = ^{
+        for (NSScreen* other in NSScreen.screens) {
+            if (NSMinY(other.visibleFrame) - NSMinY(other.frame) > 1.0) {
+                return true;
+            }
+        }
+        return false;
+    }();
+    if (!inset && (any_inset || screen != NSScreen.screens.firstObject)) {
+        return false;
+    }
+    dock_frame_estimate(screen_w, left, right);
+    return true;
 }
 
 void pet_mac_notch(float* left, float* right, float* height) {
-    NSScreen* screen = NSScreen.mainScreen;
+    NSScreen* screen = overlay_screen();
     const NSRect frame = screen.frame;
     if (@available(macOS 12.0, *)) {
         const NSRect l = screen.auxiliaryTopLeftArea;
@@ -189,11 +225,21 @@ void pet_mac_notch(float* left, float* right, float* height) {
 }
 
 static NSWindow* s_island;
+static void island_create(NSRect rect, float height);
 
-void pet_mac_island_create(float left, float right, float height) {
-    NSScreen* screen = NSScreen.mainScreen;
-    const NSRect frame = screen.frame;
-    const NSRect rect = NSMakeRect(frame.origin.x + left, NSMaxY(frame) - height, right - left, height);
+void pet_mac_island_place(float left, float right, float height) {
+    const NSRect frame = overlay_screen().frame;
+    const NSRect rect =
+        NSMakeRect(frame.origin.x + left, NSMaxY(frame) - height, right - left, height);
+    if (s_island != nil) {
+        [s_island setFrame:rect display:YES];
+        s_island.contentView.layer.cornerRadius = height * 0.45;
+        return;
+    }
+    island_create(rect, height);
+}
+
+static void island_create(NSRect rect, float height) {
     s_island = [[NSWindow alloc] initWithContentRect:rect
                                            styleMask:NSWindowStyleMaskBorderless
                                              backing:NSBackingStoreBuffered

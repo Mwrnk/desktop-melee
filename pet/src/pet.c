@@ -9,6 +9,7 @@
 #include "pc/widescreen.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <dolphin/pad.h>
 
 #include <SDL3/SDL_events.h>
@@ -92,32 +93,128 @@ void pet_configure(AuroraConfig* config) {
     config->allowJoystickBackgroundEvents = true;
 }
 
+static SDL_Window* s_window;
+
+/* Display settings from the menu bar. Size and island are what the next
+ * match uses (latched in pet_match_began); the screen applies while idle. */
+#define DEFAULT_UNITS 490.0f
+static float s_units_next = DEFAULT_UNITS;
+static float s_units = DEFAULT_UNITS; /* the running (or last) match's */
+static bool s_island_next = true;
+static bool s_island = true;
+static char s_screen_name[128];
+static bool s_screen_pending = false;
+
+/* MELEE_PET_SCALE: Melee units across the screen width; overrides the menu. */
+static float env_units(void) {
+    const char* env = getenv("MELEE_PET_SCALE");
+    const float units = env != NULL ? (float)atof(env) : 0.0f;
+    return units >= 50.0f && units <= 5000.0f ? units : 0.0f;
+}
+
+/* Screen size, floor, Dock and notch island for the screen the overlay is
+ * on. Run at startup and whenever the overlay changes screens. */
+static void layout(void) {
+#ifdef __APPLE__
+    float w, h, floor_pt;
+    pet_mac_screen_geometry(s_window, &w, &h, &floor_pt);
+    float dock_left = 0.0f, dock_right = 0.0f, dock_top = floor_pt;
+    bool exact = false;
+    const bool dock = pet_mac_dock_frame(w, h, &dock_left, &dock_right, &dock_top, &exact);
+    if (dock && exact) {
+        floor_pt = dock_top;
+    }
+    pet_set_screen_geometry(w, h, floor_pt);
+    s_dock_left = dock ? dock_left : 0.0f;
+    s_dock_right = dock ? dock_right : 0.0f;
+    if (dock) {
+        SDL_Log("pet: Dock %.0f..%.0f pt (%s)", dock_left, dock_right,
+                exact ? "exact" : "estimated; grant Accessibility for the exact size");
+    } else {
+        SDL_Log("pet: no Dock on this screen: Final Destination's own floor");
+    }
+
+    pet_mac_notch(&s_notch_left, &s_notch_right, &s_island_h);
+    const float side = s_island_h * ISLAND_SIDE;
+    pet_mac_island_place(s_notch_left - side, s_notch_right + side, s_island_h);
+    SDL_Log("pet: notch %.0f..%.0f pt, island %.0f..%.0f x %.0f pt", s_notch_left,
+            s_notch_right, s_notch_left - side, s_notch_right + side, s_island_h);
+#endif
+}
+
+/* Moves the overlay onto the chosen screen (by name; the primary when it is
+ * not connected) and lays it out there. */
+static void apply_screen(void) {
+    if (s_window == NULL) {
+        return;
+    }
+    s_screen_pending = false;
+    SDL_DisplayID target = SDL_GetPrimaryDisplay();
+    int count = 0;
+    SDL_DisplayID* displays = SDL_GetDisplays(&count);
+    for (int i = 0; displays != NULL && i < count; i++) {
+        const char* name = SDL_GetDisplayName(displays[i]);
+        if (s_screen_name[0] != '\0' && name != NULL && strcmp(name, s_screen_name) == 0) {
+            target = displays[i];
+            break;
+        }
+    }
+    SDL_free(displays);
+    SDL_Rect bounds;
+    if (!SDL_GetDisplayBounds(target, &bounds)) {
+        return;
+    }
+    int x, y, w, h;
+    SDL_GetWindowPosition(s_window, &x, &y);
+    SDL_GetWindowSize(s_window, &w, &h);
+    if (x != bounds.x || y != bounds.y || w != bounds.w || h != bounds.h) {
+        SDL_SetWindowPosition(s_window, bounds.x, bounds.y);
+        SDL_SetWindowSize(s_window, bounds.w, bounds.h);
+        SDL_SyncWindow(s_window);
+        SDL_Log("pet: overlay moved to \"%s\" (%dx%d at %d,%d)", SDL_GetDisplayName(target),
+                bounds.w, bounds.h, bounds.x, bounds.y);
+    }
+    layout();
+}
+
 void pet_window_created(SDL_Window* window) {
     if (!pet_overlay_enabled() || window == NULL) {
         return;
     }
 #ifdef __APPLE__
     pet_overlay_mac_setup(window);
-    float w, h, floor_pt;
-    pet_mac_screen_geometry(window, &w, &h, &floor_pt);
-    float dock_left, dock_right, dock_top = floor_pt;
-    bool exact;
-    pet_mac_dock_frame(w, h, &dock_left, &dock_right, &dock_top, &exact);
-    if (exact) {
-        floor_pt = dock_top;
-    }
-    pet_set_screen_geometry(w, h, floor_pt);
-    s_dock_left = dock_left;
-    s_dock_right = dock_right;
-    SDL_Log("pet: Dock %.0f..%.0f pt (%s)", dock_left, dock_right,
-            exact ? "exact" : "estimated; grant Accessibility for the exact size");
-
-    pet_mac_notch(&s_notch_left, &s_notch_right, &s_island_h);
-    const float side = s_island_h * ISLAND_SIDE;
-    pet_mac_island_create(s_notch_left - side, s_notch_right + side, s_island_h);
-    SDL_Log("pet: notch %.0f..%.0f pt, island %.0f..%.0f x %.0f pt", s_notch_left,
-            s_notch_right, s_notch_left - side, s_notch_right + side, s_island_h);
 #endif
+    s_window = window;
+    int count = 0;
+    SDL_DisplayID* displays = SDL_GetDisplays(&count);
+    for (int i = 0; displays != NULL && i < count; i++) {
+        SDL_Log("pet: screen %d: \"%s\"%s", i + 1, SDL_GetDisplayName(displays[i]),
+                displays[i] == SDL_GetPrimaryDisplay() ? " (primary)" : "");
+    }
+    SDL_free(displays);
+    apply_screen();
+}
+
+void pet_set_fighter_size(float percent) {
+    if (percent >= 25.0f && percent <= 400.0f) {
+        s_units_next = DEFAULT_UNITS * 100.0f / percent;
+    }
+}
+
+bool pet_fighter_size_locked(void) { return env_units() > 0.0f; }
+
+void pet_set_island_enabled(bool on) { s_island_next = on; }
+
+void pet_set_screen(const char* name) {
+    snprintf(s_screen_name, sizeof s_screen_name, "%s", name != NULL ? name : "");
+    if (s_window == NULL) {
+        return; /* startup: pet_window_created applies it */
+    }
+    if (pet_match_active()) {
+        s_screen_pending = true; /* the camera and floor are set for this one */
+    } else {
+        apply_screen();
+    }
 }
 
 void pet_set_hud_camera(float distance, float fov_deg) {
@@ -131,13 +228,14 @@ void pet_hud_frame(bool visible) {
 }
 
 bool pet_island_wanted(void) {
-    return pet_overlay_enabled() && s_hud_visible && SDL_GetTicks() - s_hud_last_ms < 250;
+    return pet_overlay_enabled() && s_island && s_hud_visible &&
+           SDL_GetTicks() - s_hud_last_ms < 250;
 }
 
 /* Points per HUD unit on the HUD plane. The projection is widened to the
  * window's aspect, so the scale is the same horizontally. 0 when unknown. */
 static float hud_ppu(int player) {
-    if (!pet_overlay_enabled() || (player != 0 && player != 1) || s_island_h <= 0.0f ||
+    if (!pet_overlay_enabled() || !s_island || (player != 0 && player != 1) || s_island_h <= 0.0f ||
         s_hud_distance <= 0.0f || s_hud_fov <= 0.0f || s_screen_h <= 0.0f) {
         return 0.0f;
     }
@@ -201,18 +299,9 @@ void pet_set_screen_geometry(float width_pt, float height_pt, float floor_pt) {
             floor_pt);
 }
 
-/* Melee units across the whole screen width. */
-static float screen_units(void) {
-    static float units = 0.0f;
-    if (units <= 0.0f) {
-        const char* env = getenv("MELEE_PET_SCALE");
-        units = env != NULL ? (float)atof(env) : 0.0f;
-        if (!(units >= 50.0f && units <= 5000.0f)) {
-            units = 490.0f;
-        }
-    }
-    return units;
-}
+/* Melee units across the whole screen width (fighter size: fewer units,
+ * bigger fighters), as the current match started with. */
+static float screen_units(void) { return s_units; }
 
 bool pet_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
                 float* interest_y, float* interest_z, float* fov) {
@@ -244,6 +333,7 @@ bool pet_dock_span(float* left, float* right) {
     const float units_per_pt = screen_units() / s_screen_w;
     *left = (s_dock_left - 0.5f * s_screen_w) * units_per_pt;
     *right = (s_dock_right - 0.5f * s_screen_w) * units_per_pt;
+    SDL_Log("pet: floor %.0f..%.0f units (Dock)", *left, *right);
     return true;
 }
 
@@ -290,9 +380,19 @@ bool pet_match_restart_wanted(void) {
 void pet_match_began(void) {
     s_match_requested = false;
     s_in_match = true;
+    const float env = env_units();
+    s_units = env > 0.0f ? env : s_units_next;
+    s_island = s_island_next;
+    SDL_Log("pet: match display: %.0f units across (size %.0f%%), island %s", s_units,
+            100.0f * DEFAULT_UNITS / s_units, s_island ? "on" : "off");
 }
 
-void pet_match_ended(void) { s_in_match = false; }
+void pet_match_ended(void) {
+    s_in_match = false;
+    if (s_screen_pending) {
+        apply_screen();
+    }
+}
 
 bool pet_match_active(void) { return s_in_match; }
 

@@ -307,10 +307,13 @@ private func dumpSamples(to dir: String) {
               let png = rep.representation(using: .png, properties: [:]) else { continue }
         try? png.write(to: URL(fileURLWithPath: "\(dir)/font_sample_\(i).png"))
     }
-    // The popover itself, rendered offscreen (no frosted background).
-    for tab in [PetTab.match, .players, .controls, .sound] {
+    // The popover itself, rendered offscreen (no frosted background). One
+    // DisplaySettings: each one re-sends the screen choice to the game.
+    let dumpDisplay = DisplaySettings()
+    for tab in [PetTab.match, .players, .controls, .sound, .display] {
         let panel = PetPanel(audio: AudioSettings(), match: MatchSettings(),
                              players: PlayerSettings(), controls: ControlsSettings(),
+                             display: dumpDisplay,
                              initialTab: tab, scrolls: false)
             .background(Color(white: 0.16))
             .environment(\.colorScheme, .dark)

@@ -24,6 +24,16 @@ void pet_set_button_map(int player, int button, int target);
 /* What is plugged into controller port 0..3 ("" when nothing is). */
 const char* pet_port_device(int port);
 
+/* Display (pet/src/pet.c). Fighter size in percent (100 = 490 Melee units
+ * across the screen) and the notch island apply at the next match; size is
+ * locked when MELEE_PET_SCALE is set. The screen is chosen by name (as
+ * NSScreen.localizedName reports it; "" = the primary) and moves the overlay
+ * right away, or when the running match ends. */
+void pet_set_fighter_size(float percent);
+bool pet_fighter_size_locked(void);
+void pet_set_island_enabled(bool on);
+void pet_set_screen(const char* name);
+
 /* UCF (src/pc/launcher.cpp): Universal Controller Fix. Applies immediately;
  * locked is true when MELEE_UCF in the environment decides it. */
 void pc_prefs_get_ucf(bool* on, bool* locked);
