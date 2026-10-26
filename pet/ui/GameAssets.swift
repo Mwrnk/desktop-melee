@@ -103,22 +103,87 @@ enum MeleeFont {
     private static var glyphs: [Character: Glyph] = [:]
     private static var loaded = false
 
-    private static func load() {
-        guard !loaded else { return }
-        let count = Int(pet_font_glyph_count())
-        for i in 0..<count {
+    /// One glyph as stored: its Shift-JIS code, margins and 32x32 coverage.
+    private struct Stored {
+        let hi: UInt8, lo: UInt8
+        let left: Int8, right: Int8
+        let alpha: [UInt8]
+    }
+
+    /// The font file: "DMFONT1\0", a little-endian UInt32 count, then per
+    /// glyph hi, lo, left, right and 1024 coverage bytes. Written from the
+    /// player's disc on first boot (cacheURL) and bundled into the app by
+    /// pet/package.sh, so Melee's font is there before any disc is.
+    static let fileName = "melee-font.bin"
+    private static let magic = Array("DMFONT1\0".utf8)
+
+    static var cacheURL: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return support.appendingPathComponent("Desktop Melee").appendingPathComponent(fileName)
+    }
+
+    private static func fromGame() -> [Stored] {
+        var out: [Stored] = []
+        for i in 0..<Int(pet_font_glyph_count()) {
             var hi: UInt8 = 0, lo: UInt8 = 0
             var atlas: Int32 = 0, left: Int32 = 0, right: Int32 = 0
             guard pet_font_glyph_info(Int32(i), &hi, &lo, &atlas, &left, &right),
-                  let sjis = String(data: Data([hi, lo]), encoding: .shiftJIS),
                   let alpha = pet_font_glyph_alpha(atlas) else { continue }
+            out.append(Stored(hi: hi, lo: lo, left: Int8(clamping: left), right: Int8(clamping: right),
+                              alpha: Array(UnsafeBufferPointer(start: alpha, count: 32 * 32))))
+        }
+        return out
+    }
+
+    private static func fromFile(_ url: URL?) -> [Stored]? {
+        guard let url, let data = try? Data(contentsOf: url), data.count >= 12,
+              Array(data.prefix(8)) == magic else { return nil }
+        let bytes = [UInt8](data)
+        let count = Int(bytes[8]) | Int(bytes[9]) << 8 | Int(bytes[10]) << 16 | Int(bytes[11]) << 24
+        let entry = 4 + 32 * 32
+        guard bytes.count == 12 + count * entry else { return nil }
+        return (0..<count).map { i in
+            let o = 12 + i * entry
+            return Stored(hi: bytes[o], lo: bytes[o + 1],
+                          left: Int8(bitPattern: bytes[o + 2]), right: Int8(bitPattern: bytes[o + 3]),
+                          alpha: Array(bytes[(o + 4)..<(o + entry)]))
+        }
+    }
+
+    /// Saves the game's font to cacheURL (once), for pet/package.sh to bundle.
+    static func saveCache() {
+        let url = cacheURL
+        guard !FileManager.default.fileExists(atPath: url.path) else { return }
+        let stored = fromGame()
+        guard !stored.isEmpty else { return }
+        var data = Data(magic)
+        withUnsafeBytes(of: UInt32(stored.count).littleEndian) { data.append(contentsOf: $0) }
+        for g in stored {
+            data.append(contentsOf: [g.hi, g.lo, UInt8(bitPattern: g.left), UInt8(bitPattern: g.right)])
+            data.append(contentsOf: g.alpha)
+        }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                 withIntermediateDirectories: true)
+        if (try? data.write(to: url)) != nil {
+            NSLog("pet: saved Melee's font (%d glyphs) to %@", stored.count, url.path)
+        }
+    }
+
+    private static func load() {
+        guard !loaded else { return }
+        let bundled = Bundle.main.url(forResource: "melee-font", withExtension: "bin")
+        // The game's glyph sheet is blank until the disc has loaded it.
+        let stored = fromFile(bundled) ?? fromFile(cacheURL)
+            ?? (GameAssets.shared.ready ? fromGame() : [])
+        for g in stored {
+            guard let sjis = String(data: Data([g.hi, g.lo]), encoding: .shiftJIS) else { continue }
             // White glyphs whose alpha is the coverage: a template image.
             var rgba = [UInt8](repeating: 255, count: 32 * 32 * 4)
-            for p in 0..<(32 * 32) { rgba[p * 4 + 3] = alpha[p] }
+            for p in 0..<(32 * 32) { rgba[p * 4 + 3] = g.alpha[p] }
             guard let image = rgba.withUnsafeBufferPointer({
                 GameImages.cgImage($0.baseAddress!, width: 32, height: 32)
             }) else { continue }
-            let glyph = Glyph(image: image, left: Int(left), right: Int(right))
+            let glyph = Glyph(image: image, left: Int(g.left), right: Int(g.right))
             // Full-width forms fold to ASCII ("Ａ" -> "A").
             for form in Set([sjis, sjis.precomposedStringWithCompatibilityMapping]) {
                 if let c = form.first, form.count == 1, glyphs[c] == nil {
@@ -131,7 +196,7 @@ enum MeleeFont {
         for (ascii, typo) in aliases where glyphs[ascii] == nil {
             glyphs[ascii] = glyphs[typo]
         }
-        loaded = count > 0 && !glyphs.isEmpty
+        loaded = !glyphs.isEmpty
     }
 
     static var available: Bool {
@@ -217,7 +282,9 @@ struct MText: View {
     }
 
     var body: some View {
-        if assets.ready, let image = MeleeFont.image(text, size: size, tracking: tracking) {
+        // The bundled font draws before the game is up; `assets` re-renders
+        // this once the game's own has loaded.
+        if let image = MeleeFont.image(text, size: size, tracking: tracking) {
             Image(nsImage: image)
                 .renderingMode(.template)
                 .accessibilityLabel(text)
@@ -257,7 +324,7 @@ struct MParagraph: View {
     }
 
     var body: some View {
-        if assets.ready && MeleeFont.available {
+        if MeleeFont.available {
             VStack(alignment: .leading, spacing: -size * 0.04) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                     MText(line, size: size)
@@ -286,6 +353,7 @@ final class GameAssets: ObservableObject {
 /// Called from C once the roster and font are available.
 @_cdecl("pet_ui_assets_ready")
 public func petUIAssetsReady() {
+    MeleeFont.saveCache()
     GameAssets.shared.markReady()
     if let dir = ProcessInfo.processInfo.environment["MELEE_PET_DUMP"] {
         // The game calls this on the main thread.

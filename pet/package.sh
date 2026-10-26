@@ -28,6 +28,15 @@ VERSION="${VERSION#v}"
 VERSION="${VERSION%%-*}"
 sed "s/@MELEE_VERSION@/${VERSION}/g" pet/macos/Info.plist > "${APP}/Contents/Info.plist"
 
+# Melee's font, saved from the disc on the first boot (pet/ui/GameAssets.swift),
+# so the welcome window has it before any disc is in.
+FONT="${HOME}/Library/Application Support/Desktop Melee/melee-font.bin"
+if [[ -f "${FONT}" ]]; then
+    cp "${FONT}" "${APP}/Contents/Resources/melee-font.bin"
+else
+    echo "warning: no ${FONT} yet; boot the game once and package again to bundle Melee's font" >&2
+fi
+
 IDENTITY="${DESKTOP_MELEE_SIGN:-$(security find-identity -v -p codesigning |
     awk -F'"' '/"Apple Development/ { print $2; exit }')}"
 if [[ -z "${IDENTITY}" ]]; then

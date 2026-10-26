@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The welcome window's steps. Steps 1-2 come before the disc, so Melee's font,
-// emblem and sounds don't exist yet: they use the system font and SF Symbols
-// in the popover's dark section style.
+// The welcome window's steps, in the popover's dark section style and Melee's
+// font (bundled with the app, so it is there before the disc). The emblem and
+// sounds still come from the disc.
 import AppKit
 import SwiftUI
 
@@ -33,11 +33,9 @@ struct WelcomeView: View {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
                 .frame(width: 30, height: 30)
-            Text("Desktop Melee")
-                .font(.system(size: 15, weight: .semibold))
+            MText("Desktop Melee", size: 24)
             Spacer()
-            Text("\(controller.step.rawValue) of \(WelcomeStep.allCases.count)")
-                .font(.system(size: 12))
+            MText("\(controller.step.rawValue) of \(WelcomeStep.allCases.count)", size: 17)
                 .foregroundStyle(.secondary)
         }
         .padding(.bottom, 18)
@@ -58,8 +56,7 @@ struct WelcomeButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.system(size: 15, weight: .semibold))
+            MText(title, size: 24)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
                 .background(
@@ -83,12 +80,10 @@ struct WelcomeIntroStep: View {
         VStack(alignment: .leading, spacing: 14) {
             DesktopSketch()
                 .frame(height: 210)
-            Text("Desktop Melee")
-                .font(.system(size: 26, weight: .bold))
-            Text("Real Melee, played right on your desktop. Your Dock is the stage, and the edges of the screen are the blast zones.")
-                .font(.system(size: 14))
+            MText("Desktop Melee", size: 42)
+            MParagraph("Real Melee, played right on your desktop. Your Dock is the stage, and the edges of the screen are the blast zones.",
+                       size: 21, width: 392)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             WelcomeButton("Get started") { controller.goTo(.disc) }
         }
@@ -143,14 +138,12 @@ struct WelcomeDiscStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(controller.findAgain ? "Find your Melee disc again" : "Bring your own Melee")
-                .font(.system(size: 22, weight: .bold))
-            Text(controller.findAgain
-                 ? "Desktop Melee can't use the disc it played last time. Choose your Melee disc image again."
-                 : "Desktop Melee includes the game's code but none of Nintendo's data. Characters, stages and sound come from your own copy of Melee.")
-                .font(.system(size: 14))
+            MText(title, size: fittedSize(title, size: 31, width: 392))
+            MParagraph(controller.findAgain
+                       ? "Desktop Melee can't use the disc it played last time. Choose your Melee disc image again."
+                       : "Desktop Melee includes the game's code but none of Nintendo's data. Characters, stages and sound come from your own copy of Melee.",
+                       size: 19, width: 392)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
             if controller.findAgain, let old = controller.oldPath {
                 Label(old, systemImage: "clock.arrow.circlepath")
                     .font(.system(size: 12))
@@ -165,6 +158,10 @@ struct WelcomeDiscStep: View {
         }
     }
 
+    private var title: String {
+        controller.findAgain ? "Find your Melee disc again" : "Bring your own Melee"
+    }
+
     private var isVerified: Bool {
         if case .verified = controller.disc { return true }
         return false
@@ -175,14 +172,11 @@ struct WelcomeDiscStep: View {
             Image(systemName: "opticaldisc")
                 .font(.system(size: 30))
                 .foregroundStyle(.secondary)
-            Text("Drop your disc image here")
-                .font(.system(size: 14, weight: .medium))
-            Text("Super Smash Bros. Melee · USA 1.02 · .iso .gcm .ciso .rvz")
-                .font(.system(size: 11))
+            MText("Drop your disc image here", size: 21)
+            MText("Melee USA 1.02:  .iso  .gcm  .ciso  .rvz", size: 15)
                 .foregroundStyle(.secondary)
             Button { controller.chooseFile() } label: {
-                Text(isFailed ? "Choose another…" : "Choose file…")
-                    .font(.system(size: 13, weight: .medium))
+                MText(isFailed ? "Choose another..." : "Choose file...", size: 19)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
                     .background(Capsule().fill(Color.primary.opacity(0.14)))
@@ -191,7 +185,7 @@ struct WelcomeDiscStep: View {
             .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
+        .padding(.vertical, 14)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.primary.opacity(targeted ? 0.12 : 0.04))
@@ -250,14 +244,11 @@ struct WelcomeDiscStep: View {
                 .foregroundStyle(color)
                 .font(.system(size: 15))
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(detail)
-                    .font(.system(size: 11))
+                MParagraph(title, size: 18, width: 330)
+                MText(detail, size: 15)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                    .frame(maxWidth: 330, alignment: .leading)
+                    .clipped()
             }
         }
     }

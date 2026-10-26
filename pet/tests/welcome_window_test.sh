@@ -18,9 +18,15 @@ trap 'rm -rf "${DIR}"' EXIT
 swiftc -O -o "${DIR}/window_list" pet/tools/window_list.swift 2> /dev/null || { echo "FAIL: build window_list"; exit 1; }
 
 open -n --env MELEE_PET_WELCOME=1 --env MELEE_PET_AX_PROMPT=0 "${APP}"
-sleep 8
-PID="$(pgrep -n -f "${EXE}")"
+# Wait (up to 20 s) for the welcome window, 440 pt wide, then 1 s more.
+for _ in $(seq 1 40); do
+    LIST="$("${DIR}/window_list")"
+    printf '%s\n' "${LIST}" | awk -F'\t' '$1 == "Desktop Melee" { split($3, b, " "); if (b[3] == 440) f = 1 } END { exit !f }' && break
+    sleep 0.5
+done
+sleep 1
 LIST="$("${DIR}/window_list")"
+PID="$(pgrep -n -f "${EXE}")"
 [[ -n "${PID}" ]] && kill -9 "${PID}"
 
 # Desktop Melee's windows, front to back: the welcome window is 440 pt wide.
