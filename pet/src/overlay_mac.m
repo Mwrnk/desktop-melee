@@ -266,6 +266,20 @@ void pet_mac_notch(float* left, float* right, float* height) {
     }
 }
 
+/* The island lives in the menu bar's strip. A plain NSWindow there gets moved
+ * down out of the menu bar's way whenever it is ordered front (AppKit's
+ * constrainFrameRect:toScreen:), which left it a menu bar's height too low,
+ * below the stocks and percents it frames. */
+@interface PetIslandWindow : NSWindow
+@end
+
+@implementation PetIslandWindow
+- (NSRect)constrainFrameRect:(NSRect)frameRect toScreen:(NSScreen*)screen {
+    (void)screen;
+    return frameRect;
+}
+@end
+
 static NSWindow* s_island;
 static void island_create(NSRect rect, float height);
 
@@ -282,7 +296,7 @@ void pet_mac_island_place(float left, float right, float height) {
 }
 
 static void island_create(NSRect rect, float height) {
-    s_island = [[NSWindow alloc] initWithContentRect:rect
+    s_island = [[PetIslandWindow alloc] initWithContentRect:rect
                                            styleMask:NSWindowStyleMaskBorderless
                                              backing:NSBackingStoreBuffered
                                                defer:NO];
