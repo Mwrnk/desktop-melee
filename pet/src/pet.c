@@ -113,6 +113,9 @@ static float env_units(void) {
     return units >= 50.0f && units <= 5000.0f ? units : 0.0f;
 }
 
+static bool s_dock_exact = false;
+bool pet_dock_exact(void) { return s_dock_exact; }
+
 /* Screen size, floor, Dock and notch island for the screen the overlay is
  * on. Run at startup and whenever the overlay changes screens. */
 static void layout(void) {
@@ -125,6 +128,7 @@ static void layout(void) {
     if (dock && exact) {
         floor_pt = dock_top;
     }
+    s_dock_exact = dock && exact;
     pet_set_screen_geometry(w, h, floor_pt);
     s_dock_left = dock ? dock_left : 0.0f;
     s_dock_right = dock ? dock_right : 0.0f;
@@ -194,6 +198,19 @@ void pet_window_created(SDL_Window* window) {
     }
     SDL_free(displays);
     apply_screen();
+}
+
+/* Measure the screen and Dock again (Accessibility was just granted): now
+ * when idle, else when the running match ends (its floor is set). */
+void pet_relayout(void) {
+    if (s_window == NULL) {
+        return;
+    }
+    if (pet_match_active()) {
+        s_screen_pending = true;
+    } else {
+        layout();
+    }
 }
 
 void pet_set_fighter_size(float percent) {

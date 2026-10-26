@@ -24,6 +24,14 @@ void pet_mac_overlay_set_hidden(bool hidden);
 uint32_t pet_pad_buttons(int port);
 const char* pet_key_name(int slot);
 
+/* Accessibility, for the exact Dock size: granted?, ask (system dialog),
+ * re-measure the Dock now (or after the running match), and whether the
+ * last measure was exact (pet/src/overlay_mac.m, pet.c). */
+bool pet_ax_trusted(void);
+void pet_ax_request(void);
+void pet_relayout(void);
+bool pet_dock_exact(void);
+
 /* Ask the game to shut down cleanly. */
 void pet_request_quit(void);
 

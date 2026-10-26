@@ -21,6 +21,7 @@ struct WelcomeView: View {
                     case .welcome: WelcomeIntroStep(controller: controller)
                     case .disc: WelcomeDiscStep(controller: controller)
                     case .controls: WelcomeControlsStep(controller: controller)
+                    case .permission: WelcomePermissionStep(controller: controller)
                     default: EmptyView()
                     }
                 }
@@ -446,5 +447,38 @@ struct WelcomeControlsStep: View {
             MText(keys, size: fittedSize(keys, size: 18, width: 280))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - 4. Permission
+
+struct WelcomePermissionStep: View {
+    @ObservedObject var controller: WelcomeController
+    private static let title = "Let Desktop Melee measure your Dock"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            MText(Self.title, size: fittedSize(Self.title, size: 31, width: 392))
+            MParagraph("With Accessibility turned on, the stage matches your Dock to the pixel. Desktop Melee only reads where the Dock is.",
+                       size: 19, width: 392)
+                .foregroundStyle(.secondary)
+            Section(title: "Accessibility") {
+                HStack(spacing: 10) {
+                    Image(systemName: controller.axGranted ? "checkmark.circle.fill" : "circle.dashed")
+                        .foregroundStyle(controller.axGranted ? Color.green : Color.orange)
+                    MText(controller.axGranted ? "Turned on: the Dock is measured exactly"
+                                               : "Waiting for permission...", size: 18)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Spacer(minLength: 0)
+            WelcomeButton("Open System Settings") { controller.requestAccessibility() }
+            Button { controller.goTo(.ready) } label: {
+                MText("Not now: the Dock size will be estimated", size: 16)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+        }
     }
 }

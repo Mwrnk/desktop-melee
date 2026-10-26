@@ -110,6 +110,7 @@ struct DisplayTab: View {
     @ObservedObject var display: DisplaySettings
     @ObservedObject var match: MatchSettings
     private let poll = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
+    @State private var dockExact = pet_dock_exact()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -165,6 +166,7 @@ struct DisplayTab: View {
                         }
                     }
                 }
+                DockSizeRow(exact: dockExact)
                 if display.screens.count < 2 {
                     MParagraph("Connect another display to play on it.", size: 15, width: 300)
                         .foregroundStyle(.secondary)
@@ -182,7 +184,10 @@ struct DisplayTab: View {
             display.refreshScreens()
             match.refresh()
         }
-        .onReceive(poll) { _ in match.refresh() }
+        .onReceive(poll) { _ in
+            match.refresh()
+            if dockExact != pet_dock_exact() { dockExact = pet_dock_exact() }
+        }
     }
 }
 
@@ -224,5 +229,28 @@ struct ScreenRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+    }
+}
+
+/// The Dock's size: exact with Accessibility, else estimated, with a button
+/// that asks for the permission.
+struct DockSizeRow: View {
+    let exact: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "dock.rectangle")
+                .frame(width: 18)
+                .foregroundStyle(.secondary)
+            MText("Dock size", size: 19)
+            Spacer()
+            if exact {
+                MText("Exact", size: 19).foregroundStyle(.secondary)
+            } else {
+                Button { pet_ax_request() } label: {
+                    MText("Estimated: measure", size: 17)
+                }
+            }
+        }
     }
 }

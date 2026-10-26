@@ -8,14 +8,12 @@
 # Melee and not to the terminal or tool that started it. A new instance opens
 # every time; quit it from the menu bar.
 #
-# The disc: the path given here, else the one used last time, else a file
-# picker on first run.
+# The disc: the path given here, else the one used last time; a disc that
+# hasn't passed the disc check (and the first run) opens the welcome window.
 #
 # Every MELEE_* variable set here is passed on to the game, e.g.
 # MELEE_PET_SCALE: Melee units across the screen width (default 490); bigger
 # means smaller fighters.
-# MELEE_PET_AX_PROMPT=0: never show the Accessibility dialog (without it the
-# Dock size is estimated).
 # The game's log goes to this terminal, or to MELEE_PET_LOG if set (or when
 # there is no terminal, ~/Library/Logs/Desktop Melee.log).
 #

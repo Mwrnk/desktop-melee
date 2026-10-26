@@ -17,7 +17,7 @@ DIR="$(mktemp -d)"
 trap 'rm -rf "${DIR}"' EXIT
 swiftc -O -o "${DIR}/window_list" pet/tools/window_list.swift 2> /dev/null || { echo "FAIL: build window_list"; exit 1; }
 
-open -n --env MELEE_PET_WELCOME=1 --env MELEE_PET_AX_PROMPT=0 "${APP}"
+open -n --env MELEE_PET_WELCOME=1 "${APP}"
 # Wait (up to 20 s) for the welcome window, 440 pt wide, then 1 s more.
 for _ in $(seq 1 40); do
     LIST="$("${DIR}/window_list")"

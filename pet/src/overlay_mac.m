@@ -128,11 +128,9 @@ void pet_mac_screen_geometry(SDL_Window* window, float* width_pt, float* height_
  * points with y up from the bottom of the primary screen. */
 static bool dock_frame_ax(NSScreen* screen, float* left, float* right, float* top,
                           bool* on_screen) {
-    /* MELEE_PET_AX_PROMPT=0: never show the permission dialog (test runs). */
-    const char* prompt_env = getenv("MELEE_PET_AX_PROMPT");
-    const bool prompt = !(prompt_env != NULL && prompt_env[0] == '0');
-    NSDictionary* opts = @{(__bridge NSString*)kAXTrustedCheckOptionPrompt : @(prompt)};
-    if (!AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)opts)) {
+    /* Never prompts: the welcome window and the Display tab ask, with a
+     * reason (pet_ax_request). */
+    if (!AXIsProcessTrusted()) {
         return false;
     }
     NSRunningApplication* dock =
@@ -363,4 +361,13 @@ void pet_mac_write_png(const char* path, const uint8_t* rgba, int width, int hei
         CGContextRelease(ctx);
     }
     CGColorSpaceRelease(space);
+}
+
+/* Accessibility (exact Dock size): whether it is granted, and asking for it
+ * (the system dialog, which links to the right settings pane). */
+bool pet_ax_trusted(void) { return AXIsProcessTrusted(); }
+
+void pet_ax_request(void) {
+    NSDictionary* opts = @{(__bridge NSString*)kAXTrustedCheckOptionPrompt : @YES};
+    AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)opts);
 }

@@ -85,8 +85,45 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     }
 
     func goTo(_ next: WelcomeStep) {
+        // Accessibility already granted: nothing to ask.
+        if next == .permission, pet_ax_trusted() {
+            goTo(.ready)
+            return
+        }
         step = next
         if next == .disc, disc == .empty { startCandidateCheck() }
+        if next == .permission { watchAccessibility() }
+    }
+
+    // MARK: Step 4
+
+    @Published var axGranted = false
+    private var axTimer: Timer?
+
+    /// Open System Settings: the system dialog, then watch for the switch.
+    func requestAccessibility() {
+        pet_ax_request()
+        watchAccessibility()
+    }
+
+    private func watchAccessibility() {
+        guard axTimer == nil else { return }
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.checkAccessibility() }
+        RunLoop.main.add(timer, forMode: .common)
+        axTimer = timer
+    }
+
+    private func checkAccessibility() {
+        guard step == .permission, pet_ax_trusted() else { return }
+        axTimer?.invalidate()
+        axTimer = nil
+        axGranted = true
+        // The Dock's exact size, right away: no relaunch.
+        pet_relayout()
+        MenuSound.confirm.play()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            if self?.step == .permission { self?.goTo(.ready) }
+        }
     }
 
     /// The saved disc, checked as soon as the disc step shows.
@@ -238,6 +275,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     private func endPhaseTwo() {
         padTimer?.invalidate()
         padTimer = nil
+        axTimer?.invalidate()
+        axTimer = nil
         assetsReady = nil
         pet_set_start_starts_match(true)
     }
@@ -312,6 +351,11 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_3.png")
         sample.keyboardOpen = true
         WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_3_keyboard.png")
+        sample.keyboardOpen = false
+        sample.step = .permission
+        WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_4.png")
+        sample.axGranted = true
+        WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_4_granted.png")
         let loading = WelcomeController()
         loading.isSample = true
         loading.step = .disc
