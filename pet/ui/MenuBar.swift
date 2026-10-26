@@ -3,6 +3,7 @@
 // popover. Runs inside the game process, on the main thread (the game loop's
 // thread, which pumps AppKit events every frame through SDL).
 import AppKit
+import Combine
 import PetBridge
 import SwiftUI
 
@@ -14,6 +15,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     private let audio = AudioSettings()
     private let match = MatchSettings()
     private weak var gameWindow: NSWindow?
+    private var assetsReady: AnyCancellable?
 
     init(gameWindow: NSWindow?) {
         self.gameWindow = gameWindow
@@ -32,6 +34,17 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         // height (otherwise the top can end up above the screen).
         hosting.sizingOptions = [.preferredContentSize]
         popover.contentViewController = hosting
+        // Swap the stand-in emblem for Melee's own once the game has loaded it.
+        // (@Published announces before the value changes, so build it after.)
+        assetsReady = GameAssets.shared.$ready.sink { [weak self] ready in
+            guard ready else { return }
+            DispatchQueue.main.async {
+                if let emblem = GameImages.template("emblem", height: 17) {
+                    emblem.accessibilityDescription = "melee-pet"
+                    self?.statusItem.button?.image = emblem
+                }
+            }
+        }
     }
 
     @objc private func togglePopover(_ sender: Any?) {

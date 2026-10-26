@@ -2,6 +2,7 @@
 /* macOS window settings for the desktop overlay that SDL has no API for. */
 #import <AppKit/AppKit.h>
 #import <ApplicationServices/ApplicationServices.h>
+#import <ImageIO/ImageIO.h>
 
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_properties.h>
@@ -262,4 +263,37 @@ const char* pet_mac_pick_disc(void) {
     }
     snprintf(path, sizeof path, "%s", panel.URL.fileSystemRepresentation);
     return path;
+}
+
+/* Writes straight RGBA8 pixels as a PNG (asset dumps). */
+void pet_mac_write_png(const char* path, const uint8_t* rgba, int width, int height) {
+    CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    CGContextRef ctx = CGBitmapContextCreate((void*)rgba, (size_t)width, (size_t)height, 8,
+                                             (size_t)width * 4, space,
+                                             kCGImageAlphaLast | kCGBitmapByteOrderDefault);
+    CGImageRef image = ctx ? CGBitmapContextCreateImage(ctx) : NULL;
+    if (image == NULL) {
+        /* CGBitmapContext refuses straight alpha; build the image directly. */
+        CGDataProviderRef provider =
+            CGDataProviderCreateWithData(NULL, rgba, (size_t)width * height * 4, NULL);
+        image = CGImageCreate((size_t)width, (size_t)height, 8, 32, (size_t)width * 4, space,
+                              kCGImageAlphaLast | kCGBitmapByteOrderDefault, provider, NULL,
+                              false, kCGRenderingIntentDefault);
+        CGDataProviderRelease(provider);
+    }
+    if (image != NULL) {
+        NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path]];
+        CGImageDestinationRef dest =
+            CGImageDestinationCreateWithURL((__bridge CFURLRef)url, CFSTR("public.png"), 1, NULL);
+        if (dest != NULL) {
+            CGImageDestinationAddImage(dest, image, NULL);
+            CGImageDestinationFinalize(dest);
+            CFRelease(dest);
+        }
+        CGImageRelease(image);
+    }
+    if (ctx != NULL) {
+        CGContextRelease(ctx);
+    }
+    CGColorSpaceRelease(space);
 }

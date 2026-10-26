@@ -16,6 +16,7 @@ final class AudioSettings: ObservableObject {
     @Published var sfx: Double = 1
     @Published var mute = false
     @Published var reverb = true
+    @Published var menuSounds = MenuSound.enabled
 
     func load() {
         var v: Float = 1, m: Float = 1, s: Float = 1
@@ -76,7 +77,14 @@ enum PetTab: String, CaseIterable, Identifiable {
 struct PetPanel: View {
     @ObservedObject var audio: AudioSettings
     @ObservedObject var match: MatchSettings
-    @State private var tab: PetTab = .match
+    @ObservedObject private var assets = GameAssets.shared
+    @State private var tab: PetTab
+
+    init(audio: AudioSettings, match: MatchSettings, initialTab: PetTab = .match) {
+        self.audio = audio
+        self.match = match
+        _tab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -102,14 +110,12 @@ struct PetPanel: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Image(nsImage: SmashEmblem.image(size: 28))
+            Image(nsImage: GameImages.template("emblem", height: 30) ?? SmashEmblem.image(size: 28))
                 .renderingMode(.template)
                 .foregroundStyle(.primary)
             VStack(alignment: .leading, spacing: 1) {
-                Text("melee pet")
-                    .font(.system(size: 15, weight: .heavy))
-                Text("Running on your desktop")
-                    .font(.system(size: 11))
+                MText("melee pet", size: 26)
+                MText("Running on your desktop", size: 16)
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -123,14 +129,14 @@ struct PetPanel: View {
         HStack(spacing: 4) {
             ForEach(PetTab.allCases) { item in
                 Button {
+                    if tab != item { MenuSound.move.play() }
                     tab = item
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: item.symbol)
                             .font(.system(size: 14, weight: .semibold))
                             .frame(height: 16)
-                        Text(item.rawValue)
-                            .font(.system(size: 10, weight: .medium))
+                        MText(item.rawValue, size: 15)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
@@ -148,11 +154,13 @@ struct PetPanel: View {
 
     private var footer: some View {
         HStack {
-            Text("melee-pet")
-                .font(.system(size: 11))
+            MText("melee-pet", size: 15)
                 .foregroundStyle(.tertiary)
             Spacer()
-            Button("Quit") { pet_request_quit() }
+            Button {
+                MenuSound.back.play()
+                pet_request_quit()
+            } label: { MText("Quit", size: 18) }
                 .keyboardShortcut("q")
         }
         .padding(.horizontal, 14)
@@ -169,10 +177,10 @@ struct Section<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(.system(size: 10, weight: .semibold))
+            MText(title.uppercased(), size: 15, tracking: 0.5)
                 .foregroundStyle(.secondary)
             VStack(spacing: 10) { content }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -198,13 +206,20 @@ struct SoundTab: View {
             }
             Section(title: "Options") {
                 Toggle(isOn: $audio.mute) {
-                    Label("Mute", systemImage: "speaker.slash.fill")
+                    OptionLabel(symbol: "speaker.slash.fill", text: "Mute")
                 }
-                .onChange(of: audio.mute) { _ in audio.save() }
+                .onChange(of: audio.mute) { _ in audio.save(); MenuSound.confirm.play() }
                 Toggle(isOn: $audio.reverb) {
-                    Label("Reverb", systemImage: "waveform")
+                    OptionLabel(symbol: "waveform", text: "Reverb")
                 }
-                .onChange(of: audio.reverb) { _ in audio.save() }
+                .onChange(of: audio.reverb) { _ in audio.save(); MenuSound.confirm.play() }
+                Toggle(isOn: $audio.menuSounds) {
+                    OptionLabel(symbol: "hand.tap.fill", text: "Menu sounds")
+                }
+                .onChange(of: audio.menuSounds) { on in
+                    MenuSound.enabled = on
+                    MenuSound.confirm.play()
+                }
             }
             .toggleStyle(.switch)
         }
@@ -222,16 +237,15 @@ struct VolumeRow: View {
             Image(systemName: symbol)
                 .frame(width: 18)
                 .foregroundStyle(.secondary)
-            Text(label)
-                .frame(width: 52, alignment: .leading)
+            MText(label, size: 19)
+                .frame(width: 74, alignment: .leading)
             Slider(value: $value, in: 0...1) { editing in
                 if !editing { audio.save() }
             }
             .onChange(of: value) { _ in audio.apply() }
-            Text("\(Int((value * 100).rounded()))%")
-                .font(.system(size: 11).monospacedDigit())
+            MText("\(Int((value * 100).rounded()))%", size: 17)
                 .foregroundStyle(.secondary)
-                .frame(width: 36, alignment: .trailing)
+                .frame(width: 40, alignment: .trailing)
         }
     }
 }
@@ -246,12 +260,25 @@ struct ComingSoon: View {
             Image(systemName: tab.symbol)
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(.tertiary)
-            Text(tab.rawValue)
-                .font(.system(size: 13, weight: .semibold))
-            Text("Coming in step \(tab.step)")
-                .font(.system(size: 11))
+            MText(tab.rawValue, size: 22)
+            MText("Coming in step \(tab.step)", size: 16)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 180)
+    }
+}
+
+/// An icon and a label in Melee's font, for switches and option rows.
+struct OptionLabel: View {
+    let symbol: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .frame(width: 18)
+                .foregroundStyle(.secondary)
+            MText(text, size: 19)
+        }
     }
 }

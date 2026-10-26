@@ -49,12 +49,12 @@ struct MatchTab: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Button {
+                MenuSound.confirm.play()
                 match.startOrRestart()
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: match.active ? "arrow.counterclockwise" : "play.fill")
-                    Text(match.active ? "Restart Match" : "Start Match")
-                        .font(.system(size: 14, weight: .bold))
+                    MText(match.active ? "Restart Match" : "Start Match", size: 22)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
@@ -83,9 +83,9 @@ struct MatchTab: View {
                     Image(systemName: "shippingbox")
                         .frame(width: 18)
                         .foregroundStyle(.secondary)
-                    Text("Items")
+                    MText("Items", size: 19)
                     Spacer()
-                    Text("Off")
+                    MText("Off", size: 19)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -95,15 +95,13 @@ struct MatchTab: View {
                     Image(systemName: "flag.2.crossed")
                         .frame(width: 18)
                         .foregroundStyle(.secondary)
-                    Text("When time runs out, the match ends and the pet goes back to idle.")
-                        .font(.system(size: 12))
+                    MParagraph("When time runs out, the match ends and the pet goes back to idle.",
+                               size: 17, width: 262)
                         .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
-            Text("Rule changes apply to the next match.")
-                .font(.system(size: 11))
+            MText("Rule changes apply to the next match.", size: 15)
                 .foregroundStyle(.tertiary)
         }
         .onAppear { match.refresh() }
@@ -123,14 +121,13 @@ struct StepperRow: View {
             Image(systemName: symbol)
                 .frame(width: 18)
                 .foregroundStyle(.secondary)
-            Text(label)
+            MText(label, size: 19)
             Spacer()
-            Button(action: decrement) { Image(systemName: "minus") }
+            Button { MenuSound.move.play(); decrement() } label: { Image(systemName: "minus") }
                 .buttonStyle(.borderless)
-            Text(value)
-                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+            MText(value, size: 20)
                 .frame(minWidth: 44)
-            Button(action: increment) { Image(systemName: "plus") }
+            Button { MenuSound.move.play(); increment() } label: { Image(systemName: "plus") }
                 .buttonStyle(.borderless)
         }
     }

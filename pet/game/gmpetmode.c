@@ -14,6 +14,9 @@
 #include <sysdolphin/baselib/controller.h>
 
 #include "pet_game.h"
+#include "petassets.h"
+
+#include <stdlib.h>
 
 enum {
     state_pet_idle = 0,
@@ -93,7 +96,23 @@ static void onExitVs(GameModeState* state)
     pet_match_ended();
 }
 
-void gm_Scene_PetIdle_OnEnter(void* unused) {}
+void gm_Scene_PetIdle_OnEnter(void* unused)
+{
+    static bool loaded;
+    pet_assets_load_menu_sounds();
+    if (!loaded) {
+        loaded = true;
+        /* Character icons and portraits for the menu bar, decoded once. */
+        pet_assets_load_roster();
+        pet_assets_load_named();
+        pet_assets_ready();
+        /* MELEE_PET_DUMP=<dir>: write every asset found to PNGs. */
+        if (getenv("MELEE_PET_DUMP") != NULL) {
+            pet_assets_scan_css();
+            pet_assets_scan_title();
+        }
+    }
+}
 
 void gm_Scene_PetIdle_OnExit(void* unused) {}
 

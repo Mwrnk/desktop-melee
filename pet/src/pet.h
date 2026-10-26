@@ -54,3 +54,7 @@ const char* pet_choose_disc(const char* command_line_disc);
 #ifdef __APPLE__
 const char* pet_mac_pick_disc(void);
 #endif
+#ifdef __APPLE__
+#include <stdint.h>
+void pet_mac_write_png(const char* path, const uint8_t* rgba, int width, int height);
+#endif

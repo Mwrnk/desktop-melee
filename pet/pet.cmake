@@ -1,15 +1,15 @@
 # melee-pet additions, included from the root CMakeLists.txt after the melee
 # target. Our code lives in pet/; upstream files only get small hooks.
-target_sources(melee PRIVATE pet/src/pet.c)
+target_sources(melee PRIVATE pet/src/pet.c pet/src/assets.c pet/src/gctex.c)
 target_include_directories(melee PRIVATE pet/src)
 # The game code (built by GCC) calls pet_hide_stage() and friends, and
 # includes our game mode (GM_PET), which is built as game code too.
 target_include_directories(melee_game PRIVATE pet/src pet/game)
-target_sources(melee_game PRIVATE pet/game/gmpetmode.c)
+target_sources(melee_game PRIVATE pet/game/gmpetmode.c pet/game/petassets.c)
 
 if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
     target_sources(melee PRIVATE pet/src/overlay_mac.m)
-    target_link_libraries(melee PRIVATE "-framework AppKit")
+    target_link_libraries(melee PRIVATE "-framework AppKit" "-framework ImageIO")
 
     # The menu bar app (SwiftUI), as a static library linked into the game.
     enable_language(Swift)
@@ -17,6 +17,7 @@ if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
             pet/ui/MenuBar.swift
             pet/ui/Panel.swift
             pet/ui/MatchTab.swift
+            pet/ui/GameAssets.swift
             pet/ui/Emblem.swift)
     set_target_properties(pet_ui PROPERTIES
             Swift_MODULE_NAME PetUI

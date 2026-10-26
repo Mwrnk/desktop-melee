@@ -65,3 +65,28 @@ bool pet_match_restart_wanted(void);
 /* The pet VS state entered / left. */
 void pet_match_began(void);
 void pet_match_ended(void);
+
+/* ---- game assets (pet/game/petassets.c) ---------------------------------- */
+
+struct GcTexture;
+/* A texture found in a game archive: tag names where it came from (model and
+ * texture-animation table), index is its position there. */
+void pet_asset_found(const char* tag, int index, const struct GcTexture* tex);
+
+/* The character select grid: 25 characters, Melee's order. */
+#define PET_ROSTER_SIZE 25
+#define PET_MAX_COSTUMES 6
+/* Roster entry i: character kind, costume count and face icon. */
+void pet_asset_roster(int i, int ckind, int costumes, const struct GcTexture* icon);
+/* A character's portrait for one costume. */
+void pet_asset_portrait(int ckind, int costume, const struct GcTexture* portrait);
+/* The roster and font are loaded: tells the menu bar app. */
+void pet_assets_ready(void);
+
+/* Melee's menu sounds, for the menu bar: 0 back, 1 confirm, 2 cursor move,
+ * 3 not allowed. */
+void pet_sound_menu(int kind);
+/* The announcer says the name of roster entry i. */
+void pet_sound_announce(int roster_index);
+/* A named graphic for the menu bar ("emblem", "melee"). */
+void pet_asset_named(const char* name, const struct GcTexture* tex);
