@@ -38,3 +38,30 @@ bool pet_hud_percent_anchor(int player, float* x, float* y, float* scale);
 /* True when this player's HUD lives in the notch island (its series emblem
  * is then not drawn). */
 bool pet_hud_in_island(int player);
+
+/* ---- GM_PET match flow (pet/game/gmpetmode.c) ---------------------------- */
+
+typedef struct PetPlayerSetup {
+    int ckind;     /* CharacterKind (2 = Fox) */
+    int costume;   /* costume/color index */
+    int cpu;       /* 0 human, 1 CPU */
+    int cpu_level; /* 1..9 */
+} PetPlayerSetup;
+
+typedef struct PetMatchSetup {
+    int stocks;       /* 1..99 */
+    int time_seconds; /* 0 = no time limit */
+    PetPlayerSetup players[2];
+} PetMatchSetup;
+
+/* The next match's setup, as the menu bar left it. */
+void pet_match_setup(PetMatchSetup* out);
+/* Ask for a match: starts one from idle, restarts a running one. */
+void pet_request_match(void);
+/* Idle scene: a match has been asked for. */
+bool pet_match_wanted(void);
+/* VS scene: a new match was asked for while this one runs. */
+bool pet_match_restart_wanted(void);
+/* The pet VS state entered / left. */
+void pet_match_began(void);
+void pet_match_ended(void);

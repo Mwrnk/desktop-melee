@@ -11,6 +11,7 @@
 #include "gmonlinemode.h"
 #include <stdlib.h>
 #include <string.h>
+#include "pet_game.h"
 #endif
 
 /* 1BF948 */ static void bootOnLoad(GameModeState*);
@@ -55,7 +56,11 @@ u8 pc_boot_scene(void)
         const char* want = getenv("MELEE_BOOT_SCENE");
         done = 1;
         if (want == NULL || want[0] == '\0') {
-            /* nothing */
+            /* melee-pet: the overlay boots into its own empty idle scene,
+             * never the title screen or menus. */
+            if (pet_overlay_enabled()) {
+                scene = GM_PET;
+            }
         } else if (strcmp(want, "title") == 0) {
             scene = GM_TITLE;
         } else if (strcmp(want, "vs") == 0) {

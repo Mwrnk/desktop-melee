@@ -62,6 +62,7 @@
 #include <melee/vi/vi1201v1.h>
 #include <melee/vi/vi1201v2.h>
 #include <melee/vi/vi1202.h>
+#include "gmpetmode.h"
 
 static GameScene scenes[] = {
     {
@@ -377,6 +378,13 @@ static GameScene scenes[] = {
         gm_Scene_OnlineLobby_OnFrame,
         gm_Scene_OnlineLobby_OnEnter,
         gm_Scene_OnlineLobby_OnExit,
+        NULL,
+    },
+    {
+        GS_PET_IDLE,
+        gm_Scene_PetIdle_OnFrame,
+        gm_Scene_PetIdle_OnEnter,
+        gm_Scene_PetIdle_OnExit,
         NULL,
     },
     {
@@ -756,6 +764,14 @@ static GameMode modes[] = {
         NULL,
         NULL,
         gm_Mode_Online_States,
+    },
+    {
+        false,
+        GM_PET,
+        NULL,
+        NULL,
+        NULL,
+        gm_Mode_Pet_States,
     },
     {
         false,

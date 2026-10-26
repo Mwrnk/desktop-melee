@@ -12,6 +12,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let popover = NSPopover()
     private let audio = AudioSettings()
+    private let match = MatchSettings()
     private weak var gameWindow: NSWindow?
 
     init(gameWindow: NSWindow?) {
@@ -26,7 +27,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         popover.behavior = .transient
         popover.animates = true
         popover.delegate = self
-        let hosting = NSHostingController(rootView: PetPanel(audio: audio))
+        let hosting = NSHostingController(rootView: PetPanel(audio: audio, match: match))
         // Size the popover from SwiftUI's layout, so it is placed for its real
         // height (otherwise the top can end up above the screen).
         hosting.sizingOptions = [.preferredContentSize]

@@ -1,17 +1,16 @@
 #!/bin/sh
-# Milestone 2 dev boot: the Fox ditto as a transparent, click-through overlay
-# over the whole primary display, with the stage and background hidden and a
-# fixed camera: Melee's floor sits on top of the Dock.
-# Press Start (Enter) at the title to jump straight into the match. The
-# keyboard only works while melee is the active app (Cmd-Tab to it).
+# Run melee-pet: the transparent desktop overlay with its menu bar app.
+# It boots into an empty idle scene; start a match from the Smash icon in the
+# menu bar (or with Start on a controller).
 #
-# MELEE_PET_SCALE: how many Melee units span the screen width (default 490,
-# Final Destination's blastzone width). Bigger = smaller fighters.
+# The disc: the path given here, else the one used last time, else a file
+# picker on first run.
 #
-# The main floor is stretched to the Dock's width. macOS asks once for
-# Accessibility permission for this terminal: granting it gives the exact
-# Dock size (otherwise it is estimated from the Dock's settings). Relaunch
-# after granting. MELEE_PET_AX_PROMPT=0 skips the dialog.
+# MELEE_PET_SCALE: Melee units across the screen width (default 490); bigger
+# means smaller fighters.
+# Accessibility (asked once) gives the exact Dock size; MELEE_PET_AX_PROMPT=0
+# skips the dialog.
 #
-# Usage: [MELEE_PET_SCALE=600] pet/run-overlay.sh [path/to/melee.iso]
-MELEE_PET_OVERLAY=1 exec "$(dirname "$0")/run-fox-ditto.sh" "$@"
+# Usage: pet/run-overlay.sh [path/to/melee.iso]
+cd "$(dirname "$0")/.."
+MELEE_PET_OVERLAY=1 exec build/macos/melee "$@"

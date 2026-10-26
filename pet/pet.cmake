@@ -2,8 +2,10 @@
 # target. Our code lives in pet/; upstream files only get small hooks.
 target_sources(melee PRIVATE pet/src/pet.c)
 target_include_directories(melee PRIVATE pet/src)
-# The game code (built by GCC) calls pet_hide_stage() and friends.
-target_include_directories(melee_game PRIVATE pet/src)
+# The game code (built by GCC) calls pet_hide_stage() and friends, and
+# includes our game mode (GM_PET), which is built as game code too.
+target_include_directories(melee_game PRIVATE pet/src pet/game)
+target_sources(melee_game PRIVATE pet/game/gmpetmode.c)
 
 if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
     target_sources(melee PRIVATE pet/src/overlay_mac.m)
@@ -14,6 +16,7 @@ if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
     add_library(pet_ui STATIC
             pet/ui/MenuBar.swift
             pet/ui/Panel.swift
+            pet/ui/MatchTab.swift
             pet/ui/Emblem.swift)
     set_target_properties(pet_ui PROPERTIES
             Swift_MODULE_NAME PetUI

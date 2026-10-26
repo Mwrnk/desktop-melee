@@ -2440,3 +2440,8 @@ extern "C" void pc_prefs_save(void) {
         SDL_Log("Preferences: %s", error.c_str());
     }
 }
+
+/* melee-pet: the disc image the launcher last booted (empty if none). */
+extern "C" const char* pc_prefs_get_disc(void) {
+    return prefs.disc.c_str();
+}

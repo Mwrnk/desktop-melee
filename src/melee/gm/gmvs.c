@@ -50,6 +50,10 @@
 #ifdef TARGET_PC
 #include "pc/slp.h"
 #include "pc/pc.h"
+
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
 #endif
 
 static u32 lbl_803D5620[] = {
@@ -1356,6 +1360,16 @@ void fn_8016CFE0(void)
     int unpauser_slot;
     PAD_STACK(0x10);
 
+#ifdef TARGET_PC
+    /* melee-pet: Restart in the menu bar ends this match (No Contest) and
+     * GM_PET starts the next one straight away. */
+    if (pet_match_restart_wanted()) {
+        tmp->state.match_result = OUTCOME_NO_CONTEST;
+        fn_8016C7F0();
+        gm_801A4B60();
+        return;
+    }
+#endif
     fn_8016CFE0_inline();
 
     fn_8016A4C8();

@@ -75,7 +75,8 @@ enum PetTab: String, CaseIterable, Identifiable {
 
 struct PetPanel: View {
     @ObservedObject var audio: AudioSettings
-    @State private var tab: PetTab = .sound
+    @ObservedObject var match: MatchSettings
+    @State private var tab: PetTab = .match
 
     var body: some View {
         VStack(spacing: 0) {
@@ -86,6 +87,7 @@ struct PetPanel: View {
             Divider()
             Group {
                 switch tab {
+                case .match: MatchTab(match: match)
                 case .sound: SoundTab(audio: audio)
                 default: ComingSoon(tab: tab)
                 }

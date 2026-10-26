@@ -42,3 +42,15 @@ void pet_mac_notch(float* left, float* right, float* height);
 void pet_mac_island_create(float left, float right, float height);
 /* Polled on the main thread: whether the island should be showing. */
 bool pet_island_wanted(void);
+
+/* Menu bar side of the match flow. */
+void pet_set_match_setup(const PetMatchSetup* setup);
+bool pet_match_active(void);
+
+/* The disc to boot in overlay mode: the command line's, else the one the
+ * launcher last booted, else one picked in a native file dialog (first run).
+ * NULL if the picker was cancelled. Other modes get command_line_disc back. */
+const char* pet_choose_disc(const char* command_line_disc);
+#ifdef __APPLE__
+const char* pet_mac_pick_disc(void);
+#endif

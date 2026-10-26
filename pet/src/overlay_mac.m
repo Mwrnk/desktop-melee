@@ -240,3 +240,26 @@ void pet_mac_island_create(float left, float right, float height) {
                                                               }];
                                       }];
 }
+
+/* First run in overlay mode: a native file picker for the disc image, instead
+ * of melee-pc's in-window launcher. Returns NULL if cancelled. */
+const char* pet_mac_pick_disc(void) {
+    static char path[4096];
+    NSOpenPanel* panel = [NSOpenPanel openPanel];
+    panel.title = @"Choose your Melee disc";
+    panel.message = @"Super Smash Bros. Melee (USA, v1.02) disc image: .iso, .gcm, .ciso or .rvz";
+    panel.prompt = @"Play";
+    panel.canChooseFiles = YES;
+    panel.canChooseDirectories = NO;
+    panel.allowsMultipleSelection = NO;
+    panel.allowedFileTypes = @[ @"iso", @"gcm", @"ciso", @"rvz" ];
+    panel.directoryURL = [NSFileManager.defaultManager URLsForDirectory:NSDownloadsDirectory
+                                                              inDomains:NSUserDomainMask]
+                             .firstObject;
+    [NSApp activateIgnoringOtherApps:YES];
+    if ([panel runModal] != NSModalResponseOK || panel.URL == nil) {
+        return NULL;
+    }
+    snprintf(path, sizeof path, "%s", panel.URL.fileSystemRepresentation);
+    return path;
+}

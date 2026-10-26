@@ -2,6 +2,7 @@
 #include "pet.h"
 
 #include <math.h>
+#include <unistd.h>
 #include <stdlib.h>
 
 #include "pc/widescreen.h"
@@ -255,4 +256,57 @@ void pet_request_quit(void) {
     SDL_zero(event);
     event.type = SDL_EVENT_QUIT;
     SDL_PushEvent(&event);
+}
+
+/* ---- match flow (GM_PET) -------------------------------------------------- */
+
+static PetMatchSetup s_setup = {
+    .stocks = 4,
+    .time_seconds = 7 * 60,
+    .players = {
+        { .ckind = 2, .costume = 0, .cpu = 0, .cpu_level = 9 }, /* Fox */
+        { .ckind = 2, .costume = 1, .cpu = 0, .cpu_level = 9 }, /* Fox, alt costume */
+    },
+};
+static bool s_match_requested = false;
+static bool s_in_match = false;
+
+void pet_match_setup(PetMatchSetup* out) { *out = s_setup; }
+
+void pet_set_match_setup(const PetMatchSetup* setup) { s_setup = *setup; }
+
+void pet_request_match(void) { s_match_requested = true; }
+
+bool pet_match_wanted(void) { return s_match_requested && !s_in_match; }
+
+bool pet_match_restart_wanted(void) {
+    return pet_overlay_enabled() && s_in_match && s_match_requested;
+}
+
+void pet_match_began(void) {
+    s_match_requested = false;
+    s_in_match = true;
+}
+
+void pet_match_ended(void) { s_in_match = false; }
+
+bool pet_match_active(void) { return s_in_match; }
+
+/* ---- disc ------------------------------------------------------------------ */
+
+const char* pc_prefs_get_disc(void);
+
+const char* pet_choose_disc(const char* command_line_disc) {
+    if (!pet_overlay_enabled() || command_line_disc != NULL) {
+        return command_line_disc;
+    }
+    const char* saved = pc_prefs_get_disc();
+    if (saved != NULL && saved[0] != '\0' && access(saved, R_OK) == 0) {
+        return saved;
+    }
+#ifdef __APPLE__
+    return pet_mac_pick_disc();
+#else
+    return NULL;
+#endif
 }
