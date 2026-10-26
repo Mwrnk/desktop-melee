@@ -6,6 +6,8 @@
 
 #include "pc/widescreen.h"
 
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_timer.h>
 
@@ -75,6 +77,9 @@ void pet_configure(AuroraConfig* config) {
         return;
     }
     config->overlayWindow = true;
+    /* A menu bar app: SDL must not turn the process into a regular app with a
+     * Dock icon (pet_ui_install makes it an accessory app). */
+    SDL_SetHint(SDL_HINT_MAC_BACKGROUND_APP, "1");
     config->startFullscreen = false;
     /* The overlay never asks for focus, so losing it must not pause the game,
      * and controllers must keep working while other apps are in front. */
@@ -243,4 +248,11 @@ void pet_after_menu_init(void) {
     }
     /* "Auto (window aspect)": the match fills the whole screen, not a 4:3 box. */
     pc_widescreen_set_mode(2);
+}
+
+void pet_request_quit(void) {
+    SDL_Event event;
+    SDL_zero(event);
+    event.type = SDL_EVENT_QUIT;
+    SDL_PushEvent(&event);
 }

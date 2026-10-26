@@ -2410,3 +2410,33 @@ extern "C" int pc_get_net_delay(void) {
 extern "C" int pc_get_key_binding(int slot) {
     return slot >= 0 && slot < int(prefs.keys.size()) ? prefs.keys[slot] : 0;
 }
+
+/* melee-pet: the menu bar app reads and changes the sound settings through
+ * these, sharing launcher.cfg with the launcher and the F1 menu. */
+extern "C" void pc_prefs_get_audio(float* volume, float* music, float* sfx, bool* mute,
+                                   bool* reverb) {
+    *volume = prefs.volume;
+    *music = prefs.music_volume;
+    *sfx = prefs.sfx_volume;
+    *mute = prefs.mute;
+    *reverb = prefs.reverb;
+}
+
+extern "C" void pc_prefs_set_audio(float volume, float music, float sfx, bool mute, bool reverb) {
+    prefs.volume = std::clamp(volume, 0.0f, 1.0f);
+    prefs.music_volume = std::clamp(music, 0.0f, 1.0f);
+    prefs.sfx_volume = std::clamp(sfx, 0.0f, 1.0f);
+    prefs.mute = mute;
+    prefs.reverb = reverb;
+    pc_audio_set_volume(prefs.mute ? 0 : prefs.volume);
+    pc_audio_set_music_volume(prefs.music_volume);
+    pc_audio_set_sfx_volume(prefs.sfx_volume);
+    pc_audio_set_reverb(prefs.reverb);
+}
+
+extern "C" void pc_prefs_save(void) {
+    std::string error;
+    if (!launcher::save_preferences(config_path, prefs, error)) {
+        SDL_Log("Preferences: %s", error.c_str());
+    }
+}

@@ -17,7 +17,11 @@ void pet_after_menu_init(void);
 
 #ifdef __APPLE__
 void pet_overlay_mac_setup(SDL_Window* window);
+/* The Swift menu bar app (pet/ui/MenuBar.swift); takes the game's NSWindow. */
+void pet_ui_install(void* game_window);
 #endif
+/* Ask the game to shut down cleanly (the menu bar's Quit). */
+void pet_request_quit(void);
 
 /* Screen size and Dock top, in points, measured once at startup. */
 void pet_set_screen_geometry(float width_pt, float height_pt, float floor_pt);

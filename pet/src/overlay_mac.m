@@ -21,9 +21,10 @@ void pet_overlay_mac_setup(SDL_Window* window) {
     nswindow.opaque = NO;
     nswindow.backgroundColor = NSColor.clearColor;
     nswindow.hasShadow = NO;
-    /* Above the menu bar (and the notch island just below this level), so the
-     * HUD can sit in the island and fighters can reach the very top edge. */
-    nswindow.level = NSStatusWindowLevel + 1;
+    /* Just below the menu bar (and just above the notch island). The menu bar
+     * is transparent, so the island and the HUD in it show through it, while
+     * the menu bar's own items stay on top, visible and clickable. */
+    nswindow.level = NSMainMenuWindowLevel - 1;
     /* On every Space, beside fullscreen apps, and out of Cmd-` window cycling. */
     nswindow.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces |
                                   NSWindowCollectionBehaviorStationary |
@@ -31,6 +32,8 @@ void pet_overlay_mac_setup(SDL_Window* window) {
                                   NSWindowCollectionBehaviorIgnoresCycle;
     SDL_Log("pet: overlay window %.0fx%.0f, click-through", nswindow.frame.size.width,
             nswindow.frame.size.height);
+    /* The menu bar app (pet/ui, Swift). */
+    pet_ui_install((__bridge void*)nswindow);
     /* The Metal layer must be non-opaque or the compositor ignores our alpha. */
     NSMutableArray<NSView*>* views = [NSMutableArray arrayWithObject:nswindow.contentView];
     while (views.count > 0) {
@@ -199,9 +202,9 @@ void pet_mac_island_create(float left, float right, float height) {
     s_island.hasShadow = NO;
     s_island.ignoresMouseEvents = YES;
     s_island.releasedWhenClosed = NO;
-    /* Above the menu bar so it can wrap the notch; the game overlay sits one
-     * level higher and draws the stock icons on top of it. */
-    s_island.level = NSStatusWindowLevel;
+    /* Below the menu bar (whose items draw over it) and below the game
+     * overlay, which draws the stock icons and percents on top of it. */
+    s_island.level = NSMainMenuWindowLevel - 2;
     s_island.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces |
                                   NSWindowCollectionBehaviorStationary |
                                   NSWindowCollectionBehaviorFullScreenAuxiliary |
