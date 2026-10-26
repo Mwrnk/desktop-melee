@@ -77,6 +77,12 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
               NSStringFromRect(frame), statusItem.button?.window?.isVisible == true ? 1 : 0)
     }
 
+    /// Keyboard focus to the game window: melee-pc ignores keys while it
+    /// isn't the key window (src/pc/keyboard.c).
+    func focusGame() {
+        gameWindow?.makeKey()
+    }
+
     func popoverDidClose(_ notification: Notification) {
         // Hand keyboard focus back to the game so keyboard play keeps working.
         gameWindow?.makeKey()

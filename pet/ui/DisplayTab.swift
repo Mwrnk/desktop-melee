@@ -111,6 +111,7 @@ struct DisplayTab: View {
     @ObservedObject var match: MatchSettings
     private let poll = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
     @State private var dockExact = pet_dock_exact()
+    @State private var axTrusted = pet_ax_trusted()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -186,6 +187,11 @@ struct DisplayTab: View {
         }
         .onReceive(poll) { _ in
             match.refresh()
+            // Accessibility just turned on (here or in System Settings):
+            // measure the Dock again, once.
+            let trusted = pet_ax_trusted()
+            if trusted && !axTrusted { pet_relayout() }
+            axTrusted = trusted
             if dockExact != pet_dock_exact() { dockExact = pet_dock_exact() }
         }
     }
@@ -248,7 +254,7 @@ struct DockSizeRow: View {
                 MText("Exact", size: 19).foregroundStyle(.secondary)
             } else {
                 Button { pet_ax_request() } label: {
-                    MText("Estimated: measure", size: 17)
+                    MText("Estimated · Measure exactly", size: 17)
                 }
             }
         }

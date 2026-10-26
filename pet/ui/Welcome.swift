@@ -65,6 +65,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         findAgain = !firstRun
         oldPath = firstRun ? nil : self.candidate
         step = firstRun ? .welcome : .disc
+        // MELEE_PET_WELCOME=disc: open on the disc step (testing).
+        if ProcessInfo.processInfo.environment["MELEE_PET_WELCOME"] == "disc" { step = .disc }
         if step == .disc { startCandidateCheck() }
         let window = makeWindow()
         MainActor.assumeIsolated { dumpPhaseOne() }
@@ -80,6 +82,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         pet_mac_overlay_set_hidden(false)
         if result != nil, loading {
             beginPhaseTwo(window)
+        } else {
+            MenuBarController.shared?.focusGame()
         }
         return result
     }
@@ -125,7 +129,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         }
         NSApp.activate(ignoringOtherApps: true)
         window.center()
-        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+        MenuBarController.shared?.focusGame()
     }
 
     // MARK: Step 4
@@ -161,7 +166,12 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     /// The saved disc, checked as soon as the disc step shows.
     private func startCandidateCheck() {
-        if let path = candidate, FileManager.default.fileExists(atPath: path) {
+        guard let path = candidate, FileManager.default.fileExists(atPath: path) else { return }
+        if DiscMemory.isVerified(path) {
+            // Already checked, and unchanged: no need to hash it again.
+            NSLog("pet: disc %@ (remembered)", path)
+            disc = .verified(path: path)
+        } else {
             startCheck(path)
         }
     }
@@ -238,6 +248,9 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     func acceptDisc() {
         guard case .verified(let path) = disc else { return }
         DiscMemory.remember(path)
+        // Anything after the disc counts as done: closing, quitting or a
+        // crash later on must not bring the whole welcome back.
+        DiscMemory.onboardingDone = true
         result = path
         modal = false
         // The first run goes on to how to play once the game is up.
@@ -269,6 +282,9 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         step = .controls
         MenuSound.confirm.play()
         startPadPolling()
+        // Keys go to the game, so a keyboard player's presses show up too;
+        // the welcome panel still takes clicks without being key.
+        MenuBarController.shared?.focusGame()
     }
 
     private func startPadPolling() {
@@ -318,9 +334,13 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     private func makeWindow() -> NSWindow {
         if let window { return window }
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 560),
-                              styleMask: [.titled, .closable, .fullSizeContentView],
-                              backing: .buffered, defer: false)
+        // A panel that takes clicks without becoming key, so the game keeps
+        // the keyboard in phase 2 (runModal still makes it key in phase 1).
+        let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 440, height: 560),
+                             styleMask: [.titled, .closable, .fullSizeContentView],
+                             backing: .buffered, defer: false)
+        window.becomesKeyOnlyIfNeeded = true
+        window.hidesOnDeactivate = false
         window.title = "Desktop Melee"
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
@@ -339,9 +359,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         stopCheck()
         endPhaseTwo()
-        // Closed after the disc: the player has seen enough of it.
-        if !modal, step.rawValue >= WelcomeStep.controls.rawValue {
-            DiscMemory.onboardingDone = true
+        if !modal {
+            MenuBarController.shared?.focusGame()
         }
         if modal {
             // Closed before a disc was accepted: the game quits.
