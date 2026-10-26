@@ -46,6 +46,7 @@ typedef struct PetPlayerSetup {
     int costume;   /* costume/color index */
     int cpu;       /* 0 human, 1 CPU */
     int cpu_level; /* 1..9 */
+    int port;      /* controller port 0..3 that plays this player (humans) */
 } PetPlayerSetup;
 
 typedef struct PetMatchSetup {
@@ -65,6 +66,31 @@ bool pet_match_restart_wanted(void);
 /* The pet VS state entered / left. */
 void pet_match_began(void);
 void pet_match_ended(void);
+
+/* ---- per-player controls (pet/src/pet.c) ---------------------------------- */
+/* Set from the menu bar's Controls tab; read every frame, so changes apply
+ * mid-match. Players are fighter slots (P1 = 0). */
+
+/* The Melee buttons a player's button map covers. */
+enum {
+    PET_BTN_A,
+    PET_BTN_B,
+    PET_BTN_X,
+    PET_BTN_Y,
+    PET_BTN_Z,
+    PET_BTN_L,
+    PET_BTN_R,
+    PET_BTN_COUNT,
+    PET_BTN_NONE = PET_BTN_COUNT,
+};
+
+/* Tap jump: stick up jumps (Melee's own behavior, on by default). Called
+ * where a stick-up jump would start; false blocks it. */
+bool pet_tap_jump(int player);
+/* A human player's held buttons (HSD_PAD_* bits) after their button map.
+ * Also says which analog triggers still shield: bit 0 the physical L, bit 1
+ * the physical R (a trigger mapped to another button no longer does). */
+unsigned pet_map_buttons(int player, unsigned held, int* analog_mask);
 
 /* ---- game assets (pet/game/petassets.c) ---------------------------------- */
 

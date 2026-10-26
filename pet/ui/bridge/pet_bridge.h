@@ -17,6 +17,18 @@ void pet_request_quit(void);
 void pet_set_match_setup(const PetMatchSetup* setup);
 bool pet_match_active(void);
 
+/* Per-player controls (pet/src/pet.c): tap jump, and each Melee button's
+ * PET_BTN_* target (PET_BTN_NONE unbinds it). Apply immediately. */
+void pet_set_tap_jump(int player, bool on);
+void pet_set_button_map(int player, int button, int target);
+/* What is plugged into controller port 0..3 ("" when nothing is). */
+const char* pet_port_device(int port);
+
+/* UCF (src/pc/launcher.cpp): Universal Controller Fix. Applies immediately;
+ * locked is true when MELEE_UCF in the environment decides it. */
+void pc_prefs_get_ucf(bool* on, bool* locked);
+void pc_prefs_set_ucf(bool on);
+
 /* The character roster decoded from the game (pet/src/assets.c): Melee's
  * select grid order. Images are straight RGBA8, owned by the game side. */
 #include <stdint.h>

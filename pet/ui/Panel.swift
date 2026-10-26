@@ -2,6 +2,7 @@
 // The melee-pet popover. Step 1 of pet/menubar-design.md: the shell, the tab
 // bar and the Sound tab. Text uses the system font until Melee's own glyphs
 // are decoded (step 3).
+import AppKit
 import PetBridge
 import SwiftUI
 
@@ -78,14 +79,44 @@ struct PetPanel: View {
     @ObservedObject var audio: AudioSettings
     @ObservedObject var match: MatchSettings
     @ObservedObject var players: PlayerSettings
+    @ObservedObject var controls: ControlsSettings
     @ObservedObject private var assets = GameAssets.shared
     @State private var tab: PetTab
+    @State private var tabHeight: CGFloat = 0
+    /// False for offscreen renders (MELEE_PET_DUMP): ImageRenderer cannot
+    /// draw a ScrollView.
+    private let scrolls: Bool
+
+    /// The most a tab may take: the screen's height below the menu bar, less
+    /// the header, tab bar, footer and the popover's own margins.
+    static var maxTabHeight: CGFloat {
+        let screen = NSScreen.main?.visibleFrame.height ?? 800
+        return max(300, screen - 230)
+    }
+
+    private var paddedTab: some View {
+        tabContent
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding(12)
+    }
+
+    @ViewBuilder private var tabContent: some View {
+        switch tab {
+        case .match: MatchTab(match: match)
+        case .players: PlayersTab(players: players, match: match)
+        case .controls: ControlsTab(controls: controls, players: players, match: match)
+        case .sound: SoundTab(audio: audio)
+        default: ComingSoon(tab: tab)
+        }
+    }
 
     init(audio: AudioSettings, match: MatchSettings, players: PlayerSettings,
-         initialTab: PetTab = .match) {
+         controls: ControlsSettings, initialTab: PetTab = .match, scrolls: Bool = true) {
+        self.scrolls = scrolls
         self.audio = audio
         self.match = match
         self.players = players
+        self.controls = controls
         _tab = State(initialValue: initialTab)
     }
 
@@ -96,16 +127,20 @@ struct PetPanel: View {
                 .padding(.horizontal, 12)
                 .padding(.bottom, 10)
             Divider()
-            Group {
-                switch tab {
-                case .match: MatchTab(match: match)
-                case .players: PlayersTab(players: players, match: match)
-                case .sound: SoundTab(audio: audio)
-                default: ComingSoon(tab: tab)
+            // A tab taller than the screen scrolls instead of pushing the
+            // popover's top off the screen.
+            if scrolls {
+                ScrollView(.vertical) {
+                    paddedTab
+                        .background(GeometryReader { g in
+                            Color.clear.preference(key: TabHeightKey.self, value: g.size.height)
+                        })
                 }
+                .frame(height: min(max(tabHeight, 1), Self.maxTabHeight))
+                .onPreferenceChange(TabHeightKey.self) { tabHeight = $0 }
+            } else {
+                paddedTab
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .padding(12)
             Divider()
             footer
         }
@@ -269,6 +304,53 @@ struct ComingSoon: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 180)
+    }
+}
+
+/// A + or − button whose whole tile is clickable, with hover and press
+/// feedback. Dimmed and inert at the end of its range.
+struct StepButton: View {
+    let symbol: String
+    var enabled = true
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .bold))
+                .frame(width: 28, height: 24)
+                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(StepButtonStyle(hovering: hovering))
+        .disabled(!enabled)
+        .onHover { hovering = $0 }
+        .accessibilityLabel(symbol == "plus" ? "Increase" : "Decrease")
+    }
+}
+
+private struct StepButtonStyle: ButtonStyle {
+    let hovering: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let fill = !isEnabled ? 0.04 : configuration.isPressed ? 0.24 : hovering ? 0.15 : 0.08
+        configuration.label
+            .foregroundStyle(isEnabled ? Color.primary : Color.secondary.opacity(0.4))
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.primary.opacity(fill))
+            )
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.12), value: hovering)
+    }
+}
+
+private struct TabHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 

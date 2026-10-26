@@ -94,6 +94,7 @@
 #include <sysdolphin/baselib/random.h>
 #ifdef TARGET_PC
 #include "pc/slp.h"
+#include "pet_game.h"
 #endif
 
 extern MotionState* ftData_CharacterStateTables[Ft_Kind_Max];
@@ -1835,7 +1836,8 @@ void Fighter_procInput(Fighter_GObj* gobj)
                 s8* h = ftCo_ucf_raw_x[fp->player_idx];
                 h[2] = h[1];
                 h[1] = h[0];
-                h[0] = pc_pad_game_raw_x[fp->player_idx];
+                /* The pad this player plays on (melee-pet can move P2 off port 2). */
+                h[0] = pc_pad_game_raw_x[fp->pad_port];
                 SET_STICKS(fp->input.lstick[0].x, fp->input.lstick[0].y,
                            HSD_PadGameStatus[fp->pad_port].nml_stickX,
                            HSD_PadGameStatus[fp->pad_port].nml_stickY);
@@ -1891,6 +1893,29 @@ void Fighter_procInput(Fighter_GObj* gobj)
             } else {
                 fp->input.held_buttons[0] =
                     HSD_PadGameStatus[fp->pad_port].button;
+#ifdef TARGET_PC
+                {
+                    /* melee-pet: the player's button map (Controls tab),
+                     * before Z grows into shield + A below. */
+                    int analog;
+                    fp->input.held_buttons[0] = pet_map_buttons(
+                        fp->player_idx, fp->input.held_buttons[0], &analog);
+                    if (analog != 3) {
+                        float l = (analog & 1)
+                                      ? HSD_PadGameStatus[fp->pad_port].nml_analogL
+                                      : 0.0f;
+                        float r = (analog & 2)
+                                      ? HSD_PadGameStatus[fp->pad_port].nml_analogR
+                                      : 0.0f;
+                        fp->input.triggers[0] = l > r ? l : r;
+                        if (fp->input.triggers[0] <=
+                            p_ftCommonData->analog_shoulder_deadzone)
+                        {
+                            fp->input.triggers[0] = 0.0f;
+                        }
+                    }
+                }
+#endif
             }
 
             if (gm_8016B0FC()) {

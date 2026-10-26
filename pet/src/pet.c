@@ -5,7 +5,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include "pc/pc.h"
 #include "pc/widescreen.h"
+
+#include <stdio.h>
+#include <dolphin/pad.h>
 
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_hints.h>
@@ -264,8 +268,8 @@ static PetMatchSetup s_setup = {
     .stocks = 4,
     .time_seconds = 7 * 60,
     .players = {
-        { .ckind = 2, .costume = 0, .cpu = 0, .cpu_level = 9 }, /* Fox */
-        { .ckind = 2, .costume = 1, .cpu = 0, .cpu_level = 9 }, /* Fox, alt costume */
+        { .ckind = 2, .costume = 0, .cpu = 0, .cpu_level = 9, .port = 0 }, /* Fox */
+        { .ckind = 2, .costume = 1, .cpu = 0, .cpu_level = 9, .port = 1 }, /* alt costume */
     },
 };
 static bool s_match_requested = false;
@@ -291,6 +295,102 @@ void pet_match_began(void) {
 void pet_match_ended(void) { s_in_match = false; }
 
 bool pet_match_active(void) { return s_in_match; }
+
+/* ---- per-player controls --------------------------------------------------- */
+
+#define PET_PLAYERS 2
+
+/* HSD_PAD_* bits of the buttons a map covers, in PET_BTN_* order. */
+static const unsigned s_btn_bits[PET_BTN_COUNT] = {
+    1u << 8, 1u << 9, 1u << 10, 1u << 11, /* A B X Y */
+    1u << 4, 1u << 6, 1u << 5,            /* Z L R */
+};
+
+static struct {
+    bool tap_jump;
+    unsigned char map[PET_BTN_COUNT]; /* physical button -> PET_BTN_* or NONE */
+} s_controls[PET_PLAYERS] = {
+    { true, { 0, 1, 2, 3, 4, 5, 6 } },
+    { true, { 0, 1, 2, 3, 4, 5, 6 } },
+};
+
+/* MELEE_PET_INPUT_TRACE=1: log blocked tap jumps and remapped presses. */
+static bool input_trace(void) {
+    static int on = -1;
+    if (on < 0) {
+        const char* env = getenv("MELEE_PET_INPUT_TRACE");
+        on = env != NULL && env[0] != '\0' && env[0] != '0';
+    }
+    return on;
+}
+
+void pet_set_tap_jump(int player, bool on) {
+    if (player >= 0 && player < PET_PLAYERS) {
+        s_controls[player].tap_jump = on;
+    }
+}
+
+void pet_set_button_map(int player, int button, int target) {
+    if (player >= 0 && player < PET_PLAYERS && button >= 0 && button < PET_BTN_COUNT &&
+        target >= 0 && target <= PET_BTN_NONE) {
+        s_controls[player].map[button] = (unsigned char)target;
+    }
+}
+
+bool pet_tap_jump(int player) {
+    if (player < 0 || player >= PET_PLAYERS || s_controls[player].tap_jump) {
+        return true;
+    }
+    if (input_trace()) {
+        SDL_Log("pet: P%d tap jump blocked", player + 1);
+    }
+    return false;
+}
+
+unsigned pet_map_buttons(int player, unsigned held, int* analog_mask) {
+    *analog_mask = 3;
+    if (player < 0 || player >= PET_PLAYERS) {
+        return held;
+    }
+    unsigned out = held;
+    for (int b = 0; b < PET_BTN_COUNT; b++) {
+        out &= ~s_btn_bits[b];
+    }
+    for (int b = 0; b < PET_BTN_COUNT; b++) {
+        const int target = s_controls[player].map[b];
+        if ((held & s_btn_bits[b]) != 0 && target < PET_BTN_COUNT) {
+            out |= s_btn_bits[target];
+        }
+    }
+    /* A physical trigger keeps its analog (light) shield only while it is
+     * still a shield button. */
+    const int l = s_controls[player].map[PET_BTN_L], r = s_controls[player].map[PET_BTN_R];
+    *analog_mask = (l == PET_BTN_L || l == PET_BTN_R ? 1 : 0) |
+                   (r == PET_BTN_L || r == PET_BTN_R ? 2 : 0);
+    if (out != held && input_trace()) {
+        SDL_Log("pet: P%d buttons %04x -> %04x", player + 1, held & 0xFFFF, out & 0xFFFF);
+    }
+    return out;
+}
+
+/* What is plugged into a controller port, for the Controls tab. */
+const char* pet_port_device(int port) {
+    static char name[4][96];
+    if (port < 0 || port > 3) {
+        return "";
+    }
+    uint8_t raw[6];
+    bool wireless = false;
+    const char* pad = PADGetName((u32)port);
+    if (pc_gcadapter_raw(port, raw, &wireless)) {
+        snprintf(name[port], sizeof name[port], "%s", wireless ? "WaveBird" : "GameCube controller");
+    } else if (pad != NULL && pad[0] != '\0') {
+        snprintf(name[port], sizeof name[port], "%s", pad);
+    } else {
+        name[port][0] = '\0';
+    }
+    return name[port];
+}
 
 /* ---- disc ------------------------------------------------------------------ */
 

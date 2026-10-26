@@ -68,13 +68,15 @@ struct MatchTab: View {
 
             Section(title: "Rules") {
                 StepperRow(symbol: "heart.fill", label: "Stocks",
-                           value: "\(match.stocks)") {
+                           value: "\(match.stocks)",
+                           canDecrement: match.stocks > 1, canIncrement: match.stocks < 99) {
                     match.stocks = max(1, match.stocks - 1)
                 } increment: {
                     match.stocks = min(99, match.stocks + 1)
                 }
                 StepperRow(symbol: "timer", label: "Time",
-                           value: match.minutes == 0 ? "None" : "\(match.minutes):00") {
+                           value: match.minutes == 0 ? "None" : "\(match.minutes):00",
+                           canDecrement: match.minutes > 0, canIncrement: match.minutes < 99) {
                     match.minutes = max(0, match.minutes - 1)
                 } increment: {
                     match.minutes = min(99, match.minutes + 1)
@@ -113,6 +115,8 @@ struct StepperRow: View {
     let symbol: String
     let label: String
     let value: String
+    var canDecrement = true
+    var canIncrement = true
     let decrement: () -> Void
     let increment: () -> Void
 
@@ -123,12 +127,18 @@ struct StepperRow: View {
                 .foregroundStyle(.secondary)
             MText(label, size: 19)
             Spacer()
-            Button { MenuSound.move.play(); decrement() } label: { Image(systemName: "minus") }
-                .buttonStyle(.borderless)
-            MText(value, size: 20)
-                .frame(minWidth: 44)
-            Button { MenuSound.move.play(); increment() } label: { Image(systemName: "plus") }
-                .buttonStyle(.borderless)
+            HStack(spacing: 6) {
+                StepButton(symbol: "minus", enabled: canDecrement) {
+                    MenuSound.move.play()
+                    decrement()
+                }
+                MText(value, size: 20)
+                    .frame(minWidth: 44)
+                StepButton(symbol: "plus", enabled: canIncrement) {
+                    MenuSound.move.play()
+                    increment()
+                }
+            }
         }
     }
 }

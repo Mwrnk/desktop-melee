@@ -308,9 +308,10 @@ private func dumpSamples(to dir: String) {
         try? png.write(to: URL(fileURLWithPath: "\(dir)/font_sample_\(i).png"))
     }
     // The popover itself, rendered offscreen (no frosted background).
-    for tab in [PetTab.match, .players, .sound] {
+    for tab in [PetTab.match, .players, .controls, .sound] {
         let panel = PetPanel(audio: AudioSettings(), match: MatchSettings(),
-                             players: PlayerSettings(), initialTab: tab)
+                             players: PlayerSettings(), controls: ControlsSettings(),
+                             initialTab: tab, scrolls: false)
             .background(Color(white: 0.16))
             .environment(\.colorScheme, .dark)
         let renderer = ImageRenderer(content: panel)

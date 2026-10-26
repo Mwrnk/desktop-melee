@@ -2434,6 +2434,15 @@ extern "C" void pc_prefs_set_audio(float volume, float music, float sfx, bool mu
     pc_audio_set_reverb(prefs.reverb);
 }
 
+extern "C" void pc_prefs_get_ucf(bool* on, bool* locked) {
+    *on = pc_is_ucf_enabled();
+    *locked = std::getenv("MELEE_UCF") != nullptr;
+}
+
+extern "C" void pc_prefs_set_ucf(bool on) {
+    prefs.ucf = on;
+}
+
 extern "C" void pc_prefs_save(void) {
     std::string error;
     if (!launcher::save_preferences(config_path, prefs, error)) {

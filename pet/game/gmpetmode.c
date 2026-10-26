@@ -85,9 +85,16 @@ static void onEnterVs(GameModeState* state)
         start->players[i].slot_type =
             setup.players[i].cpu ? Gm_PKind_Cpu : Gm_PKind_Human;
         start->players[i].cpu_level = setup.players[i].cpu_level;
-        OSReport("pet: match P%d ckind %d costume %d %s level %d\n", (int) i + 1,
+        /* The controller port that plays a human (0 = the slot's own). */
+        if (!setup.players[i].cpu && setup.players[i].port >= 0 &&
+            setup.players[i].port < 4)
+        {
+            start->players[i].slot = (u8) (setup.players[i].port + 1);
+        }
+        OSReport("pet: match P%d ckind %d costume %d %s level %d port %d\n", (int) i + 1,
                  setup.players[i].ckind, setup.players[i].costume,
-                 setup.players[i].cpu ? "cpu" : "human", setup.players[i].cpu_level);
+                 setup.players[i].cpu ? "cpu" : "human", setup.players[i].cpu_level,
+                 setup.players[i].port + 1);
     }
     gm_LoadAnnouncer();
     pet_match_began();

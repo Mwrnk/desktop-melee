@@ -204,12 +204,15 @@ final class PlayerSettings: ObservableObject {
     private func push() {
         var setup = PetMatchSetup()
         pet_match_setup(&setup)
-        func game(_ p: Player) -> PetPlayerSetup {
-            PetPlayerSetup(ckind: Int32(p.ckind), costume: Int32(p.costume),
-                           cpu: p.cpu ? 1 : 0, cpu_level: Int32(p.level))
+        // Only this tab's fields: the port belongs to the Controls tab.
+        func apply(_ p: Player, to g: inout PetPlayerSetup) {
+            g.ckind = Int32(p.ckind)
+            g.costume = Int32(p.costume)
+            g.cpu = p.cpu ? 1 : 0
+            g.cpu_level = Int32(p.level)
         }
-        setup.players.0 = game(players[0])
-        setup.players.1 = game(players[1])
+        apply(players[0], to: &setup.players.0)
+        apply(players[1], to: &setup.players.1)
         pet_set_match_setup(&setup)
     }
 }
@@ -325,16 +328,16 @@ struct PlayerCard: View {
             MText("Level", size: 17)
                 .foregroundStyle(.secondary)
             Spacer()
-            Button { select(); players.setLevel(index, player.level - 1) } label: {
-                Image(systemName: "minus")
+            StepButton(symbol: "minus", enabled: player.level > 1) {
+                select()
+                players.setLevel(index, player.level - 1)
             }
-            .buttonStyle(.borderless)
             MText("\(player.level)", size: 19)
                 .frame(minWidth: 16)
-            Button { select(); players.setLevel(index, player.level + 1) } label: {
-                Image(systemName: "plus")
+            StepButton(symbol: "plus", enabled: player.level < 9) {
+                select()
+                players.setLevel(index, player.level + 1)
             }
-            .buttonStyle(.borderless)
         }
     }
 }
