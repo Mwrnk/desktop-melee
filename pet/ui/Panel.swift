@@ -77,12 +77,15 @@ enum PetTab: String, CaseIterable, Identifiable {
 struct PetPanel: View {
     @ObservedObject var audio: AudioSettings
     @ObservedObject var match: MatchSettings
+    @ObservedObject var players: PlayerSettings
     @ObservedObject private var assets = GameAssets.shared
     @State private var tab: PetTab
 
-    init(audio: AudioSettings, match: MatchSettings, initialTab: PetTab = .match) {
+    init(audio: AudioSettings, match: MatchSettings, players: PlayerSettings,
+         initialTab: PetTab = .match) {
         self.audio = audio
         self.match = match
+        self.players = players
         _tab = State(initialValue: initialTab)
     }
 
@@ -96,6 +99,7 @@ struct PetPanel: View {
             Group {
                 switch tab {
                 case .match: MatchTab(match: match)
+                case .players: PlayersTab(players: players, match: match)
                 case .sound: SoundTab(audio: audio)
                 default: ComingSoon(tab: tab)
                 }

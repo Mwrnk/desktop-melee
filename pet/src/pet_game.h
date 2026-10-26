@@ -78,6 +78,8 @@ void pet_asset_found(const char* tag, int index, const struct GcTexture* tex);
 #define PET_MAX_COSTUMES 6
 /* Roster entry i: character kind, costume count and face icon. */
 void pet_asset_roster(int i, int ckind, int costumes, const struct GcTexture* icon);
+/* How many costumes a character kind has (every playable kind, Sheik too). */
+void pet_asset_costumes(int ckind, int costumes);
 /* A character's portrait for one costume. */
 void pet_asset_portrait(int ckind, int costume, const struct GcTexture* portrait);
 /* The roster and font are loaded: tells the menu bar app. */

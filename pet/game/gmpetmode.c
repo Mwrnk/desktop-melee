@@ -2,6 +2,7 @@
 /* GM_PET (see gmpetmode.h). Built with the game code (melee_game). */
 #include "gmpetmode.h"
 
+#include <dolphin/os.h>
 #include <melee/gm/forward.h>
 #include <melee/gm/gm_1601.h>
 #include <melee/gm/gm_1A36.h>
@@ -84,6 +85,9 @@ static void onEnterVs(GameModeState* state)
         start->players[i].slot_type =
             setup.players[i].cpu ? Gm_PKind_Cpu : Gm_PKind_Human;
         start->players[i].cpu_level = setup.players[i].cpu_level;
+        OSReport("pet: match P%d ckind %d costume %d %s level %d\n", (int) i + 1,
+                 setup.players[i].ckind, setup.players[i].costume,
+                 setup.players[i].cpu ? "cpu" : "human", setup.players[i].cpu_level);
     }
     gm_LoadAnnouncer();
     pet_match_began();

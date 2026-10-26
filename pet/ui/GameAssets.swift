@@ -81,9 +81,10 @@ enum MenuSound: Int32 {
         pet_sound_menu(rawValue)
     }
 
-    /// The announcer calls out roster entry `index`'s name.
+    /// The announcer calls out roster entry `index`'s name. Not during a
+    /// match: the match swaps in its own sound banks.
     static func announce(rosterIndex index: Int) {
-        guard enabled, GameAssets.shared.ready else { return }
+        guard enabled, GameAssets.shared.ready, !pet_match_active() else { return }
         pet_sound_announce(Int32(index))
     }
 }
@@ -307,8 +308,9 @@ private func dumpSamples(to dir: String) {
         try? png.write(to: URL(fileURLWithPath: "\(dir)/font_sample_\(i).png"))
     }
     // The popover itself, rendered offscreen (no frosted background).
-    for tab in [PetTab.match, .sound] {
-        let panel = PetPanel(audio: AudioSettings(), match: MatchSettings(), initialTab: tab)
+    for tab in [PetTab.match, .players, .sound] {
+        let panel = PetPanel(audio: AudioSettings(), match: MatchSettings(),
+                             players: PlayerSettings(), initialTab: tab)
             .background(Color(white: 0.16))
             .environment(\.colorScheme, .dark)
         let renderer = ImageRenderer(content: panel)

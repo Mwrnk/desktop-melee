@@ -96,6 +96,18 @@ void pet_asset_roster(int i, int ckind, int costumes, const struct GcTexture* ic
     }
 }
 
+static int s_costumes[PET_CKIND_MAX];
+
+void pet_asset_costumes(int ckind, int costumes) {
+    if (ckind >= 0 && ckind < PET_CKIND_MAX) {
+        s_costumes[ckind] = costumes;
+    }
+}
+
+int pet_costume_count(int ckind) {
+    return ckind >= 0 && ckind < PET_CKIND_MAX ? s_costumes[ckind] : 0;
+}
+
 void pet_asset_portrait(int ckind, int costume, const struct GcTexture* portrait) {
     if (ckind < 0 || ckind >= PET_CKIND_MAX || costume < 0 || costume >= PET_MAX_COSTUMES ||
         portrait->data == NULL) {

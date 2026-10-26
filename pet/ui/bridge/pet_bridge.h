@@ -24,6 +24,8 @@ int pet_roster_count(void);
 bool pet_roster_entry(int i, int* ckind, int* costumes);
 const uint8_t* pet_roster_icon(int i, int* w, int* h);
 const uint8_t* pet_portrait(int ckind, int costume, int* w, int* h);
+/* Costumes a character kind has; 0 until the roster is loaded. */
+int pet_costume_count(int ckind);
 
 /* Melee's text font: character entries (Shift-JIS, atlas glyph, margins)
  * and the atlas glyphs' 32x32 coverage, one byte per pixel. */

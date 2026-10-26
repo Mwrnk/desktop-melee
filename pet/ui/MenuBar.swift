@@ -14,6 +14,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     private let popover = NSPopover()
     private let audio = AudioSettings()
     private let match = MatchSettings()
+    private let players = PlayerSettings()
     private weak var gameWindow: NSWindow?
     private var assetsReady: AnyCancellable?
 
@@ -29,7 +30,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         popover.behavior = .transient
         popover.animates = true
         popover.delegate = self
-        let hosting = NSHostingController(rootView: PetPanel(audio: audio, match: match))
+        let hosting = NSHostingController(rootView: PetPanel(audio: audio, match: match, players: players))
         // Size the popover from SwiftUI's layout, so it is placed for its real
         // height (otherwise the top can end up above the screen).
         hosting.sizingOptions = [.preferredContentSize]

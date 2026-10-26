@@ -311,6 +311,10 @@ void pet_assets_load_roster(void)
     aobj = portraits != NULL ? HSD_AObjLoadDesc(DP(HSD_AObjDesc, portraits->aobjdesc))
                              : NULL;
 
+    /* Every playable kind, including Sheik, who has no tile of their own. */
+    for (int ck = 0; ck < CKind_Playable_Count; ck++) {
+        pet_asset_costumes(ck, gm_GetNumCostumesForCKind((u8) ck));
+    }
     for (int i = 0; i < PET_ROSTER_SIZE; i++) {
         int counter = 0;
         int ckind = roster[i].ckind;
