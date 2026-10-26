@@ -13,6 +13,45 @@
 /* The overlay window, and the screen it is on (the menu's choice). */
 static NSWindow* s_overlay;
 
+/* Keeps the overlay click-through. SDL turns ignoresMouseEvents off whenever
+ * a transparent window without a shape gets a mouse-moved event
+ * (updateIgnoreMouseState in SDL_cocoawindow.m), and a full-screen window
+ * that takes clicks, above every app on every Space, locks the player out of
+ * their own desktop. */
+@interface PetClickThroughGuard : NSObject
+@end
+
+@implementation PetClickThroughGuard
+- (void)observeValueForKeyPath:(NSString*)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary*)change
+                       context:(void*)context {
+    NSWindow* window = object;
+    if (!window.ignoresMouseEvents) {
+        static bool logged = false;
+        if (!logged) {
+            logged = true;
+            SDL_Log("pet: overlay click-through was turned off; turned it back on");
+        }
+        window.ignoresMouseEvents = YES;
+    }
+}
+@end
+
+static PetClickThroughGuard* s_click_guard;
+
+void pet_mac_overlay_set_hidden(bool hidden) {
+    if (s_overlay == nil) {
+        return;
+    }
+    if (hidden) {
+        [s_overlay orderOut:nil];
+    } else {
+        s_overlay.ignoresMouseEvents = YES;
+        [s_overlay orderFrontRegardless];
+    }
+}
+
 static NSScreen* overlay_screen(void) {
     return s_overlay.screen != nil ? s_overlay.screen : NSScreen.mainScreen;
 }
@@ -25,8 +64,13 @@ void pet_overlay_mac_setup(SDL_Window* window) {
         return;
     }
     s_overlay = nswindow;
-    /* Clicks, drags and scrolls go to the windows underneath. */
+    /* Clicks, drags and scrolls go to the windows underneath, always. */
     nswindow.ignoresMouseEvents = YES;
+    s_click_guard = [PetClickThroughGuard new];
+    [nswindow addObserver:s_click_guard
+               forKeyPath:@"ignoresMouseEvents"
+                  options:NSKeyValueObservingOptionNew
+                  context:NULL];
     nswindow.opaque = NO;
     nswindow.backgroundColor = NSColor.clearColor;
     nswindow.hasShadow = NO;

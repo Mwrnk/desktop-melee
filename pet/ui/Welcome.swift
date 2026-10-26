@@ -50,12 +50,16 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         if step == .disc { startCandidateCheck() }
         let window = makeWindow()
         MainActor.assumeIsolated { dumpPhaseOne() }
+        // Until a disc is in, the overlay has nothing to show: hide it, so
+        // the whole desktop stays the player's.
+        pet_mac_overlay_set_hidden(true)
         NSApp.activate(ignoringOtherApps: true)
         window.center()
         window.makeKeyAndOrderFront(nil)
         modal = true
         NSApp.runModal(for: window)
         modal = false
+        pet_mac_overlay_set_hidden(false)
         return result
     }
 

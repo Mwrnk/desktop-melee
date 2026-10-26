@@ -12,6 +12,11 @@ void pc_prefs_save(void);
 /* The disc check (pet/src/disc_check.cpp). */
 #include "../../src/disc_check.h"
 
+/* Hide or show the game overlay (pet/src/overlay_mac.m). Hidden while the
+ * welcome window waits for a disc: nothing is drawn yet, and a full-screen
+ * window there only gets in the way. */
+void pet_mac_overlay_set_hidden(bool hidden);
+
 /* Ask the game to shut down cleanly. */
 void pet_request_quit(void);
 

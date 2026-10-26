@@ -17,6 +17,8 @@ void pet_after_menu_init(void);
 
 #ifdef __APPLE__
 void pet_overlay_mac_setup(SDL_Window* window);
+/* Hide or show the overlay window (the welcome window hides it). */
+void pet_mac_overlay_set_hidden(bool hidden);
 /* The Swift menu bar app (pet/ui/MenuBar.swift); takes the game's NSWindow. */
 void pet_ui_install(void* game_window);
 #endif
