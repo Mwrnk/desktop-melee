@@ -357,7 +357,10 @@ public func petUIAssetsReady() {
     GameAssets.shared.markReady()
     if let dir = ProcessInfo.processInfo.environment["MELEE_PET_DUMP"] {
         // The game calls this on the main thread.
-        MainActor.assumeIsolated { dumpSamples(to: dir) }
+        MainActor.assumeIsolated {
+            dumpSamples(to: dir)
+            WelcomeController.dumpPhaseTwo(to: dir)
+        }
     }
 }
 

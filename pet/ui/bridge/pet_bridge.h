@@ -17,6 +17,13 @@ void pc_prefs_save(void);
  * window there only gets in the way. */
 void pet_mac_overlay_set_hidden(bool hidden);
 
+/* The welcome window (pet/ui/Welcome.swift): buttons held on a controller
+ * port (HSD_PAD_* bits; pet/game/gmpetmode.c) and a keyboard binding's key
+ * name (pet.c). pet_set_start_starts_match is in pet_game.h. */
+#include <stdint.h>
+uint32_t pet_pad_buttons(int port);
+const char* pet_key_name(int slot);
+
 /* Ask the game to shut down cleanly. */
 void pet_request_quit(void);
 

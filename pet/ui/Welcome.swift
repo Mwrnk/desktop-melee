@@ -3,6 +3,7 @@
 // player's own disc (checked, only a clean USA 1.02 passes), then how to
 // play. Steps 1-2 run modally before the game boots, from pet_choose_disc.
 import AppKit
+import Combine
 import PetBridge
 import SwiftUI
 import UniformTypeIdentifiers
@@ -28,6 +29,22 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     @Published var oldPath: String?
     /// An offscreen sample for MELEE_PET_DUMP renders, not the live window.
     var isSample = false
+    /// Phase 2: the disc is in and the game is booting ("Getting Melee ready").
+    @Published var loading = false
+    /// Step 3: who pressed a button, by controller port.
+    @Published var pressed: [PortPress] = []
+    @Published var keyboardOpen = false
+
+    struct PortPress: Identifiable, Equatable {
+        let port: Int
+        let name: String
+        var id: Int { port }
+    }
+
+    private var firstRun = false
+    private var assetsReady: AnyCancellable?
+    private var padTimer: Timer?
+    private var lastButtons = [UInt32](repeating: 0, count: 4)
 
     private var window: NSWindow?
     private var check: OpaquePointer?
@@ -42,6 +59,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     /// verified disc, or nil when the player closed the window.
     func runDiscPhase(candidate: String?, firstRun: Bool) -> String? {
         self.candidate = candidate.flatMap { $0.isEmpty ? nil : $0 }
+        self.firstRun = firstRun
         result = nil
         disc = .empty
         findAgain = !firstRun
@@ -60,6 +78,9 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         NSApp.runModal(for: window)
         modal = false
         pet_mac_overlay_set_hidden(false)
+        if result != nil, loading {
+            beginPhaseTwo(window)
+        }
         return result
     }
 
@@ -149,8 +170,76 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         DiscMemory.remember(path)
         result = path
         modal = false
+        // The first run goes on to how to play once the game is up.
+        loading = firstRun
         NSApp.stopModal()
-        window?.orderOut(nil)
+        if !firstRun { window?.orderOut(nil) }
+    }
+
+    // MARK: Phase 2
+
+    /// The game boots under "Getting Melee ready"; once its assets (emblem,
+    /// sounds) are decoded, the window comes alive on step 3.
+    private func beginPhaseTwo(_ window: NSWindow) {
+        // Not modal any more: stay above the game overlay.
+        window.level = .popUpMenu
+        // "Press any button" must not start a match underneath.
+        pet_set_start_starts_match(false)
+        assetsReady = GameAssets.shared.$ready.sink { [weak self] ready in
+            guard ready else { return }
+            // @Published announces before the value changes.
+            DispatchQueue.main.async { self?.reveal() }
+        }
+    }
+
+    private func reveal() {
+        guard loading else { return }
+        assetsReady = nil
+        loading = false
+        step = .controls
+        MenuSound.confirm.play()
+        startPadPolling()
+    }
+
+    private func startPadPolling() {
+        padTimer?.invalidate()
+        lastButtons = (0..<4).map { pet_pad_buttons(Int32($0)) }
+        let timer = Timer(timeInterval: 1.0 / 30, repeats: true) { [weak self] _ in self?.pollPads() }
+        RunLoop.main.add(timer, forMode: .common)
+        padTimer = timer
+    }
+
+    private func pollPads() {
+        guard step == .controls else { return }
+        for port in 0..<4 {
+            let held = pet_pad_buttons(Int32(port))
+            let newlyPressed = held & ~lastButtons[port]
+            lastButtons[port] = held
+            guard newlyPressed != 0, !pressed.contains(where: { $0.port == port }) else { continue }
+            let device = String(cString: pet_port_device(Int32(port)))
+            let name = device.isEmpty ? (port == 0 ? "Keyboard" : "Controller") : device
+            pressed.append(PortPress(port: port, name: name))
+            pressed.sort { $0.port < $1.port }
+            MenuSound.move.play()
+        }
+    }
+
+    /// Which device card a press lights up.
+    enum DeviceKind { case gameCube, otherPad, keyboard }
+
+    static func kind(of name: String) -> DeviceKind {
+        if name == "Keyboard" { return .keyboard }
+        if name.localizedCaseInsensitiveContains("GameCube") || name.localizedCaseInsensitiveContains("WaveBird") {
+            return .gameCube
+        }
+        return .otherPad
+    }
+
+    private func endPhaseTwo() {
+        padTimer?.invalidate()
+        padTimer = nil
+        assetsReady = nil
+        pet_set_start_starts_match(true)
     }
 
     // MARK: Window
@@ -177,6 +266,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         stopCheck()
+        endPhaseTwo()
         if modal {
             // Closed before a disc was accepted: the game quits.
             result = nil
@@ -208,6 +298,25 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
             sample.oldPath = again ? "/Users/you/Downloads/Melee.iso" : nil
             WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/\(name).png")
         }
+    }
+
+    /// MELEE_PET_DUMP: steps 3+ and the loading screen, once the game is up
+    /// (called from pet_ui_assets_ready on any boot).
+    @MainActor
+    static func dumpPhaseTwo(to dir: String) {
+        let sample = WelcomeController()
+        sample.isSample = true
+        sample.step = .controls
+        sample.pressed = [PortPress(port: 0, name: "GameCube controller"),
+                          PortPress(port: 1, name: "DualSense Wireless Controller")]
+        WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_3.png")
+        sample.keyboardOpen = true
+        WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_3_keyboard.png")
+        let loading = WelcomeController()
+        loading.isSample = true
+        loading.step = .disc
+        loading.loading = true
+        WelcomeController.dump(WelcomeView(controller: loading), to: "\(dir)/welcome_loading.png")
     }
 
     @MainActor

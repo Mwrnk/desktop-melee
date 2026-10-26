@@ -131,10 +131,22 @@ void gm_Scene_PetIdle_OnExit(void* unused) {}
  * for, from the menu bar or with Start on any controller. */
 void gm_Scene_PetIdle_OnFrame(void)
 {
-    if ((gm_GetButtonsTriggered(PAD_MAX_CONTROLLERS) & HSD_PAD_START) != 0) {
+    if ((gm_GetButtonsTriggered(PAD_MAX_CONTROLLERS) & HSD_PAD_START) != 0 &&
+        pet_start_starts_match())
+    {
         pet_request_match();
     }
     if (pet_match_wanted()) {
         gm_801A4B60();
     }
+}
+
+/* The buttons held on controller port 0..3 (HSD_PAD_* bits), for the welcome
+ * window's "press any button". */
+u32 pet_pad_buttons(int port)
+{
+    if (port < 0 || port >= PAD_MAX_CONTROLLERS) {
+        return 0;
+    }
+    return HSD_PadMasterStatus[port].button;
 }

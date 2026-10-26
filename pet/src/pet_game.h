@@ -63,6 +63,10 @@ typedef struct PetMatchSetup {
 void pet_match_setup(PetMatchSetup* out);
 /* Ask for a match: starts one from idle, restarts a running one. */
 void pet_request_match(void);
+/* Whether Start on a controller begins a match from idle (off while the
+ * welcome window asks the player to press buttons). */
+bool pet_start_starts_match(void);
+void pet_set_start_starts_match(bool on);
 /* Idle scene: a match has been asked for. */
 bool pet_match_wanted(void);
 /* VS scene: a new match was asked for while this one runs. */

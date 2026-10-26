@@ -14,6 +14,7 @@
 
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_hints.h>
+#include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_timer.h>
 
@@ -386,6 +387,21 @@ void pet_match_setup(PetMatchSetup* out) { *out = s_setup; }
 void pet_set_match_setup(const PetMatchSetup* setup) { s_setup = *setup; }
 
 void pet_request_match(void) { s_match_requested = true; }
+
+static bool s_start_starts_match = true;
+bool pet_start_starts_match(void) { return s_start_starts_match; }
+void pet_set_start_starts_match(bool on) { s_start_starts_match = on; }
+
+/* A keyboard binding's key name ("X", "Up", "Tab"), slot as in
+ * pc_get_key_binding: A B X Y Start Z L R, D-pad up down left right, stick
+ * right left up down, C-stick right left up down, analog L R. */
+const char* pet_key_name(int slot) {
+    if (slot < 0 || slot > 21) {
+        return "";
+    }
+    const char* name = SDL_GetScancodeName((SDL_Scancode)pc_get_key_binding(slot));
+    return name != NULL ? name : "";
+}
 
 bool pet_match_wanted(void) { return s_match_requested && !s_in_match; }
 

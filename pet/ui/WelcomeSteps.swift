@@ -3,19 +3,26 @@
 // font (bundled with the app, so it is there before the disc). The emblem and
 // sounds still come from the disc.
 import AppKit
+import PetBridge
 import SwiftUI
 
 struct WelcomeView: View {
     @ObservedObject var controller: WelcomeController
+    @ObservedObject private var assets = GameAssets.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Group {
-                switch controller.step {
-                case .welcome: WelcomeIntroStep(controller: controller)
-                case .disc: WelcomeDiscStep(controller: controller)
-                default: EmptyView()
+                if controller.loading {
+                    WelcomeLoading()
+                } else {
+                    switch controller.step {
+                    case .welcome: WelcomeIntroStep(controller: controller)
+                    case .disc: WelcomeDiscStep(controller: controller)
+                    case .controls: WelcomeControlsStep(controller: controller)
+                    default: EmptyView()
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -30,9 +37,16 @@ struct WelcomeView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Image(nsImage: NSApp.applicationIconImage)
-                .resizable()
-                .frame(width: 30, height: 30)
+            // The Smash emblem once the game has decoded it from the disc.
+            if assets.ready, let emblem = GameImages.template("emblem", height: 28) {
+                Image(nsImage: emblem)
+                    .renderingMode(.template)
+                    .frame(width: 30, height: 30)
+            } else {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 30, height: 30)
+            }
             MText("Desktop Melee", size: 24)
             Spacer()
             MText("\(controller.step.rawValue) of \(WelcomeStep.allCases.count)", size: 17)
@@ -283,5 +297,154 @@ struct DropTarget: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+// MARK: - Getting Melee ready
+
+/// Between the disc and step 3: the game boots and decodes its assets.
+struct WelcomeLoading: View {
+    var body: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            Image(systemName: "opticaldisc")
+                .font(.system(size: 44))
+                .foregroundStyle(.secondary)
+                .symbolEffect(.pulse)
+            MText("Getting Melee ready...", size: 26)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - 3. Controls
+
+struct WelcomeControlsStep: View {
+    @ObservedObject var controller: WelcomeController
+
+    private static let playerColors = [PlayerColor.p1, PlayerColor.p2,
+                                       Color(red: 0.95, green: 0.75, blue: 0.15),
+                                       Color(red: 0.25, green: 0.70, blue: 0.35)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            MText("Grab a controller", size: 31)
+            HStack(spacing: 8) {
+                card(.gameCube, symbol: "gamecontroller.fill", title: "GameCube",
+                     detail: "Official adapter, or one in Wii U mode")
+                card(.otherPad, symbol: "gamecontroller", title: "Xbox, PS, Switch",
+                     detail: "USB or Bluetooth")
+                card(.keyboard, symbol: "keyboard", title: "Keyboard",
+                     detail: controller.keyboardOpen ? "Hide the keys" : "See the keys")
+                    .onTapGesture { controller.keyboardOpen.toggle() }
+            }
+            if controller.keyboardOpen {
+                keyboardKeys
+            } else {
+                presses
+            }
+            Spacer(minLength: 0)
+            WelcomeButton("Continue") { controller.goTo(.permission) }
+        }
+    }
+
+    private func color(_ port: Int) -> Color { Self.playerColors[min(port, 3)] }
+
+    /// The first player whose press matches this kind of device.
+    private func lit(_ kind: WelcomeController.DeviceKind) -> Int? {
+        controller.pressed.first { WelcomeController.kind(of: $0.name) == kind }?.port
+    }
+
+    private func card(_ kind: WelcomeController.DeviceKind, symbol: String, title: String,
+                      detail: String) -> some View {
+        let port = lit(kind)
+        return VStack(spacing: 5) {
+            Image(systemName: symbol)
+                .font(.system(size: 22))
+                .foregroundStyle(port.map { color($0) } ?? .secondary)
+                .frame(height: 26)
+            MText(title, size: fittedSize(title, size: 17, width: 112))
+            MParagraph(detail, size: 14, width: 112)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 100, alignment: .top)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.primary.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(port.map { color($0) } ?? .clear, lineWidth: 2)
+        )
+        .contentShape(Rectangle())
+    }
+
+    private var presses: some View {
+        Section(title: "Press any button") {
+            if controller.pressed.isEmpty {
+                MParagraph("Press a button on each controller, or a key, to see who's who.",
+                           size: 17, width: 360)
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(controller.pressed) { press in
+                HStack(spacing: 10) {
+                    MText("P\(press.port + 1)", size: 22)
+                        .foregroundStyle(color(press.port))
+                    MText(press.name, size: fittedSize(press.name, size: 19, width: 270))
+                    Spacer()
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+            }
+            MParagraph("Ports can be changed in the menu bar's Controls tab.", size: 15, width: 360)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func key(_ slot: Int32) -> String { String(cString: pet_key_name(slot)) }
+
+    /// The stick and C-stick keys, read live from the bindings.
+    private var stickKeys: String {
+        let keys = [14, 13, 15, 12].map { key(Int32($0)) } // up left down right
+        if keys == ["Up", "Left", "Down", "Right"] { return "Arrow keys or W A S D" }
+        return keys.joined(separator: " ")
+    }
+
+    private var cStickKeys: String {
+        [18, 17, 19, 16].map { key(Int32($0)) }.joined(separator: " ")
+    }
+
+    private var keyboardKeys: some View {
+        Section(title: "Keyboard") {
+            let buttons: [(badge: Int, slot: Int32)] = [(0, 0), (1, 1), (2, 2), (3, 3), (4, 5), (5, 6), (6, 7)]
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 3) {
+                ForEach(buttons, id: \.badge) { b in
+                    HStack(spacing: 8) {
+                        PadBadge(button: b.badge)
+                        MText(key(b.slot), size: 18)
+                    }
+                }
+                HStack(spacing: 8) {
+                    MText("Start", size: 16).foregroundStyle(.secondary)
+                    MText(key(4), size: 18)
+                }
+            }
+            keyRow("Stick", stickKeys)
+            keyRow("C-stick", cStickKeys)
+            MParagraph("The keyboard works while Desktop Melee is the active app.", size: 15, width: 360)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func keyRow(_ label: String, _ keys: String) -> some View {
+        HStack(spacing: 10) {
+            MText(label, size: 16).foregroundStyle(.secondary)
+                .frame(width: 70, alignment: .leading)
+            MText(keys, size: fittedSize(keys, size: 18, width: 280))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
