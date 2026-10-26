@@ -61,6 +61,20 @@ check "PAL disc" "1" "European (PAL)" "${DIR}/pal.iso"
 check "revision 0" "1" "Unsupported revision" "${DIR}/rev0.iso"
 check "modified USA 1.02" "2" "modified or is a bad copy" "${DIR}/fake.iso"
 
+# Closing the window or dropping another file frees a running check: it must
+# stop promptly and cleanly.
+START=$(date +%s)
+out="$("${BIN}" --cancel-after-ms 300 "${DIR}/fake.iso" 2>&1)"
+code=$?
+ELAPSED=$(( $(date +%s) - START ))
+if [[ ${code} -eq 4 && "${out}" == canceled* && ${ELAPSED} -le 2 ]]; then
+    echo "ok   cancel mid-check: ${out} (${ELAPSED} s)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL cancel mid-check: exit ${code} (want 4), output: ${out}, ${ELAPSED} s (want <= 2)"
+    FAIL=$((FAIL + 1))
+fi
+
 CFG="${HOME}/Library/Application Support/melee-pc/launcher.cfg"
 REAL="$(sed -n 's/^disc "\(.*\)"$/\1/p' "${CFG}" 2> /dev/null | head -1)"
 if [[ -n "${REAL}" && -f "${REAL}" ]]; then
