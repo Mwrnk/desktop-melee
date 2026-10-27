@@ -21,11 +21,11 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>@MELEE_VERSION@</string>
+    <string>@DESKTOP_MELEE_VERSION@</string>
     <key>CFBundleVersion</key>
-    <string>@MELEE_VERSION@</string>
+    <string>@DESKTOP_MELEE_VERSION@</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>27.0</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.games</string>
     <key>NSHighResolutionCapable</key>

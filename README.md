@@ -44,8 +44,9 @@ into Melee's world, the menu bar app, and every file.
 
 ## Requirements
 
-- A Mac. Tested on Apple silicon with macOS 27; older macOS versions and
-  Intel Macs are untested. The Light/Dark app icon needs macOS 26 or later.
+- A Mac with Apple silicon and macOS 27 or later. The build links against
+  macOS 27 libraries, so the app does not open on older versions; Intel Macs
+  are untested.
 - Xcode (for Swift, `actool` and the macOS SDK) and these
   [Homebrew](https://brew.sh) packages:
   `brew install gcc cmake ninja sdl3 zstd libpng freetype`. GCC is required:

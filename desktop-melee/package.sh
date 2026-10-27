@@ -23,10 +23,12 @@ BUILD_DIR="${BUILD_DIR}" tools/package_macos.sh
 echo "=== Making ${APP} ==="
 rm -rf "${APP}"
 mv "${BUILD_DIR}/Melee.app" "${APP}"
-VERSION="$(cat VERSION)"
+# Desktop Melee's own version (desktop-melee/VERSION); the root VERSION file is
+# the melee-pc release this is built on.
+VERSION="$(cat desktop-melee/VERSION)"
 VERSION="${VERSION#v}"
 VERSION="${VERSION%%-*}"
-sed "s/@MELEE_VERSION@/${VERSION}/g" desktop-melee/macos/Info.plist > "${APP}/Contents/Info.plist"
+sed "s/@DESKTOP_MELEE_VERSION@/${VERSION}/g" desktop-melee/macos/Info.plist > "${APP}/Contents/Info.plist"
 
 # Melee's font, saved from the disc on the first boot (desktop-melee/ui/GameAssets.swift),
 # so the welcome window has it before any disc is in.

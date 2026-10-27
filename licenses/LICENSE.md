@@ -57,6 +57,10 @@ change is tagged `desktop-melee` in a comment and listed in
 
 - Build: `CMakeLists.txt` (includes `desktop-melee/desktop-melee.cmake`), `.gitignore`.
 - Port code: `src/pc/main.c`, `src/pc/launcher.cpp`.
+- Repository: `.github/workflows/build.yml` (manual only, release job removed),
+  `.github/ISSUE_TEMPLATE/`; `.github/RELEASE_NOTES.md` and
+  `.github/workflows/pages.yml` removed; melee-pc's `README.md` is now
+  `MELEE-PC.md`.
 - aurora: `extern/aurora/include/aurora/aurora.h`, `extern/aurora/lib/aurora.cpp`,
   `extern/aurora/lib/window.cpp`, `extern/aurora/lib/webgpu/gpu.cpp`,
   `extern/aurora/lib/webgpu/gpu.hpp`, `extern/aurora/lib/gx/gx.cpp`,
