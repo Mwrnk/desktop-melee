@@ -28,7 +28,16 @@ mv "${BUILD_DIR}/Melee.app" "${APP}"
 VERSION="$(cat desktop-melee/VERSION)"
 VERSION="${VERSION#v}"
 VERSION="${VERSION%%-*}"
-sed "s/@DESKTOP_MELEE_VERSION@/${VERSION}/g" desktop-melee/macos/Info.plist > "${APP}/Contents/Info.plist"
+# The oldest macOS this build opens on: whatever the compiler stamped into the
+# binary, which is the macOS of the Mac that built it (no deployment target is
+# set, and Homebrew's libraries are built for that macOS too).
+MIN_MACOS="$(vtool -show-build "${APP}/Contents/MacOS/melee" | awk '/minos/ { print $2; exit }')"
+if [[ -z "${MIN_MACOS}" ]]; then
+    echo "error: cannot read the minimum macOS from ${APP}/Contents/MacOS/melee" >&2
+    exit 1
+fi
+sed -e "s/@DESKTOP_MELEE_VERSION@/${VERSION}/g" -e "s/@DESKTOP_MELEE_MIN_MACOS@/${MIN_MACOS}/g" \
+    desktop-melee/macos/Info.plist > "${APP}/Contents/Info.plist"
 
 # Melee's font, saved from the disc on the first boot (desktop-melee/ui/GameAssets.swift),
 # so the welcome window has it before any disc is in.

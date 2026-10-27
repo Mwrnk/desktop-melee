@@ -44,9 +44,9 @@ into Melee's world, the menu bar app, and every file.
 
 ## Requirements
 
-- A Mac with Apple silicon and macOS 27 or later. The build links against
-  macOS 27 libraries, so the app does not open on older versions; Intel Macs
-  are untested.
+- A Mac with Apple silicon. Tested on macOS 27 only. You build the app on
+  your own Mac and it runs on that macOS; older versions and Intel Macs are
+  untested. Building needs Xcode 26 or later, for the Icon Composer app icon.
 - Xcode (for Swift, `actool` and the macOS SDK) and these
   [Homebrew](https://brew.sh) packages:
   `brew install gcc cmake ninja sdl3 zstd libpng freetype`. GCC is required:
