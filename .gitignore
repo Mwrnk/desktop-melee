@@ -47,3 +47,6 @@ mods/*
 # CTest temporary files
 Testing/
 
+
+# macOS Finder metadata
+.DS_Store
