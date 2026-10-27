@@ -32,6 +32,8 @@ void pet_ax_request(void);
 void pet_relayout(void);
 bool pet_dock_exact(void);
 
+/* Pause and hide (pet_game.h: pet_toggle_pause_and_hide, pet_hidden). */
+
 /* Ask the game to shut down cleanly. */
 void pet_request_quit(void);
 

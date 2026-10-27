@@ -32,7 +32,8 @@ if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
             pet/ui/Emblem.swift
             pet/ui/DiscMemory.swift
             pet/ui/Welcome.swift
-            pet/ui/WelcomeSteps.swift)
+            pet/ui/WelcomeSteps.swift
+            pet/ui/Hotkey.swift)
     set_target_properties(pet_ui PROPERTIES
             Swift_MODULE_NAME PetUI
             Swift_LANGUAGE_VERSION 5)
@@ -43,7 +44,7 @@ if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
             "SHELL:-I ${CMAKE_CURRENT_SOURCE_DIR}/pet/ui/bridge")
     set_property(TARGET pet_ui PROPERTY COMPILE_DEFINITIONS "")
     target_link_libraries(melee PRIVATE pet_ui
-            "-framework SwiftUI" "-framework Combine")
+            "-framework SwiftUI" "-framework Combine" "-framework Carbon")
     # The game links with clang++, not swiftc (which CMake would pick for a
     # target with a Swift dependency), so point it at the Swift runtime the
     # Swift objects autolink against.

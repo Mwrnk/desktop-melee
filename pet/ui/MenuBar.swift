@@ -97,6 +97,7 @@ public func petUIInstall(_ gameWindow: UnsafeMutableRawPointer?) {
     let window = gameWindow.map { Unmanaged<NSWindow>.fromOpaque($0).takeUnretainedValue() }
     let controller = MenuBarController(gameWindow: window)
     MenuBarController.shared = controller
+    PauseHotkey.install()
     // Accessory apps are not made active at launch; do it so the game window
     // gets keyboard focus (melee-pc ignores keys while it is unfocused).
     NSApp.activate(ignoringOtherApps: true)

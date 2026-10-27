@@ -17,6 +17,8 @@ final class MatchSettings: ObservableObject {
         didSet { Self.defaults.set(minutes, forKey: "match.minutes"); push() }
     }
     @Published private(set) var active = false
+    /// Pause and hide is on: the fighters are hidden.
+    @Published private(set) var hidden = false
 
     init() {
         let d = Self.defaults
@@ -27,6 +29,7 @@ final class MatchSettings: ObservableObject {
 
     func refresh() {
         active = pet_match_active()
+        hidden = pet_hidden()
     }
 
     func startOrRestart() {
@@ -65,6 +68,8 @@ struct MatchTab: View {
                 .foregroundStyle(.white)
             }
             .buttonStyle(.plain)
+
+            PauseAndHideRow(hidden: match.hidden)
 
             Section(title: "Rules") {
                 StepperRow(symbol: "heart.fill", label: "Stocks",
@@ -140,5 +145,78 @@ struct StepperRow: View {
                 }
             }
         }
+    }
+}
+
+/// Pause and hide, under Start: a button, and its global shortcut, which
+/// can be changed by clicking it and pressing new keys.
+struct PauseAndHideRow: View {
+    let hidden: Bool
+    @State private var shortcut = PauseHotkey.display
+    @State private var recording = false
+    @State private var monitor: Any?
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button {
+                MenuSound.confirm.play()
+                pet_toggle_pause_and_hide()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: hidden ? "eye" : "eye.slash")
+                    MText(hidden ? "Show" : "Pause and hide", size: 19)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.primary.opacity(0.1))
+                )
+            }
+            .buttonStyle(.plain)
+            Button {
+                recording ? stopRecording() : startRecording()
+            } label: {
+                MText(recording ? "Press keys..." : shortcut, size: 18)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(recording ? Color.accentColor : Color.primary.opacity(0.25),
+                                          lineWidth: 1.5)
+                    )
+            }
+            .buttonStyle(.plain)
+            .help("Click, then press a new shortcut (with Control, Option or Command)")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: PauseHotkey.changed)) { _ in
+            shortcut = PauseHotkey.display
+        }
+        .onDisappear { stopRecording() }
+    }
+
+    private func startRecording() {
+        recording = true
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == 53 { // Escape: keep the old shortcut
+                stopRecording()
+                return nil
+            }
+            guard let mods = PauseHotkey.carbonMods(event.modifierFlags) else {
+                NSSound.beep()
+                return nil
+            }
+            PauseHotkey.set(keyCode: UInt32(event.keyCode), mods: mods,
+                            label: PauseHotkey.label(for: event))
+            MenuSound.confirm.play()
+            stopRecording()
+            return nil
+        }
+    }
+
+    private func stopRecording() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        recording = false
     }
 }
