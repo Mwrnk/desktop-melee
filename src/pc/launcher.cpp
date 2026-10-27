@@ -10,6 +10,8 @@
 #include "net.h"
 #include "pc.h"
 #include "android_hooks.h"
+/* melee-pet (pet/src/pet_game.h). */
+extern "C" bool pet_overlay_enabled(void);
 #include <RmlUi/Core/Elements/ElementFormControl.h>
 #include <aurora/dvd.h>
 #include <aurora/event.h>
@@ -935,7 +937,9 @@ public:
         text("app-version", pc::get_app_version());
         text("check-status", "Current version: " + pc::get_app_version());
         text("disc-note", disc_note);
-        if (prefs.check_updates) {
+        /* melee-pet: Desktop Melee is not a melee-pc release, so it never
+         * asks melee-pc's GitHub releases for an update. */
+        if (prefs.check_updates && !pet_overlay_enabled()) {
             pc::updater::check_for_updates_async(true);
         }
         controls();

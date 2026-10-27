@@ -33,6 +33,8 @@ sed "s/@MELEE_VERSION@/${VERSION}/g" pet/macos/Info.plist > "${APP}/Contents/Inf
 FONT="${HOME}/Library/Application Support/Desktop Melee/melee-font.bin"
 if [[ -f "${FONT}" ]]; then
     cp "${FONT}" "${APP}/Contents/Resources/melee-font.bin"
+    echo "note: the app now holds Melee's font from your disc (Nintendo's); keep this" \
+        "build to yourself and never upload it" >&2
 else
     echo "warning: no ${FONT} yet; boot the game once and package again to bundle Melee's font" >&2
 fi

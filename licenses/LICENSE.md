@@ -44,14 +44,51 @@ for this port.
 
 The full text is in [`COPYING`](COPYING).
 
+### Desktop Melee
+
+`pet/` is Desktop Melee, the desktop overlay built on melee-pc. It is under
+the same GPL-3.0-or-later terms.
+
+    Copyright (C) 2026 Mateus Werneck
+
+Desktop Melee also changes these melee-pc files (GPL-3.0 section 5a). Each
+change is tagged `melee-pet` in a comment and listed in
+[`docs/desktop-melee/how-it-works.md`](../docs/desktop-melee/how-it-works.md#where-desktop-melee-touches-melee-pc):
+
+- Build: `CMakeLists.txt` (includes `pet/pet.cmake`), `.gitignore`.
+- Port code: `src/pc/main.c`, `src/pc/launcher.cpp`.
+- aurora: `extern/aurora/include/aurora/aurora.h`, `extern/aurora/lib/aurora.cpp`,
+  `extern/aurora/lib/window.cpp`, `extern/aurora/lib/webgpu/gpu.cpp`,
+  `extern/aurora/lib/webgpu/gpu.hpp`, `extern/aurora/lib/gx/gx.cpp`,
+  `extern/aurora/lib/gx/gx.hpp`, `extern/aurora/lib/gx/pipeline.hpp`,
+  `extern/aurora/lib/gx/command_processor.cpp`,
+  `extern/aurora/lib/gfx/recording.cpp`,
+  `extern/aurora/lib/dolphin/gx/GXFrameBuffer.cpp`,
+  `extern/aurora/cmake/AuroraSDL3Provider.cmake`,
+  `extern/aurora/cmake/patches/apply-sdl3-macos-libusb-claim.cmake`.
+- Game code (section 1, still not licensed; the hooks are small and marked):
+  `src/melee/cm/camera.c`, `src/melee/ft/fighter.c`,
+  `src/melee/ft/kinds/ftCommon/ftCo_Jump.c`,
+  `src/melee/ft/kinds/ftCommon/ftCo_JumpAerial.c`,
+  `src/melee/ft/kinds/ftCommon/ftCo_JumpAerialF1.c`, `src/melee/gm/forward.h`,
+  `src/melee/gm/gmboot.c`, `src/melee/gm/gmscdata.c`, `src/melee/gm/gmvs.c`,
+  `src/melee/gr/grdisplay.c`, `src/melee/gr/ground.c`, `src/melee/if/ifall.c`,
+  `src/melee/if/ifnametag.c`, `src/melee/if/ifstatus.c`,
+  `src/melee/if/ifstock.c`, `src/melee/if/iftime.c`, `src/melee/mp/mplib.c`,
+  `src/sysdolphin/baselib/displayfunc.c`.
+
 ## 3. Third-party components
 
 - `extern/aurora/` — aurora, MIT. See `extern/aurora/LICENSE`.
 - `resources/font.ttf`, `resources/font-bold.ttf` — Liberation Sans, SIL Open
   Font License. See `resources/FONT-LICENSE.txt`.
 - `platforms/android/app/src/main/java/org/libsdl/` — SDL3, zlib license.
+- `extern/dht/dht.c`, `extern/dht/dht.h` — jech/dht, MIT (notice in the files).
+- `extern/dht/sha1.c`, `extern/dht/sha1.h` — Steve Reid's SHA-1, public domain.
+- `extern/monocypher/` — Monocypher 4.0.3, BSD-2-Clause or CC0 (notice in the
+  files).
 - Dawn, SDL3, nod, RmlUi and the other dependencies are fetched at build time
   under their own licenses.
 
-MIT, zlib and the SIL OFL are all GPL-3.0 compatible, so combining them with
-the port code in section 2 is fine.
+MIT, zlib, BSD-2-Clause, CC0, public domain and the SIL OFL are all GPL-3.0
+compatible, so combining them with the port code in section 2 is fine.

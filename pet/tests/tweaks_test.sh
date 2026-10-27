@@ -1,5 +1,5 @@
 #!/bin/bash
-# Tests the Display and Pause tweaks (pet/tweaks-design.md) on the installed
+# Tests the Display tab tweaks and Pause and hide on the installed
 # Desktop Melee.app. Each case starts a real match through MELEE_KEY_FIFO
 # with MELEE_PET_TRACE=1 and checks the game's "pet: trace" lines. It takes
 # over the screen for about 30 s per case. Settings are changed one key at a

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The welcome window (pet/onboarding-design.md): what Desktop Melee is, the
+// The welcome window: what Desktop Melee is, the
 // player's own disc (checked, only a clean USA 1.02 passes), then how to
 // play. Steps 1-2 run modally before the game boots, from pet_choose_disc.
 import AppKit
