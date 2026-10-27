@@ -2,7 +2,9 @@
 # Starts a match on the installed Desktop Melee.app (it takes over the screen
 # for about 25 s) and checks that the notch island sits in the menu bar, flush
 # with the top of the screen, not pushed down below it. Needs the disc from
-# launcher.cfg; your melee-pet settings are saved and restored around the run.
+# launcher.cfg. It only adds the settings it needs (the disc remembered as
+# checked, the welcome done, the island on) when they're missing, and takes
+# back only what it added, so it never undoes the player's own progress.
 #
 # Usage: pet/tests/island_test.sh   (after pet/package.sh)
 set -uo pipefail
@@ -19,11 +21,16 @@ if [[ ! -f "${DISC}" ]]; then
     exit 0
 fi
 DIR="$(mktemp -d)"
-defaults export melee-pet "${DIR}/settings.plist"
+ADDED=()
+ISLAND_WAS=""
 restore() {
     exec 3>&- 2> /dev/null
-    defaults delete melee-pet 2> /dev/null
-    defaults import melee-pet "${DIR}/settings.plist"
+    for key in ${ADDED[@]+"${ADDED[@]}"}; do
+        defaults delete melee-pet "${key}" 2> /dev/null
+    done
+    if [[ "${ISLAND_WAS}" == "0" ]]; then
+        defaults write melee-pet display.island -bool false
+    fi
     rm -rf "${DIR}"
 }
 trap restore EXIT
@@ -37,9 +44,18 @@ UserDefaults(suiteName: "melee-pet")!.set(
     ["path": path, "size": (a[.size] as! NSNumber).intValue,
      "mtime": (a[.modificationDate] as! Date).timeIntervalSince1970], forKey: "disc.verified")
 SWIFT
-swift "${DIR}/remember.swift" "${DISC}" 2> /dev/null
-defaults write melee-pet onboarding.done -bool true
-defaults write melee-pet display.island -bool true
+if ! defaults read melee-pet disc.verified > /dev/null 2>&1; then
+    swift "${DIR}/remember.swift" "${DISC}" 2> /dev/null
+    ADDED+=(disc.verified)
+fi
+if [[ "$(defaults read melee-pet onboarding.done 2> /dev/null)" != "1" ]]; then
+    defaults write melee-pet onboarding.done -bool true
+    ADDED+=(onboarding.done)
+fi
+ISLAND_WAS="$(defaults read melee-pet display.island 2> /dev/null)"
+if [[ "${ISLAND_WAS}" == "0" ]]; then
+    defaults write melee-pet display.island -bool true
+fi
 
 mkfifo "${DIR}/keys"
 env MELEE_KEY_FIFO="${DIR}/keys" MELEE_PET_LOG="${DIR}/log" pet/run-overlay.sh > /dev/null 2>&1 &
