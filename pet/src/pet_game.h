@@ -30,6 +30,16 @@ void pet_set_shake(bool on);
 void pet_trace_shake(float x, float y);
 void pet_trace_frame(void);
 
+/* Timer (Display tab): at the top at pet_timer_scale() of Melee's size, or
+ * hidden (the last-seconds countdown too). Applies immediately. */
+enum { PET_TIMER_TOP = 0, PET_TIMER_HIDDEN = 1 };
+int pet_timer_mode(void);
+void pet_set_timer_mode(int mode);
+float pet_timer_scale(void);
+/* src/melee/if/iftime.c: apply the mode (each frame), and the trace. */
+void pet_timer_frame(void);
+bool pet_timer_trace(float* scale);
+
 /* The Dock's left and right edges in Melee units (x), for stretching the main
  * stage floor across it. False when not in overlay mode. */
 bool pet_dock_span(float* left, float* right);

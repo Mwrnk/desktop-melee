@@ -21,6 +21,8 @@ final class DisplaySettings: ObservableObject {
     @Published private(set) var island: Bool
     /// Screen shake (Effects): Melee's quake offset on the overlay camera.
     @Published private(set) var shake: Bool
+    /// Timer (Effects): "top" (half size) or "hidden".
+    @Published private(set) var timer: String
     /// The chosen screen's name; "" follows the primary screen.
     @Published private(set) var screen: String
     @Published private(set) var screens: [String] = []
@@ -35,11 +37,13 @@ final class DisplaySettings: ObservableObject {
         size = min(max(stored, Self.sizes.lowerBound), Self.sizes.upperBound)
         island = d.object(forKey: "display.island") as? Bool ?? true
         shake = d.object(forKey: "display.shake") as? Bool ?? true
+        timer = d.string(forKey: "display.timer") == "hidden" ? "hidden" : "top"
         screen = d.string(forKey: "display.screen") ?? ""
         refreshScreens()
         pet_set_fighter_size(Float(size))
         pet_set_island_enabled(island)
         pet_set_shake(shake)
+        pet_set_timer_mode(timer == "hidden" ? Int32(PET_TIMER_HIDDEN) : Int32(PET_TIMER_TOP))
         pet_set_screen(screen)
         // A display plugged in or out, or the Dock resized: the overlay goes
         // back to the chosen screen (or the primary while it is missing) and

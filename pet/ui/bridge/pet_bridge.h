@@ -56,7 +56,8 @@ void pet_set_fighter_size(float percent);
 bool pet_fighter_size_locked(void);
 void pet_set_island_enabled(bool on);
 void pet_set_screen(const char* name);
-/* Effects (pet/src/pet.c): screen shake on or off, immediately. */
+/* Effects (pet/src/pet.c): screen shake on or off, immediately; the timer
+ * mode (PET_TIMER_*, pet_game.h) too. */
 void pet_set_shake(bool on);
 
 /* UCF (src/pc/launcher.cpp): Universal Controller Fix. Applies immediately;

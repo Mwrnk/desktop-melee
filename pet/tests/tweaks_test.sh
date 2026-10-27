@@ -148,8 +148,33 @@ case_shake_off() {
     fi
 }
 
+case_timer_top() {
+    with_setting match.minutes int 7
+    with_setting display.timer string top
+    run_match "${DIR}/timer_top.log" "sleep 4"
+    if traces "${DIR}/timer_top.log" | grep -q "timer top scale 0.50"; then
+        ok "timer top: shown at half size"
+    else
+        bad "timer top: want \"timer top scale 0.50\", got: $(traces "${DIR}/timer_top.log" | head -1)"
+    fi
+}
+
+case_timer_hidden() {
+    with_setting match.minutes int 7
+    with_setting display.timer string hidden
+    run_match "${DIR}/timer_hidden.log" "sleep 4"
+    local n hidden
+    n="$(traces "${DIR}/timer_hidden.log" | wc -l | tr -d ' ')"
+    hidden="$(traces "${DIR}/timer_hidden.log" | grep -c "timer hidden")"
+    if [[ ${n} -ge 3 && ${n} -eq ${hidden} ]]; then
+        ok "timer hidden: hidden in all ${n} trace lines"
+    else
+        bad "timer hidden: ${hidden} of ${n} trace lines say hidden"
+    fi
+}
+
 CASES=("$@")
-[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off)
+[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off timer_top timer_hidden)
 for c in "${CASES[@]}"; do
     "case_${c}"
 done

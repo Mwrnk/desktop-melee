@@ -219,6 +219,11 @@ static bool s_shake = true;
 void pet_set_shake(bool on) { s_shake = on; }
 bool pet_shake_enabled(void) { return s_shake; }
 
+static int s_timer_mode = PET_TIMER_TOP;
+void pet_set_timer_mode(int mode) { s_timer_mode = mode == PET_TIMER_HIDDEN ? mode : PET_TIMER_TOP; }
+int pet_timer_mode(void) { return s_timer_mode; }
+float pet_timer_scale(void) { return pet_overlay_enabled() ? 0.5f : 1.0f; }
+
 static int s_trace = -1;
 static float s_trace_shake;
 static int s_trace_frames;
@@ -243,8 +248,11 @@ void pet_trace_frame(void) {
         return;
     }
     s_trace_frames = 0;
+    float timer_scale = 1.0f;
+    const bool timer_hidden = pet_timer_trace(&timer_scale);
     SDL_Log("pet: trace shake %.2f timer %s scale %.2f tags %d hud %s island %d paused %d hidden %d",
-            s_trace_shake, "top", 1.0f, 1, "island", pet_island_wanted() ? 1 : 0, 0, 0);
+            s_trace_shake, timer_hidden ? "hidden" : "top", timer_scale, 1, "island",
+            pet_island_wanted() ? 1 : 0, 0, 0);
     s_trace_shake = 0.0f;
 }
 

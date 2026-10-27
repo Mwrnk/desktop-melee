@@ -14,6 +14,9 @@
 #include <sysdolphin/baselib/gobjplink.h>
 #include <sysdolphin/baselib/gobjproc.h>
 #include <sysdolphin/baselib/jobj.h>
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
 
 static struct ifTime_data {
     HSD_GObj* match_timer;
@@ -132,6 +135,12 @@ void ifTime_HideTimers(void)
 void ifTime_ShowTimers(void)
 {
     struct ifTime_data* x = &ifTime_data;
+#ifdef TARGET_PC
+    /* melee-pet: a hidden timer stays hidden (Melee shows it on pause). */
+    if (pet_timer_mode() == PET_TIMER_HIDDEN) {
+        return;
+    }
+#endif
     if (x->match_timer != NULL) {
         HSD_JObj* jobj = HSD_GObjGetHSDObj(x->match_timer);
         int seconds;
@@ -262,6 +271,14 @@ void ifTime_CreateTimers(void)
         HSD_JObjReqAnimAll(jobj, 0.0f);
         HSD_GObj_SetupProc(gobj, ifTime_UpdateTimers, 17);
         HSD_JObjSetTranslate(jobj, ifAll_GetTimerPosition());
+#ifdef TARGET_PC
+        {
+            /* melee-pet: a smaller clock, so it doesn't sit on the desktop. */
+            Vec3 scale;
+            scale.x = scale.y = scale.z = pet_timer_scale();
+            HSD_JObjSetScale(jobj, &scale);
+        }
+#endif
         digit = HSD_JObjGetChild(jobj);
         ifTime_data.digits[0] = digit;
         for (i = 1; i < 10; i++) {
@@ -308,3 +325,34 @@ bool ifTime_IsTimerHidden(void)
     }
     return false;
 }
+
+#ifdef TARGET_PC
+/* melee-pet: apply the timer setting each frame, so it takes effect at once
+ * (and covers the countdown, which may appear later). */
+void pet_timer_frame(void)
+{
+    struct ifTime_data* x = &ifTime_data;
+    if (pet_timer_mode() == PET_TIMER_HIDDEN) {
+        if (x->match_timer != NULL && !ifTime_IsTimerHidden()) {
+            ifTime_HideTimers();
+        }
+        if (x->countdown_timer != NULL && x->countdown_timer->hsd_obj != NULL) {
+            HSD_JObjSetFlagsAll(HSD_GObjGetHSDObj(x->countdown_timer), JOBJ_HIDDEN);
+        }
+    } else if (x->match_timer != NULL && ifTime_IsTimerHidden() &&
+               !ifAll_IsHUDHidden())
+    {
+        ifTime_ShowTimers();
+    }
+}
+
+/* Trace: whether the clock is hidden, and its scale (1 when there is none). */
+bool pet_timer_trace(float* scale)
+{
+    struct ifTime_data* x = &ifTime_data;
+    *scale = x->match_timer != NULL
+                 ? HSD_JObjGetScaleX(HSD_GObjGetHSDObj(x->match_timer))
+                 : 1.0f;
+    return x->match_timer == NULL || ifTime_IsTimerHidden();
+}
+#endif
