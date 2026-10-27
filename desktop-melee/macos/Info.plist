@@ -28,6 +28,11 @@
     <string>@DESKTOP_MELEE_MIN_MACOS@</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.games</string>
+    <!-- No Game Mode: macOS turns it on (with a "Game Mode: On" notice) for a
+         games-category app whose window covers the screen, and the overlay
+         does, though it lives on the desktop next to other apps. -->
+    <key>GCSupportsGameMode</key>
+    <false/>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key>
