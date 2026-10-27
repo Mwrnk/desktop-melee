@@ -9,6 +9,8 @@
 #include "pc/pc.h"
 #include "pc/widescreen.h"
 
+#include <aurora/gfx.h>
+
 #include <stdio.h>
 #include <string.h>
 #include <dolphin/pad.h>
@@ -482,6 +484,34 @@ bool pet_blastzones(float* left, float* right, float* top, float* bottom) {
     SDL_Log("pet: blastzones x %.0f..%.0f, y %.0f..%.0f units (screen edges)", *left, *right,
             *bottom, *top);
     return true;
+}
+
+void pet_launcher_wait_begin(void) {
+    if (!pet_overlay_enabled()) {
+        return;
+    }
+#ifdef __APPLE__
+    pet_mac_overlay_set_faded(true);
+    pet_ui_loading_begin();
+#endif
+}
+
+void pet_launcher_wait_end(void) {
+    if (!pet_overlay_enabled()) {
+        return;
+    }
+#ifdef __APPLE__
+    pet_ui_loading_end();
+    /* Pause and hide may have been pressed meanwhile: it stays hidden. */
+    if (!s_hidden) {
+        pet_mac_overlay_set_faded(false);
+    }
+#endif
+}
+
+/* Graphics pipelines still being built (the menu bar's loading progress). */
+unsigned pet_pipelines_pending(void) {
+    return aurora_wait_pipelines(0);
 }
 
 void pet_after_menu_init(void) {

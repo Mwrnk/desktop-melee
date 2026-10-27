@@ -37,6 +37,10 @@ bool pet_dock_exact(void);
 /* Ask the game to shut down cleanly. */
 void pet_request_quit(void);
 
+/* Graphics pipelines melee-pc's launcher still waits for before the game
+ * starts (pet/src/pet.c): the loading progress. */
+unsigned pet_pipelines_pending(void);
+
 /* Match setup and control (GM_PET): PetMatchSetup and friends. */
 #include "../../src/pet_game.h"
 void pet_set_match_setup(const PetMatchSetup* setup);

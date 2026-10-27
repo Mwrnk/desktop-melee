@@ -694,12 +694,16 @@ MELEE_EXPORT int main(int argc, char* argv[]) {
      * running, or it eats the taps meant for the disc picker. */
     pc_android_set_launcher_active(true);
     /* melee-pet: the overlay never shows the launcher; pick the disc natively
-     * on first run, and quit if that is cancelled. */
+     * on first run, and quit if that is cancelled. The launcher still runs to
+     * wait for the shader cache, unseen behind a transparent overlay, while
+     * Desktop Melee's own window shows the progress. */
+    pet_launcher_wait_begin();
     disc = pet_choose_disc(disc);
     if (pet_overlay_enabled() && disc == NULL) {
         return 0;
     }
     const int launched = pc_launcher_run(disc, info.window);
+    pet_launcher_wait_end();
     if (launched != 1)
         return launched == 0 ? 0 : 1;
     pc_android_set_launcher_active(false);

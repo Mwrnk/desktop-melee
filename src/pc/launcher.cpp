@@ -666,12 +666,14 @@ class Launcher final : public Rml::EventListener {
     bool begin_game() {
         auto check = launcher::inspect_disc(prefs.disc);
         if (!check.supported) {
+            SDL_Log("Launcher: cannot start: %s", check.message.c_str());
             supported = false;
             status(check.message, true);
             controls();
             return false;
         }
         if (!aurora_dvd_open(prefs.disc.c_str())) {
+            SDL_Log("Launcher: cannot start: the disc did not open");
             aurora_dvd_close();
             status("Could not load this disc. Choose another image or verify it.", true);
             return false;
@@ -732,6 +734,10 @@ class Launcher final : public Rml::EventListener {
 #endif
             controls();
         } else if (id == "play" && supported) {
+            /* melee-pet: nobody sees this screen, so nothing may skip the
+             * wait (the first match would draw with shaders missing). */
+            if (pet_overlay_enabled() && shaders_waited)
+                return;
             /* The pipeline queue may still be draining. Take the wait here,
              * where the player is already looking at a screen, rather than
              * during the first match; pressing Play again skips it. */
@@ -933,7 +939,10 @@ public:
 #if defined(__ANDROID__)
         document->SetClass("android", true);
 #endif
-        document->Show();
+        /* melee-pet: Desktop Melee shows its own loading window; this one
+         * only waits for the shaders, unseen and taking no input. */
+        if (!pet_overlay_enabled())
+            document->Show();
         text("app-version", pc::get_app_version());
         text("check-status", "Current version: " + pc::get_app_version());
         text("disc-note", disc_note);

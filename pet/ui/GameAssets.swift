@@ -299,12 +299,14 @@ struct MParagraph: View {
     let text: String
     var size: CGFloat = 16
     var width: CGFloat
+    var alignment: HorizontalAlignment = .leading
     @ObservedObject private var assets = GameAssets.shared
 
-    init(_ text: String, size: CGFloat = 16, width: CGFloat) {
+    init(_ text: String, size: CGFloat = 16, width: CGFloat, alignment: HorizontalAlignment = .leading) {
         self.text = text
         self.size = size
         self.width = width
+        self.alignment = alignment
     }
 
     private var lines: [String] {
@@ -325,7 +327,7 @@ struct MParagraph: View {
 
     var body: some View {
         if MeleeFont.available {
-            VStack(alignment: .leading, spacing: -size * 0.04) {
+            VStack(alignment: alignment, spacing: -size * 0.04) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                     MText(line, size: size)
                 }
@@ -333,6 +335,7 @@ struct MParagraph: View {
         } else {
             Text(text)
                 .font(.system(size: size * 0.6))
+                .multilineTextAlignment(alignment == .center ? .center : .leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

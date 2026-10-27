@@ -52,6 +52,9 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     private var candidate: String?
     private var result: String?
     private var modal = false
+    /// Steps 1-2 are up, before any disc is in (the small loading window
+    /// stays away meanwhile).
+    var waitingForDisc: Bool { modal }
 
     // MARK: Phase 1
 
@@ -419,6 +422,16 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         loading.step = .disc
         loading.loading = true
         WelcomeController.dump(WelcomeView(controller: loading), to: "\(dir)/welcome_loading.png")
+        // The loading progress: first launch (in the welcome window), and the
+        // small window later launches get.
+        let early = ShaderProgress.sample(done: 1204, total: 6625, secondsLeft: 250)
+        WelcomeController.dump(WelcomeLoading(progress: early).frame(width: 392, height: 470)
+            .padding(24).background(Color(white: 0.14)), to: "\(dir)/loading_first.png")
+        let late = ShaderProgress.sample(done: 5431, total: 6625, secondsLeft: 40)
+        WelcomeController.dump(WelcomeLoading(progress: late).frame(width: 392, height: 470)
+            .padding(24).background(Color(white: 0.14)), to: "\(dir)/loading_almost.png")
+        let later = ShaderProgress.sample(done: 3102, total: 6625, secondsLeft: 130)
+        WelcomeController.dump(LoadingWindowView(progress: later), to: "\(dir)/loading_window.png")
     }
 
     @MainActor

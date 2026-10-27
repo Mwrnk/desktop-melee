@@ -14,6 +14,16 @@ void pet_configure(AuroraConfig* config);
 void pet_window_created(SDL_Window* window);
 /* After the launcher applies saved preferences (pc_menu_init). */
 void pet_after_menu_init(void);
+/* Around the disc choice and melee-pc's launcher (its shader-cache wait):
+ * the overlay stays fully transparent, so melee-pc's screen is never seen,
+ * and the menu bar app shows the progress (pet_ui_loading_*). */
+void pet_launcher_wait_begin(void);
+void pet_launcher_wait_end(void);
+#ifdef __APPLE__
+/* pet/ui/Loading.swift. */
+void pet_ui_loading_begin(void);
+void pet_ui_loading_end(void);
+#endif
 
 #ifdef __APPLE__
 void pet_overlay_mac_setup(SDL_Window* window);

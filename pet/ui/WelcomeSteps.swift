@@ -303,16 +303,28 @@ struct DropTarget: ViewModifier {
 
 // MARK: - Getting Melee ready
 
-/// Between the disc and step 3: the game boots and decodes its assets.
+/// Between the disc and step 3: the graphics are built (the first launch
+/// takes minutes, so it shows progress), then the game boots and decodes its
+/// assets.
 struct WelcomeLoading: View {
+    @ObservedObject var progress: ShaderProgress = .shared
+
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 14) {
             Spacer()
             Image(systemName: "opticaldisc")
                 .font(.system(size: 44))
                 .foregroundStyle(.secondary)
                 .symbolEffect(.pulse)
             MText("Getting Melee ready...", size: 26)
+            if progress.active {
+                MParagraph("The first launch builds Melee's graphics, so matches never stutter. It takes a few minutes, once. You can use your Mac in the meantime.",
+                           size: 17, width: 340, alignment: .center)
+                    .foregroundStyle(.secondary)
+                ShaderProgressBar(progress: progress)
+                    .frame(width: 340)
+                    .padding(.top, 6)
+            }
             Spacer()
         }
         .frame(maxWidth: .infinity)

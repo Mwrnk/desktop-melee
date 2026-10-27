@@ -33,7 +33,8 @@ if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
             pet/ui/DiscMemory.swift
             pet/ui/Welcome.swift
             pet/ui/WelcomeSteps.swift
-            pet/ui/Hotkey.swift)
+            pet/ui/Hotkey.swift
+            pet/ui/Loading.swift)
     set_target_properties(pet_ui PROPERTIES
             Swift_MODULE_NAME PetUI
             Swift_LANGUAGE_VERSION 5)

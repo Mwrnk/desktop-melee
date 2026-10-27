@@ -258,7 +258,8 @@ What each hook changes, in one line:
 
 | Hook (file) | Change |
 |---|---|
-| `src/pc/main.c` | Overlay window settings, native disc picker instead of the launcher. |
+| `src/pc/main.c` | Overlay window settings, native disc picker; the overlay stays transparent until the game starts. |
+| `src/pc/launcher.cpp` | melee-pc's launcher still waits for the shaders, but is never shown and can't be skipped; no update check. |
 | `src/melee/gm/gmboot.c` | Boot straight into `GM_PET`, never the title screen. |
 | `src/sysdolphin/baselib/displayfunc.c` | "Clear the screen" clears to transparent, not black. |
 | `src/melee/gr/grdisplay.c`, `src/melee/gr/ground.c` | Don't draw the stage or background models. |
@@ -590,6 +591,22 @@ flowchart TB
   modification date are enough (`pet/ui/DiscMemory.swift`).
 - Until a disc is in, the overlay window is hidden, so the welcome window
   never sits under an invisible full-screen window.
+
+**Loading, and melee-pc's launcher.** Before the first match, melee-pc's
+launcher builds every graphics pipeline it knows (about 6,600), so matches
+never stutter. That takes about 5 minutes on the first launch and a few
+seconds after that, because macOS caches the compiled shaders. Desktop Melee
+keeps the launcher running for that wait but never shows it: the overlay stays
+fully transparent until the game starts (`pet_launcher_wait_begin` /
+`pet_launcher_wait_end` in `pet/src/pet.c`). `pet/ui/Loading.swift` shows the
+progress instead:
+
+- **First launch:** inside the welcome window's "Getting Melee ready…" screen,
+  with a progress bar and the time left.
+- **Later launches:** nothing, unless the rest of the work would take more
+  than about 3 seconds at the current rate (after a new build or a macOS
+  update). Then a small "Getting Melee ready…" window appears until the game
+  starts.
 
 ---
 
