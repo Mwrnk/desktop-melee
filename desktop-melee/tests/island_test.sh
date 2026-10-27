@@ -7,7 +7,7 @@
 # missing or different, and puts back only what it changed, so it never
 # undoes the player's own progress.
 #
-# Usage: pet/tests/island_test.sh   (after pet/package.sh)
+# Usage: desktop-melee/tests/island_test.sh   (after desktop-melee/package.sh)
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 EXE="/Applications/Desktop Melee.app/Contents/MacOS/melee"
@@ -27,45 +27,47 @@ HUD_WAS=""
 restore() {
     exec 3>&- 2> /dev/null
     for key in ${ADDED[@]+"${ADDED[@]}"}; do
-        defaults delete melee-pet "${key}" 2> /dev/null
+        defaults delete desktop-melee "${key}" 2> /dev/null
     done
     if [[ -n "${HUD_WAS}" ]]; then
-        defaults write melee-pet display.hud -string "${HUD_WAS}"
+        defaults write desktop-melee display.hud -string "${HUD_WAS}"
     fi
     rm -rf "${DIR}"
 }
 trap restore EXIT
-swiftc -O -o "${DIR}/window_list" pet/tools/window_list.swift 2> /dev/null || { echo "FAIL: build window_list"; exit 1; }
+swiftc -O -o "${DIR}/window_list" desktop-melee/tools/window_list.swift 2> /dev/null ||
+    { echo "FAIL: build window_list"; exit 1; }
 # Boot straight in: the disc remembered as checked, the welcome done.
 cat > "${DIR}/remember.swift" <<'SWIFT'
 import Foundation
 let path = CommandLine.arguments[1]
 let a = try! FileManager.default.attributesOfItem(atPath: path)
-UserDefaults(suiteName: "melee-pet")!.set(
+UserDefaults(suiteName: "desktop-melee")!.set(
     ["path": path, "size": (a[.size] as! NSNumber).intValue,
      "mtime": (a[.modificationDate] as! Date).timeIntervalSince1970], forKey: "disc.verified")
 SWIFT
-if ! defaults read melee-pet disc.verified > /dev/null 2>&1; then
+if ! defaults read desktop-melee disc.verified > /dev/null 2>&1; then
     swift "${DIR}/remember.swift" "${DISC}" 2> /dev/null
     ADDED+=(disc.verified)
 fi
-if [[ "$(defaults read melee-pet onboarding.done 2> /dev/null)" != "1" ]]; then
-    defaults write melee-pet onboarding.done -bool true
+if [[ "$(defaults read desktop-melee onboarding.done 2> /dev/null)" != "1" ]]; then
+    defaults write desktop-melee onboarding.done -bool true
     ADDED+=(onboarding.done)
 fi
 # Stocks and percents in the island (display.hud; the old display.island
 # switch only matters before the app has migrated it).
-HUD_NOW="$(defaults read melee-pet display.hud 2> /dev/null)"
+HUD_NOW="$(defaults read desktop-melee display.hud 2> /dev/null)"
 if [[ -z "${HUD_NOW}" ]]; then
-    defaults write melee-pet display.hud -string island
+    defaults write desktop-melee display.hud -string island
     ADDED+=(display.hud)
 elif [[ "${HUD_NOW}" != island ]]; then
     HUD_WAS="${HUD_NOW}"
-    defaults write melee-pet display.hud -string island
+    defaults write desktop-melee display.hud -string island
 fi
 
 mkfifo "${DIR}/keys"
-env MELEE_KEY_FIFO="${DIR}/keys" MELEE_PET_LOG="${DIR}/log" pet/run-overlay.sh > /dev/null 2>&1 &
+env MELEE_KEY_FIFO="${DIR}/keys" DESKTOP_MELEE_LOG="${DIR}/log" \
+    desktop-melee/run-overlay.sh > /dev/null 2>&1 &
 exec 3> "${DIR}/keys"
 sleep 12
 echo "Return 150" >&3 # Start: a match, with the island

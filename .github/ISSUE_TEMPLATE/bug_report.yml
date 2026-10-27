@@ -63,7 +63,7 @@ body:
     attributes:
       label: Log
       description: |
-        Quit Desktop Melee from the menu bar, then run `MELEE_PET_LOG=desktop-melee.log pet/run-overlay.sh` from the repository, reproduce the problem and attach `desktop-melee.log`.
+        Quit Desktop Melee from the menu bar, then run `DESKTOP_MELEE_LOG=desktop-melee.log desktop-melee/run-overlay.sh` from the repository, reproduce the problem and attach `desktop-melee.log`.
         Paste the last 30 lines here if the file is small; attach the whole file otherwise.
       render: text
     validations:

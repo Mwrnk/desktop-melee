@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Finds textures inside the game's own archives for the menu bar app (built
  * with the game code, so the disc structures read correctly). Each texture
- * is handed to pet_asset_found() as a GcTexture pointing into game memory. */
-#include "petassets.h"
+ * is handed to desktop_melee_asset_found() as a GcTexture pointing into game memory. */
+#include "desktop_melee_assets.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,9 +25,9 @@
 #include <sysdolphin/baselib/tobj.h>
 
 #include "gctex.h"
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 
-/* While set, emit() hands matching textures to pet_asset_named() instead. */
+/* While set, emit() hands matching textures to desktop_melee_asset_named() instead. */
 static const struct NamedCapture {
     const char* tag;
     int index;
@@ -53,12 +53,12 @@ static void emit(const char* tag, int index, HSD_ImageDesc* img, HSD_TlutDesc* t
     if (s_capture != NULL) {
         for (const struct NamedCapture* c = s_capture; c->tag != NULL; c++) {
             if (strcmp(c->tag, tag) == 0 && c->index == index) {
-                pet_asset_named(c->name, &tex);
+                desktop_melee_asset_named(c->name, &tex);
             }
         }
         return;
     }
-    pet_asset_found(tag, index, &tex);
+    desktop_melee_asset_found(tag, index, &tex);
 }
 
 static void walk_joint(HSD_Joint* joint, const char* tag, int* counter)
@@ -110,7 +110,7 @@ static void walk_model(StaticModelDesc* model, const char* tag)
     walk_matanim(DP(HSD_MatAnimJoint, model->matanim_joint), tag, &table);
 }
 
-void pet_assets_scan_css(void)
+void desktop_melee_assets_scan_css(void)
 {
     HSD_Archive* archive = lbArchive_LoadArchive("MnSlChr.usd");
     struct MnSelectChrDataTable* table;
@@ -160,7 +160,7 @@ static const struct {
     u8 ckind;
     u8 joint;
     u16 name_sfx;
-} roster[PET_ROSTER_SIZE] = {
+} roster[DESKTOP_MELEE_ROSTER_SIZE] = {
     { CKind_DrMario, ICONJOINT_DRMARIO, 0xC5 },   { CKind_Mario, ICONJOINT_MARIO, 0xCD },
     { CKind_Luigi, ICONJOINT_LUIGI, 0xCC },       { CKind_Koopa, ICONJOINT_KOOPA, 0xCA },
     { CKind_Peach, ICONJOINT_PEACH, 0xD1 },       { CKind_Yoshi, ICONJOINT_YOSHI, 0xD7 },
@@ -290,7 +290,7 @@ static void texture_of(HSD_TexAnim* ta, int index, GcTexture* out)
     }
 }
 
-void pet_assets_load_roster(void)
+void desktop_melee_assets_load_roster(void)
 {
     HSD_Archive* archive = lbArchive_LoadArchive("MnSlChr.usd");
     struct MnSelectChrDataTable* table;
@@ -313,18 +313,18 @@ void pet_assets_load_roster(void)
 
     /* Every playable kind, including Sheik, who has no tile of their own. */
     for (int ck = 0; ck < CKind_Playable_Count; ck++) {
-        pet_asset_costumes(ck, gm_GetNumCostumesForCKind((u8) ck));
+        desktop_melee_asset_costumes(ck, gm_GetNumCostumesForCKind((u8) ck));
     }
-    for (int i = 0; i < PET_ROSTER_SIZE; i++) {
+    for (int i = 0; i < DESKTOP_MELEE_ROSTER_SIZE; i++) {
         int counter = 0;
         int ckind = roster[i].ckind;
         int costumes = gm_GetNumCostumesForCKind((u8) ckind);
         GcTexture icon;
         memset(&icon, 0, sizeof icon);
         icon_texture(joint_at(DP(HSD_Joint, menu->joint), roster[i].joint, &counter), &icon);
-        pet_asset_roster(i, ckind, costumes, &icon);
+        desktop_melee_asset_roster(i, ckind, costumes, &icon);
 
-        for (int c = 0; aobj != NULL && c < costumes && c < PET_MAX_COSTUMES; c++) {
+        for (int c = 0; aobj != NULL && c < costumes && c < DESKTOP_MELEE_MAX_COSTUMES; c++) {
             int index = -1;
             GcTexture portrait;
             HSD_AObjReqAnim(aobj, (f32) portrait_frame(ckind, c));
@@ -333,7 +333,7 @@ void pet_assets_load_roster(void)
                 continue;
             }
             texture_of(portraits, index, &portrait);
-            pet_asset_portrait(ckind, c, &portrait);
+            desktop_melee_asset_portrait(ckind, c, &portrait);
         }
     }
     if (aobj != NULL) {
@@ -346,7 +346,7 @@ void pet_assets_load_roster(void)
 /* The character select screen's sound banks: menu sounds and the
  * announcer's character names. A match loads its own banks, so the idle
  * scene loads these each time it starts. */
-void pet_assets_load_menu_sounds(void)
+void desktop_melee_assets_load_menu_sounds(void)
 {
     lbAudioAx_80026F2C(0x1E);
     lbAudioAx_8002702C(2, 8);
@@ -354,32 +354,32 @@ void pet_assets_load_menu_sounds(void)
     lbAudioAx_80027648();
 }
 
-void pet_sound_menu(int kind)
+void desktop_melee_sound_menu(int kind)
 {
     if (kind >= 0 && kind <= 3) {
         lbAudioAx_80024030(kind);
     }
 }
 
-void pet_sound_announce(int roster_index)
+void desktop_melee_sound_announce(int roster_index)
 {
-    if (roster_index >= 0 && roster_index < PET_ROSTER_SIZE) {
+    if (roster_index >= 0 && roster_index < DESKTOP_MELEE_ROSTER_SIZE) {
         int voice = lbAudioAx_80023870(roster[roster_index].name_sfx, 0x7F, 0x40,
                                        roster_index + 0x8A);
-        if (getenv("MELEE_PET_DUMP") != NULL) {
-            OSReport("pet: announce %d -> voice %d\n", roster_index, voice);
+        if (getenv("DESKTOP_MELEE_DUMP") != NULL) {
+            OSReport("desktop-melee: announce %d -> voice %d\n", roster_index, voice);
         }
     }
 }
 
-void pet_assets_scan_title(void)
+void desktop_melee_assets_scan_title(void)
 {
     scan_title();
 }
 
 /* Named pieces of the title logo (NTSC 1.02 layout): the Smash emblem (the
  * "O" of BROS.) and the "Melee" wordmark. */
-void pet_assets_load_named(void)
+void desktop_melee_assets_load_named(void)
 {
     static const struct NamedCapture captures[] = {
         { "title_moji", 31, "emblem" },

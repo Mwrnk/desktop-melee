@@ -1,6 +1,6 @@
 #include "ifnametag.h"
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #endif
 
 #include "forward.h"
@@ -218,9 +218,9 @@ void fn_802FCC44(HSD_GObj* gobj)
                  Player_GetNametagSlotID(*slot) != NAMETAG_DISABLED ||
                  Player_80036058(*slot) || gm_8016B258(*slot));
 #ifdef TARGET_PC
-    /* melee-pet: player tags always on (while in the match) or always off. */
-    if (pet_hide_stage()) {
-        show = pet_tags_enabled() && Player_GetPlayerSlotType(*slot) != Gm_PKind_NA &&
+    /* desktop-melee: player tags always on (while in the match) or always off. */
+    if (desktop_melee_hide_stage()) {
+        show = desktop_melee_tags_enabled() && Player_GetPlayerSlotType(*slot) != Gm_PKind_NA &&
                Player_GetPlayerState(*slot) && Player_GetStocks(*slot);
     }
 #endif
@@ -388,8 +388,8 @@ void un_802FD4C8(void)
 }
 
 #ifdef TARGET_PC
-/* melee-pet trace: how many player tags are showing. */
-int pet_tags_trace(void)
+/* desktop-melee trace: how many player tags are showing. */
+int desktop_melee_tags_trace(void)
 {
     int i, n = 0;
     for (i = 0; i < Gm_Player_NumMax; i++) {

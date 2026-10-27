@@ -284,7 +284,7 @@ endif ()
 
 target_include_directories(melee PRIVATE extern/monocypher)
 
-include(pet/pet.cmake)
+include(desktop-melee/desktop-melee.cmake)
 
 target_compile_options(melee PRIVATE
         ${MELEE_FP_FLAGS}

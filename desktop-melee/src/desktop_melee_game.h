@@ -1,178 +1,178 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* melee-pet hooks called from the decompiled game code (melee_game). */
+/* desktop-melee hooks called from the decompiled game code (melee_game). */
 #pragma once
 #include <stdbool.h>
 
-/* MELEE_PET_OVERLAY=1: run as a transparent, click-through window over the
+/* DESKTOP_MELEE_OVERLAY=1: run as a transparent, click-through window over the
  * whole primary display instead of a normal window. */
-bool pet_overlay_enabled(void);
+bool desktop_melee_overlay_enabled(void);
 
 /* Desktop overlay: stage and background models are not drawn, so only the
  * fighters, effects and HUD appear over the desktop. */
-bool pet_hide_stage(void);
+bool desktop_melee_hide_stage(void);
 
 /* Fixed desktop camera, replacing Melee's zooming one in overlay mode. Fills
  * the eye and interest points (Melee units) and the vertical field of view
  * (degrees) so that Melee y = 0 sits on top of the Dock, x = 0 is the middle
- * of the screen, and the screen is MELEE_PET_SCALE units wide (default 490,
+ * of the screen, and the screen is DESKTOP_MELEE_SCALE units wide (default 490,
  * Final Destination's blastzone width). False when not in overlay mode. */
-bool pet_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
+bool desktop_melee_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
                 float* interest_y, float* interest_z, float* fov);
 
 /* Screen shake (Display tab): when off, Melee's quake offset is not applied
  * to the overlay camera. Applies immediately. */
-bool pet_shake_enabled(void);
-void pet_set_shake(bool on);
+bool desktop_melee_shake_enabled(void);
+void desktop_melee_set_shake(bool on);
 
-/* MELEE_PET_TRACE=1 (tests): the overlay camera reports the shake it applied
- * each frame; pet_trace_tick (once a second, from an AppKit timer, so also
- * while paused) logs a "pet: trace" line during a match. */
-void pet_trace_shake(float x, float y);
-void pet_trace_tick(void);
-bool pet_trace_enabled(void);
+/* DESKTOP_MELEE_TRACE=1 (tests): the overlay camera reports the shake it applied
+ * each frame; desktop_melee_trace_tick (once a second, from an AppKit timer, so also
+ * while paused) logs a "desktop-melee: trace" line during a match. */
+void desktop_melee_trace_shake(float x, float y);
+void desktop_melee_trace_tick(void);
+bool desktop_melee_trace_enabled(void);
 
 /* Pause and hide (menu bar button, global shortcut): hides the overlay and
  * the island and pauses a running match with Melee's own pause, as
- * pet_set_pause_port's port (the first human player's, else port 1);
+ * desktop_melee_set_pause_port's port (the first human player's, else port 1);
  * pressing it again shows them, still paused. */
-void pet_toggle_pause_and_hide(void);
-bool pet_hidden(void);
-void pet_set_pause_port(int port);
+void desktop_melee_toggle_pause_and_hide(void);
+bool desktop_melee_hidden(void);
+void desktop_melee_set_pause_port(int port);
 /* The port to pause as, once, after a toggle asked for a pause (else -1). */
-int pet_take_pause_request(void);
-/* pet/game/gmpetmode.c: whether a VS pause is on. */
-bool pet_game_paused(void);
+int desktop_melee_take_pause_request(void);
+/* desktop-melee/game/gmdesktopmelee.c: whether a VS pause is on. */
+bool desktop_melee_game_paused(void);
 
-/* Timer (Display tab): at the top at pet_timer_scale() of Melee's size, or
+/* Timer (Display tab): at the top at desktop_melee_timer_scale() of Melee's size, or
  * hidden (the last-seconds countdown too). Applies immediately. */
-enum { PET_TIMER_TOP = 0, PET_TIMER_HIDDEN = 1 };
-int pet_timer_mode(void);
-void pet_set_timer_mode(int mode);
-float pet_timer_scale(void);
+enum { DESKTOP_MELEE_TIMER_TOP = 0, DESKTOP_MELEE_TIMER_HIDDEN = 1 };
+int desktop_melee_timer_mode(void);
+void desktop_melee_set_timer_mode(int mode);
+float desktop_melee_timer_scale(void);
 /* src/melee/if/iftime.c: apply the mode (each frame), and the trace. */
-void pet_timer_frame(void);
-bool pet_timer_trace(float* scale);
+void desktop_melee_timer_frame(void);
+bool desktop_melee_timer_trace(float* scale);
 
 /* Player tags (Display tab): the P1 / P2 / CPU markers over fighters, always
  * shown in the match or never. Applies immediately. */
-bool pet_tags_enabled(void);
-void pet_set_tags(bool on);
+bool desktop_melee_tags_enabled(void);
+void desktop_melee_set_tags(bool on);
 /* src/melee/if/ifnametag.c: tags showing now (trace). */
-int pet_tags_trace(void);
+int desktop_melee_tags_trace(void);
 
 /* Where stocks and percents go (Display tab): Melee's own HUD in the notch
  * island, at the bottom of the screen, or hidden. Set any time; a match
- * uses the mode it started with (pet_hud_mode). */
-enum { PET_HUD_ISLAND = 0, PET_HUD_BOTTOM = 1, PET_HUD_HIDDEN = 2 };
-void pet_set_hud_mode(int mode);
-int pet_hud_mode(void);
+ * uses the mode it started with (desktop_melee_hud_mode). */
+enum { DESKTOP_MELEE_HUD_ISLAND = 0, DESKTOP_MELEE_HUD_BOTTOM = 1, DESKTOP_MELEE_HUD_HIDDEN = 2 };
+void desktop_melee_set_hud_mode(int mode);
+int desktop_melee_hud_mode(void);
 /* Trace: a stock or percent group was drawn. */
-void pet_trace_hud_drawn(void);
+void desktop_melee_trace_hud_drawn(void);
 
 /* The Dock's left and right edges in Melee units (x), for stretching the main
  * stage floor across it. False when not in overlay mode. */
-bool pet_dock_span(float* left, float* right);
+bool desktop_melee_dock_span(float* left, float* right);
 
 /* The blastzones (Melee units): the overlay's screen edges, at the size the
  * current match uses. False when not in overlay mode. */
-bool pet_blastzones(float* left, float* right, float* top, float* bottom);
+bool desktop_melee_blastzones(float* left, float* right, float* top, float* bottom);
 
 /* HUD camera, reported once when the HUD scene loads: distance from the eye
  * to the HUD plane (Melee units) and vertical field of view (degrees). */
-void pet_set_hud_camera(float distance, float fov_deg);
+void desktop_melee_set_hud_camera(float distance, float fov_deg);
 /* Called every frame the HUD camera renders; the notch island is shown while
  * these keep coming and the HUD is visible. */
-void pet_hud_frame(bool visible);
+void desktop_melee_hud_frame(bool visible);
 /* Stock icons inside the notch island: the translation and uniform scale (HUD
  * units) for a player's stock group, P1 left of the notch and P2 right of it.
  * False keeps Melee's own placement. */
-bool pet_hud_stock_anchor(int player, float* x, float* y, float* scale);
+bool desktop_melee_hud_stock_anchor(int player, float* x, float* y, float* scale);
 /* The same for a player's percent (damage) group. */
-bool pet_hud_percent_anchor(int player, float* x, float* y, float* scale);
+bool desktop_melee_hud_percent_anchor(int player, float* x, float* y, float* scale);
 /* True when this player's HUD lives in the notch island (its series emblem
  * is then not drawn). */
-bool pet_hud_in_island(int player);
+bool desktop_melee_hud_in_island(int player);
 
-/* ---- GM_PET match flow (pet/game/gmpetmode.c) ---------------------------- */
+/* ---- GM_DESKTOP_MELEE match flow (desktop-melee/game/gmdesktopmelee.c) ------------------ */
 
-typedef struct PetPlayerSetup {
+typedef struct DesktopMeleePlayerSetup {
     int ckind;     /* CharacterKind (2 = Fox) */
     int costume;   /* costume/color index */
     int cpu;       /* 0 human, 1 CPU */
     int cpu_level; /* 1..9 */
     int port;      /* controller port 0..3 that plays this player (humans) */
-} PetPlayerSetup;
+} DesktopMeleePlayerSetup;
 
-typedef struct PetMatchSetup {
+typedef struct DesktopMeleeMatchSetup {
     int stocks;       /* 1..99 */
     int time_seconds; /* 0 = no time limit */
-    PetPlayerSetup players[2];
-} PetMatchSetup;
+    DesktopMeleePlayerSetup players[2];
+} DesktopMeleeMatchSetup;
 
 /* The next match's setup, as the menu bar left it. */
-void pet_match_setup(PetMatchSetup* out);
+void desktop_melee_match_setup(DesktopMeleeMatchSetup* out);
 /* Ask for a match: starts one from idle, restarts a running one. */
-void pet_request_match(void);
+void desktop_melee_request_match(void);
 /* Whether Start on a controller begins a match from idle (off while the
  * welcome window asks the player to press buttons). */
-bool pet_start_starts_match(void);
-void pet_set_start_starts_match(bool on);
+bool desktop_melee_start_starts_match(void);
+void desktop_melee_set_start_starts_match(bool on);
 /* Idle scene: a match has been asked for. */
-bool pet_match_wanted(void);
+bool desktop_melee_match_wanted(void);
 /* VS scene: a new match was asked for while this one runs. */
-bool pet_match_restart_wanted(void);
-/* The pet VS state entered / left. */
-void pet_match_began(void);
-void pet_match_ended(void);
+bool desktop_melee_match_restart_wanted(void);
+/* The Desktop Melee VS state entered / left. */
+void desktop_melee_match_began(void);
+void desktop_melee_match_ended(void);
 
-/* ---- per-player controls (pet/src/pet.c) ---------------------------------- */
+/* ---- per-player controls (desktop-melee/src/desktop_melee.c) ----------------------------- */
 /* Set from the menu bar's Controls tab; read every frame, so changes apply
  * mid-match. Players are fighter slots (P1 = 0). */
 
 /* The Melee buttons a player's button map covers. */
 enum {
-    PET_BTN_A,
-    PET_BTN_B,
-    PET_BTN_X,
-    PET_BTN_Y,
-    PET_BTN_Z,
-    PET_BTN_L,
-    PET_BTN_R,
-    PET_BTN_COUNT,
-    PET_BTN_NONE = PET_BTN_COUNT,
+    DESKTOP_MELEE_BTN_A,
+    DESKTOP_MELEE_BTN_B,
+    DESKTOP_MELEE_BTN_X,
+    DESKTOP_MELEE_BTN_Y,
+    DESKTOP_MELEE_BTN_Z,
+    DESKTOP_MELEE_BTN_L,
+    DESKTOP_MELEE_BTN_R,
+    DESKTOP_MELEE_BTN_COUNT,
+    DESKTOP_MELEE_BTN_NONE = DESKTOP_MELEE_BTN_COUNT,
 };
 
 /* Tap jump: stick up jumps (Melee's own behavior, on by default). Called
  * where a stick-up jump would start; false blocks it. */
-bool pet_tap_jump(int player);
+bool desktop_melee_tap_jump(int player);
 /* A human player's held buttons (HSD_PAD_* bits) after their button map.
  * Also says which analog triggers still shield: bit 0 the physical L, bit 1
  * the physical R (a trigger mapped to another button no longer does). */
-unsigned pet_map_buttons(int player, unsigned held, int* analog_mask);
+unsigned desktop_melee_map_buttons(int player, unsigned held, int* analog_mask);
 
-/* ---- game assets (pet/game/petassets.c) ---------------------------------- */
+/* ---- game assets (desktop-melee/game/desktop_melee_assets.c) ----------------------------- */
 
 struct GcTexture;
 /* A texture found in a game archive: tag names where it came from (model and
  * texture-animation table), index is its position there. */
-void pet_asset_found(const char* tag, int index, const struct GcTexture* tex);
+void desktop_melee_asset_found(const char* tag, int index, const struct GcTexture* tex);
 
 /* The character select grid: 25 characters, Melee's order. */
-#define PET_ROSTER_SIZE 25
-#define PET_MAX_COSTUMES 6
+#define DESKTOP_MELEE_ROSTER_SIZE 25
+#define DESKTOP_MELEE_MAX_COSTUMES 6
 /* Roster entry i: character kind, costume count and face icon. */
-void pet_asset_roster(int i, int ckind, int costumes, const struct GcTexture* icon);
+void desktop_melee_asset_roster(int i, int ckind, int costumes, const struct GcTexture* icon);
 /* How many costumes a character kind has (every playable kind, Sheik too). */
-void pet_asset_costumes(int ckind, int costumes);
+void desktop_melee_asset_costumes(int ckind, int costumes);
 /* A character's portrait for one costume. */
-void pet_asset_portrait(int ckind, int costume, const struct GcTexture* portrait);
+void desktop_melee_asset_portrait(int ckind, int costume, const struct GcTexture* portrait);
 /* The roster and font are loaded: tells the menu bar app. */
-void pet_assets_ready(void);
+void desktop_melee_assets_ready(void);
 
 /* Melee's menu sounds, for the menu bar: 0 back, 1 confirm, 2 cursor move,
  * 3 not allowed. */
-void pet_sound_menu(int kind);
+void desktop_melee_sound_menu(int kind);
 /* The announcer says the name of roster entry i. */
-void pet_sound_announce(int roster_index);
+void desktop_melee_sound_announce(int roster_index);
 /* A named graphic for the menu bar ("emblem", "melee"). */
-void pet_asset_named(const char* name, const struct GcTexture* tex);
+void desktop_melee_asset_named(const char* name, const struct GcTexture* tex);

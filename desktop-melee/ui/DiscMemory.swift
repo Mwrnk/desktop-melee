@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Which disc Desktop Melee boots: only one that passed the disc check
-// (pet/src/disc_check.cpp). A passed check is remembered per file, by its
+// (desktop-melee/src/disc_check.cpp). A passed check is remembered per file, by its
 // path, size and modification date, so it runs once.
 import AppKit
-import PetBridge
+import DesktopMeleeBridge
 
 enum DiscMemory {
-    private static let defaults = UserDefaults(suiteName: "melee-pet") ?? .standard
+    private static var defaults: UserDefaults { Settings.defaults }
     private static let verifiedKey = "disc.verified"
 
     /// Set once the player has been through the welcome window.
@@ -46,16 +46,16 @@ private func choose(_ path: String) -> UnsafePointer<CChar>? {
     return UnsafePointer(chosenDisc)
 }
 
-/// Called from C (pet_choose_disc) before the game boots: the disc to boot,
+/// Called from C (desktop_melee_choose_disc) before the game boots: the disc to boot,
 /// or nil when the player gave up. `candidate` is the command line's disc,
 /// else the one booted last time.
-@_cdecl("pet_ui_choose_disc")
-public func petUIChooseDisc(_ candidate: UnsafePointer<CChar>?) -> UnsafePointer<CChar>? {
+@_cdecl("desktop_melee_ui_choose_disc")
+public func desktopMeleeUIChooseDisc(_ candidate: UnsafePointer<CChar>?) -> UnsafePointer<CChar>? {
     let path = candidate.map { String(cString: $0) } ?? ""
     let firstRun = !DiscMemory.onboardingDone
-        || ProcessInfo.processInfo.environment["MELEE_PET_WELCOME"] != nil
+        || ProcessInfo.processInfo.environment["DESKTOP_MELEE_WELCOME"] != nil
     if !firstRun, !path.isEmpty, DiscMemory.isVerified(path) {
-        NSLog("pet: disc %@ (remembered)", path)
+        NSLog("desktop-melee: disc %@ (remembered)", path)
         return choose(path)
     }
     guard let chosen = WelcomeController.shared.runDiscPhase(candidate: path, firstRun: firstRun)

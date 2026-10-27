@@ -11,15 +11,15 @@
 #include <melee/ft/inlines.h>
 
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #include <melee/pl/player.h>
-/* melee-pet: tap jump can be turned off per player. CPUs always keep it;
+/* desktop-melee: tap jump can be turned off per player. CPUs always keep it;
  * Nana (reported as a CPU) follows her player's setting, like Popo. */
-#define PET_TAP_JUMP(fp)                                                      \
+#define DESKTOP_MELEE_TAP_JUMP(fp)                                                      \
     (Player_8003248C((fp)->player_idx, false) == Gm_PKind_Cpu ||              \
-     pet_tap_jump((fp)->player_idx))
+     desktop_melee_tap_jump((fp)->player_idx))
 #else
-#define PET_TAP_JUMP(fp) true
+#define DESKTOP_MELEE_TAP_JUMP(fp) true
 #endif
 
 static inline struct Fighter_x2D0_t* ftCo_800D74A4_inline(Fighter* fp)
@@ -74,7 +74,7 @@ bool ftCo_800D730C(Fighter_GObj* gobj, bool arg1)
         }
         r4 = 1;
         if (!(fp->input.lstick[0].y >= p_ftCommonData->tap_jump_threshold &&
-              PET_TAP_JUMP(fp)) &&
+              DESKTOP_MELEE_TAP_JUMP(fp)) &&
             !(fp->input.held_buttons[0] & 0xC00))
         {
             r4 = 0;

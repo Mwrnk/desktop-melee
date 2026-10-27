@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // window_list: prints every on-screen window as
 // "<owner>\t<layer>\t<x> <y> <w> <h>\t<alpha>"
-// (no Screen Recording needed for bounds). Used by pet/tests/welcome_window_test.sh.
+// (no Screen Recording needed for bounds). Used by desktop-melee/tests/welcome_window_test.sh.
 import CoreGraphics
 import Foundation
 let opts: CGWindowListOption = [.optionOnScreenOnly]

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Milestone 1 dev boot: Fox vs Fox on Final Destination, 4 stocks, no menus.
 # Press Start (Enter) at the title to jump straight into the match.
-# Usage: pet/run-fox-ditto.sh [path/to/melee.iso]
+# Usage: desktop-melee/run-fox-ditto.sh [path/to/melee.iso]
 set -eu
 cd "$(dirname "$0")/.."
 ISO="${1:-$HOME/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso}"

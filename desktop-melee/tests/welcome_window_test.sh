@@ -4,7 +4,7 @@
 # no Desktop Melee window that covers the screen may sit above the welcome
 # window while it waits for a disc. Quits the instance it started.
 #
-# Usage: pet/tests/welcome_window_test.sh   (after pet/package.sh)
+# Usage: desktop-melee/tests/welcome_window_test.sh   (after desktop-melee/package.sh)
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 APP="/Applications/Desktop Melee.app"
@@ -15,9 +15,10 @@ if pgrep -f "${EXE}" > /dev/null; then
 fi
 DIR="$(mktemp -d)"
 trap 'rm -rf "${DIR}"' EXIT
-swiftc -O -o "${DIR}/window_list" pet/tools/window_list.swift 2> /dev/null || { echo "FAIL: build window_list"; exit 1; }
+swiftc -O -o "${DIR}/window_list" desktop-melee/tools/window_list.swift 2> /dev/null ||
+    { echo "FAIL: build window_list"; exit 1; }
 
-open -n --env MELEE_PET_WELCOME=1 "${APP}"
+open -n --env DESKTOP_MELEE_WELCOME=1 "${APP}"
 # Wait (up to 20 s) for the welcome window, 440 pt wide, then 1 s more.
 for _ in $(seq 1 40); do
     LIST="$("${DIR}/window_list")"

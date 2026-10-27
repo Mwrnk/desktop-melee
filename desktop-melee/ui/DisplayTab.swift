@@ -6,7 +6,7 @@
 // when the running match ends.
 import AppKit
 import Combine
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 
 // MARK: - Settings
@@ -16,7 +16,7 @@ final class DisplaySettings: ObservableObject {
     /// size, so smaller fighters just get more room).
     static let sizes: ClosedRange<Double> = 50...200
 
-    private static let defaults = UserDefaults(suiteName: "melee-pet") ?? .standard
+    private static var defaults: UserDefaults { Settings.defaults }
 
     @Published private(set) var size: Double
     /// Where stocks and percents go: "island", "bottom" or "hidden".
@@ -32,7 +32,7 @@ final class DisplaySettings: ObservableObject {
     @Published private(set) var screen: String
     @Published private(set) var screens: [String] = []
     @Published private(set) var primary = ""
-    let sizeLocked = pet_fighter_size_locked()
+    let sizeLocked = desktop_melee_fighter_size_locked()
 
     private var screenChanges: AnyCancellable?
 
@@ -54,12 +54,13 @@ final class DisplaySettings: ObservableObject {
         tags = d.object(forKey: "display.tags") as? Bool ?? true
         screen = d.string(forKey: "display.screen") ?? ""
         refreshScreens()
-        pet_set_fighter_size(Float(size))
-        pet_set_hud_mode(Self.hudMode(hud))
-        pet_set_shake(shake)
-        pet_set_tags(tags)
-        pet_set_timer_mode(timer == "hidden" ? Int32(PET_TIMER_HIDDEN) : Int32(PET_TIMER_TOP))
-        pet_set_screen(screen)
+        desktop_melee_set_fighter_size(Float(size))
+        desktop_melee_set_hud_mode(Self.hudMode(hud))
+        desktop_melee_set_shake(shake)
+        desktop_melee_set_tags(tags)
+        desktop_melee_set_timer_mode(
+            timer == "hidden" ? Int32(DESKTOP_MELEE_TIMER_HIDDEN) : Int32(DESKTOP_MELEE_TIMER_TOP))
+        desktop_melee_set_screen(screen)
         // A display plugged in or out, or the Dock resized: the overlay goes
         // back to the chosen screen (or the primary while it is missing) and
         // is laid out again. AppKit also posts this when nothing changed (over
@@ -74,7 +75,7 @@ final class DisplaySettings: ObservableObject {
                 guard layout != self.screenLayout else { return }
                 self.screenLayout = layout
                 self.refreshScreens()
-                pet_set_screen(self.screen)
+                desktop_melee_set_screen(self.screen)
             }
     }
 
@@ -104,14 +105,14 @@ final class DisplaySettings: ObservableObject {
         guard snapped != size else { return }
         size = snapped
         Self.defaults.set(size, forKey: "display.size")
-        pet_set_fighter_size(Float(size))
+        desktop_melee_set_fighter_size(Float(size))
         MenuSound.move.play()
     }
 
     func setShake(_ on: Bool) {
         shake = on
         Self.defaults.set(on, forKey: "display.shake")
-        pet_set_shake(on)
+        desktop_melee_set_shake(on)
         MenuSound.confirm.play()
     }
 
@@ -119,14 +120,15 @@ final class DisplaySettings: ObservableObject {
         guard value != timer else { return }
         timer = value
         Self.defaults.set(value, forKey: "display.timer")
-        pet_set_timer_mode(value == "hidden" ? Int32(PET_TIMER_HIDDEN) : Int32(PET_TIMER_TOP))
+        desktop_melee_set_timer_mode(
+            value == "hidden" ? Int32(DESKTOP_MELEE_TIMER_HIDDEN) : Int32(DESKTOP_MELEE_TIMER_TOP))
         MenuSound.confirm.play()
     }
 
     func setTags(_ on: Bool) {
         tags = on
         Self.defaults.set(on, forKey: "display.tags")
-        pet_set_tags(on)
+        desktop_melee_set_tags(on)
         MenuSound.confirm.play()
     }
 
@@ -138,15 +140,15 @@ final class DisplaySettings: ObservableObject {
         guard value != hud else { return }
         hud = value
         Self.defaults.set(value, forKey: "display.hud")
-        pet_set_hud_mode(Self.hudMode(value))
+        desktop_melee_set_hud_mode(Self.hudMode(value))
         MenuSound.confirm.play()
     }
 
     static func hudMode(_ value: String) -> Int32 {
         switch value {
-        case "bottom": return Int32(PET_HUD_BOTTOM)
-        case "hidden": return Int32(PET_HUD_HIDDEN)
-        default: return Int32(PET_HUD_ISLAND)
+        case "bottom": return Int32(DESKTOP_MELEE_HUD_BOTTOM)
+        case "hidden": return Int32(DESKTOP_MELEE_HUD_HIDDEN)
+        default: return Int32(DESKTOP_MELEE_HUD_ISLAND)
         }
     }
 
@@ -157,7 +159,7 @@ final class DisplaySettings: ObservableObject {
         guard value != screen || name != current else { return }
         screen = value
         Self.defaults.set(value, forKey: "display.screen")
-        pet_set_screen(value)
+        desktop_melee_set_screen(value)
         MenuSound.confirm.play()
     }
 }
@@ -168,8 +170,8 @@ struct DisplayTab: View {
     @ObservedObject var display: DisplaySettings
     @ObservedObject var match: MatchSettings
     private let poll = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
-    @State private var dockExact = pet_dock_exact()
-    @State private var axTrusted = pet_ax_trusted()
+    @State private var dockExact = desktop_melee_dock_exact()
+    @State private var axTrusted = desktop_melee_ax_trusted()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -195,7 +197,7 @@ struct DisplayTab: View {
                 }
                 .disabled(display.sizeLocked)
                 MParagraph(display.sizeLocked
-                           ? "Set by MELEE_PET_SCALE in the environment."
+                           ? "Set by DESKTOP_MELEE_SCALE in the environment."
                            : "The screen edges are the blastzones: bigger fighters are KO'd sooner.",
                            size: 15, width: 300)
                     .foregroundStyle(.secondary)
@@ -266,15 +268,15 @@ struct DisplayTab: View {
             match.refresh()
             // Accessibility just turned on (here or in System Settings):
             // measure the Dock again, once.
-            let trusted = pet_ax_trusted()
-            if trusted && !axTrusted { pet_relayout() }
+            let trusted = desktop_melee_ax_trusted()
+            if trusted && !axTrusted { desktop_melee_relayout() }
             axTrusted = trusted
-            if dockExact != pet_dock_exact() { dockExact = pet_dock_exact() }
+            if dockExact != desktop_melee_dock_exact() { dockExact = desktop_melee_dock_exact() }
         }
     }
 }
 
-/// One connected screen, with a checkmark on the one the pet plays on.
+/// One connected screen, with a checkmark on the one Desktop Melee plays on.
 struct ScreenRow: View {
     let name: String
     let primary: Bool
@@ -330,7 +332,7 @@ struct DockSizeRow: View {
             if exact {
                 MText("Exact", size: 19).foregroundStyle(.secondary)
             } else {
-                Button { pet_ax_request() } label: {
+                Button { desktop_melee_ax_request() } label: {
                     MText("Estimated · Measure exactly", size: 17)
                 }
             }

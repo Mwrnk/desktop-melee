@@ -15,7 +15,7 @@
 #include <sysdolphin/baselib/gobjproc.h>
 #include <sysdolphin/baselib/jobj.h>
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #endif
 
 static struct ifTime_data {
@@ -136,8 +136,8 @@ void ifTime_ShowTimers(void)
 {
     struct ifTime_data* x = &ifTime_data;
 #ifdef TARGET_PC
-    /* melee-pet: a hidden timer stays hidden (Melee shows it on pause). */
-    if (pet_timer_mode() == PET_TIMER_HIDDEN) {
+    /* desktop-melee: a hidden timer stays hidden (Melee shows it on pause). */
+    if (desktop_melee_timer_mode() == DESKTOP_MELEE_TIMER_HIDDEN) {
         return;
     }
 #endif
@@ -273,9 +273,9 @@ void ifTime_CreateTimers(void)
         HSD_JObjSetTranslate(jobj, ifAll_GetTimerPosition());
 #ifdef TARGET_PC
         {
-            /* melee-pet: a smaller clock, so it doesn't sit on the desktop. */
+            /* desktop-melee: a smaller clock, so it doesn't sit on the desktop. */
             Vec3 scale;
-            scale.x = scale.y = scale.z = pet_timer_scale();
+            scale.x = scale.y = scale.z = desktop_melee_timer_scale();
             HSD_JObjSetScale(jobj, &scale);
         }
 #endif
@@ -327,12 +327,12 @@ bool ifTime_IsTimerHidden(void)
 }
 
 #ifdef TARGET_PC
-/* melee-pet: apply the timer setting each frame, so it takes effect at once
+/* desktop-melee: apply the timer setting each frame, so it takes effect at once
  * (and covers the countdown, which may appear later). */
-void pet_timer_frame(void)
+void desktop_melee_timer_frame(void)
 {
     struct ifTime_data* x = &ifTime_data;
-    if (pet_timer_mode() == PET_TIMER_HIDDEN) {
+    if (desktop_melee_timer_mode() == DESKTOP_MELEE_TIMER_HIDDEN) {
         if (x->match_timer != NULL && !ifTime_IsTimerHidden()) {
             ifTime_HideTimers();
         }
@@ -347,7 +347,7 @@ void pet_timer_frame(void)
 }
 
 /* Trace: whether the clock is hidden, and its scale (1 when there is none). */
-bool pet_timer_trace(float* scale)
+bool desktop_melee_timer_trace(float* scale)
 {
     struct ifTime_data* x = &ifTime_data;
     *scale = x->match_timer != NULL

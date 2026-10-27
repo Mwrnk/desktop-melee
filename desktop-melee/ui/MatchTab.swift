@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The Match tab: start or restart a match, and its rules.
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 
 /// The match rules, remembered across launches and handed to the game's
-/// GM_PET mode (pet_set_match_setup) whenever they change. The players part
+/// GM_DESKTOP_MELEE mode (desktop_melee_set_match_setup) whenever they change. The players part
 /// of the setup is left as the game has it (the Players tab owns it).
 final class MatchSettings: ObservableObject {
-    private static let defaults = UserDefaults(suiteName: "melee-pet") ?? .standard
+    private static var defaults: UserDefaults { Settings.defaults }
 
     @Published var stocks: Int {
         didSet { Self.defaults.set(stocks, forKey: "match.stocks"); push() }
@@ -28,20 +28,20 @@ final class MatchSettings: ObservableObject {
     }
 
     func refresh() {
-        active = pet_match_active()
-        hidden = pet_hidden()
+        active = desktop_melee_match_active()
+        hidden = desktop_melee_hidden()
     }
 
     func startOrRestart() {
-        pet_request_match()
+        desktop_melee_request_match()
     }
 
     private func push() {
-        var setup = PetMatchSetup()
-        pet_match_setup(&setup)
+        var setup = DesktopMeleeMatchSetup()
+        desktop_melee_match_setup(&setup)
         setup.stocks = Int32(max(1, min(99, stocks)))
         setup.time_seconds = Int32(max(0, minutes) * 60)
-        pet_set_match_setup(&setup)
+        desktop_melee_set_match_setup(&setup)
     }
 }
 
@@ -102,7 +102,8 @@ struct MatchTab: View {
                     Image(systemName: "flag.2.crossed")
                         .frame(width: 18)
                         .foregroundStyle(.secondary)
-                    MParagraph("When time runs out, the match ends and the pet goes back to idle.",
+                    MParagraph("When time runs out, the match ends and Desktop Melee goes "
+                               + "back to idle.",
                                size: 17, width: 262)
                         .foregroundStyle(.secondary)
                 }
@@ -161,7 +162,7 @@ struct PauseAndHideRow: View {
         HStack(spacing: 10) {
             Button {
                 MenuSound.confirm.play()
-                pet_toggle_pause_and_hide()
+                desktop_melee_toggle_pause_and_hide()
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: hidden ? "eye" : "eye.slash")

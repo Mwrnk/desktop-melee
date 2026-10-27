@@ -8,7 +8,7 @@
 #include <SDL3/SDL_properties.h>
 #include <SDL3/SDL_video.h>
 
-#include "pet.h"
+#include "desktop_melee.h"
 
 /* The overlay window, and the screen it is on (the menu's choice). */
 static NSWindow* s_overlay;
@@ -18,10 +18,10 @@ static NSWindow* s_overlay;
  * (updateIgnoreMouseState in SDL_cocoawindow.m), and a full-screen window
  * that takes clicks, above every app on every Space, locks the player out of
  * their own desktop. */
-@interface PetClickThroughGuard : NSObject
+@interface DesktopMeleeClickThroughGuard : NSObject
 @end
 
-@implementation PetClickThroughGuard
+@implementation DesktopMeleeClickThroughGuard
 - (void)observeValueForKeyPath:(NSString*)keyPath
                       ofObject:(id)object
                         change:(NSDictionary*)change
@@ -31,24 +31,24 @@ static NSWindow* s_overlay;
         static bool logged = false;
         if (!logged) {
             logged = true;
-            SDL_Log("pet: overlay click-through was turned off; turned it back on");
+            SDL_Log("desktop-melee: overlay click-through was turned off; turned it back on");
         }
         window.ignoresMouseEvents = YES;
     }
 }
 @end
 
-static PetClickThroughGuard* s_click_guard;
+static DesktopMeleeClickThroughGuard* s_click_guard;
 
 /* Pause and hide: the overlay goes fully transparent but keeps drawing, so
  * the game loop never stalls on a hidden window. */
-void pet_mac_overlay_set_faded(bool faded) {
+void desktop_melee_mac_overlay_set_faded(bool faded) {
     if (s_overlay != nil) {
         s_overlay.alphaValue = faded ? 0.0 : 1.0;
     }
 }
 
-void pet_mac_overlay_set_hidden(bool hidden) {
+void desktop_melee_mac_overlay_set_hidden(bool hidden) {
     if (s_overlay == nil) {
         return;
     }
@@ -64,23 +64,23 @@ static NSScreen* overlay_screen(void) {
     return s_overlay.screen != nil ? s_overlay.screen : NSScreen.mainScreen;
 }
 
-void pet_overlay_mac_setup(SDL_Window* window) {
+void desktop_melee_overlay_mac_setup(SDL_Window* window) {
     NSWindow* nswindow = (__bridge NSWindow*)SDL_GetPointerProperty(
         SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
     if (nswindow == nil) {
-        SDL_Log("pet: no NSWindow for the overlay");
+        SDL_Log("desktop-melee: no NSWindow for the overlay");
         return;
     }
     s_overlay = nswindow;
     /* Clicks, drags and scrolls go to the windows underneath, always. */
     nswindow.ignoresMouseEvents = YES;
-    s_click_guard = [PetClickThroughGuard new];
-    if (pet_trace_enabled()) {
+    s_click_guard = [DesktopMeleeClickThroughGuard new];
+    if (desktop_melee_trace_enabled()) {
         [NSTimer scheduledTimerWithTimeInterval:1.0
                                         repeats:YES
                                           block:^(NSTimer* timer) {
                                               (void)timer;
-                                              pet_trace_tick();
+                                              desktop_melee_trace_tick();
                                           }];
     }
     [nswindow addObserver:s_click_guard
@@ -99,10 +99,10 @@ void pet_overlay_mac_setup(SDL_Window* window) {
                                   NSWindowCollectionBehaviorStationary |
                                   NSWindowCollectionBehaviorFullScreenAuxiliary |
                                   NSWindowCollectionBehaviorIgnoresCycle;
-    SDL_Log("pet: overlay window %.0fx%.0f, click-through", nswindow.frame.size.width,
+    SDL_Log("desktop-melee: overlay window %.0fx%.0f, click-through", nswindow.frame.size.width,
             nswindow.frame.size.height);
-    /* The menu bar app (pet/ui, Swift). */
-    pet_ui_install((__bridge void*)nswindow);
+    /* The menu bar app (desktop-melee/ui, Swift). */
+    desktop_melee_ui_install((__bridge void*)nswindow);
     /* The Metal layer must be non-opaque or the compositor ignores our alpha. */
     NSMutableArray<NSView*>* views = [NSMutableArray arrayWithObject:nswindow.contentView];
     while (views.count > 0) {
@@ -118,14 +118,14 @@ void pet_overlay_mac_setup(SDL_Window* window) {
                     [layers addObjectsFromArray:l.sublayers];
                 }
                 if ([l isKindOfClass:NSClassFromString(@"CAMetalLayer")]) {
-                    SDL_Log("pet: CAMetalLayer opaque=%d", l.opaque ? 1 : 0);
+                    SDL_Log("desktop-melee: CAMetalLayer opaque=%d", l.opaque ? 1 : 0);
                 }
             }
         }
     }
 }
 
-void pet_mac_screen_geometry(SDL_Window* window, float* width_pt, float* height_pt,
+void desktop_melee_mac_screen_geometry(SDL_Window* window, float* width_pt, float* height_pt,
                              float* floor_pt) {
     NSWindow* nswindow = (__bridge NSWindow*)SDL_GetPointerProperty(
         SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
@@ -145,7 +145,7 @@ void pet_mac_screen_geometry(SDL_Window* window, float* width_pt, float* height_
 static bool dock_frame_ax(NSScreen* screen, float* left, float* right, float* top,
                           bool* on_screen) {
     /* Never prompts: the welcome window and the Display tab ask, with a
-     * reason (pet_ax_request). */
+     * reason (desktop_melee_ax_request). */
     if (!AXIsProcessTrusted()) {
         return false;
     }
@@ -234,7 +234,7 @@ static void dock_frame_estimate(float screen_w, float* left, float* right) {
     *right = 0.5f * (screen_w + width);
 }
 
-bool pet_mac_dock_frame(float screen_w, float screen_h, float* left, float* right,
+bool desktop_melee_mac_dock_frame(float screen_w, float screen_h, float* left, float* right,
                         float* top, bool* exact) {
     (void)screen_h;
     NSScreen* screen = overlay_screen();
@@ -261,7 +261,7 @@ bool pet_mac_dock_frame(float screen_w, float screen_h, float* left, float* righ
     return true;
 }
 
-void pet_mac_notch(float* left, float* right, float* height) {
+void desktop_melee_mac_notch(float* left, float* right, float* height) {
     NSScreen* screen = overlay_screen();
     const NSRect frame = screen.frame;
     if (@available(macOS 12.0, *)) {
@@ -286,10 +286,10 @@ void pet_mac_notch(float* left, float* right, float* height) {
  * down out of the menu bar's way whenever it is ordered front (AppKit's
  * constrainFrameRect:toScreen:), which left it a menu bar's height too low,
  * below the stocks and percents it frames. */
-@interface PetIslandWindow : NSWindow
+@interface DesktopMeleeIslandWindow : NSWindow
 @end
 
-@implementation PetIslandWindow
+@implementation DesktopMeleeIslandWindow
 - (NSRect)constrainFrameRect:(NSRect)frameRect toScreen:(NSScreen*)screen {
     (void)screen;
     return frameRect;
@@ -299,7 +299,7 @@ void pet_mac_notch(float* left, float* right, float* height) {
 static NSWindow* s_island;
 static void island_create(NSRect rect, float height);
 
-void pet_mac_island_place(float left, float right, float height) {
+void desktop_melee_mac_island_place(float left, float right, float height) {
     const NSRect frame = overlay_screen().frame;
     const NSRect rect =
         NSMakeRect(frame.origin.x + left, NSMaxY(frame) - height, right - left, height);
@@ -312,7 +312,7 @@ void pet_mac_island_place(float left, float right, float height) {
 }
 
 static void island_create(NSRect rect, float height) {
-    s_island = [[PetIslandWindow alloc] initWithContentRect:rect
+    s_island = [[DesktopMeleeIslandWindow alloc] initWithContentRect:rect
                                            styleMask:NSWindowStyleMaskBorderless
                                              backing:NSBackingStoreBuffered
                                                defer:NO];
@@ -340,7 +340,7 @@ static void island_create(NSRect rect, float height) {
                                     repeats:YES
                                       block:^(NSTimer* timer) {
                                           (void)timer;
-                                          const bool want = pet_island_wanted();
+                                          const bool want = desktop_melee_island_wanted();
                                           const bool shown = s_island.alphaValue > 0.0;
                                           if (want == shown && s_island.visible == want) {
                                               return;
@@ -361,7 +361,7 @@ static void island_create(NSRect rect, float height) {
 }
 
 /* Writes straight RGBA8 pixels as a PNG (asset dumps). */
-void pet_mac_write_png(const char* path, const uint8_t* rgba, int width, int height) {
+void desktop_melee_mac_write_png(const char* path, const uint8_t* rgba, int width, int height) {
     CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
     CGContextRef ctx = CGBitmapContextCreate((void*)rgba, (size_t)width, (size_t)height, 8,
                                              (size_t)width * 4, space,
@@ -395,9 +395,9 @@ void pet_mac_write_png(const char* path, const uint8_t* rgba, int width, int hei
 
 /* Accessibility (exact Dock size): whether it is granted, and asking for it
  * (the system dialog, which links to the right settings pane). */
-bool pet_ax_trusted(void) { return AXIsProcessTrusted(); }
+bool desktop_melee_ax_trusted(void) { return AXIsProcessTrusted(); }
 
-void pet_ax_request(void) {
+void desktop_melee_ax_request(void) {
     NSDictionary* opts = @{(__bridge NSString*)kAXTrustedCheckOptionPrompt : @YES};
     AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)opts);
 }

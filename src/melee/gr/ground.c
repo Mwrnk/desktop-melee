@@ -121,7 +121,7 @@
 #include <sysdolphin/baselib/wobj.h>
 
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #endif
 
 /* 1BFFA8 */ static void Ground_OnStart(void);
@@ -1088,7 +1088,7 @@ void Ground_801C1E2C(HSD_GObj* gobj, intptr_t code)
     bool stage_is_something;
     HSD_JObj* jobj;
 #ifdef TARGET_PC
-    if (pet_hide_stage()) {
+    if (desktop_melee_hide_stage()) {
         return;
     }
 #endif
@@ -2355,9 +2355,9 @@ void Ground_801C3BB4(void)
     }
 #ifdef TARGET_PC
     {
-        /* melee-pet overlay: the screen edges are the blastzones. */
+        /* desktop-melee overlay: the screen edges are the blastzones. */
         f32 l, r, t, b;
-        if (pet_blastzones(&l, &r, &t, &b)) {
+        if (desktop_melee_blastzones(&l, &r, &t, &b)) {
             lft = l - stage_info.cam_info.cam_x_offset;
             rgt = r - stage_info.cam_info.cam_x_offset;
             top = t - stage_info.cam_info.cam_y_offset;

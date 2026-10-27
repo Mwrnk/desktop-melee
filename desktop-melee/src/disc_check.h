@@ -10,23 +10,23 @@ extern "C" {
 #endif
 
 typedef enum {
-    PET_DISC_CHECKING = 0,
-    PET_DISC_VERIFIED = 1,
-    PET_DISC_REJECTED = 2, /* the header check failed (PAL included) */
-    PET_DISC_MODIFIED = 3, /* the size or hash does not match the clean disc */
-    PET_DISC_ERROR = 4     /* the image could not be read */
-} PetDiscState;
+    DESKTOP_MELEE_DISC_CHECKING = 0,
+    DESKTOP_MELEE_DISC_VERIFIED = 1,
+    DESKTOP_MELEE_DISC_REJECTED = 2, /* the header check failed (PAL included) */
+    DESKTOP_MELEE_DISC_MODIFIED = 3, /* the size or hash does not match the clean disc */
+    DESKTOP_MELEE_DISC_ERROR = 4     /* the image could not be read */
+} DesktopMeleeDiscState;
 
-typedef struct PetDiscCheck PetDiscCheck;
+typedef struct DesktopMeleeDiscCheck DesktopMeleeDiscCheck;
 
 /* Starts checking the image at path. */
-PetDiscCheck* pet_disc_check_start(const char* path);
+DesktopMeleeDiscCheck* desktop_melee_disc_check_start(const char* path);
 /* The state so far, the hash progress (0..100) and, once finished, a message
  * for the player. Never blocks. */
-PetDiscState pet_disc_check_poll(PetDiscCheck* check, int* percent, char* message,
-                                 int message_size);
+DesktopMeleeDiscState desktop_melee_disc_check_poll(DesktopMeleeDiscCheck* check, int* percent,
+                                                    char* message, int message_size);
 /* Cancels the check if it is still running, waits for it, and frees it. */
-void pet_disc_check_free(PetDiscCheck* check);
+void desktop_melee_disc_check_free(DesktopMeleeDiscCheck* check);
 
 #ifdef __cplusplus
 }

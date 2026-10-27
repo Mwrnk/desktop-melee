@@ -29,7 +29,7 @@
 #include <sysdolphin/baselib/tobj.h>
 
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #endif
 
 static struct ifStock_804A1378 ifStock_804A1378;
@@ -490,14 +490,14 @@ void fn_802F94E0(HSD_GObj* gobj, intptr_t renderpass)
     struct IfStockUserData* p = HSD_GObjGetUserData(gobj);
     struct HudIndex* x = ifStatus_GetHUDInfo();
 #ifdef TARGET_PC
-    if (pet_hide_stage() && pet_hud_mode() == PET_HUD_HIDDEN) {
-        return; /* melee-pet: stocks and percents hidden */
+    if (desktop_melee_hide_stage() && desktop_melee_hud_mode() == DESKTOP_MELEE_HUD_HIDDEN) {
+        return; /* desktop-melee: stocks and percents hidden */
     }
     {
-        /* melee-pet: stocks live in the notch island. Set every frame here,
+        /* desktop-melee: stocks live in the notch island. Set every frame here,
          * after any animation has rewritten the group's root. */
         f32 ix, iy, is;
-        if (pet_hud_stock_anchor(p->player, &ix, &iy, &is)) {
+        if (desktop_melee_hud_stock_anchor(p->player, &ix, &iy, &is)) {
             HSD_JObj* jobj = gobj->hsd_obj;
             Vec3 pos, scale;
             pos.x = ix;
@@ -511,7 +511,7 @@ void fn_802F94E0(HSD_GObj* gobj, intptr_t renderpass)
 #endif
     if (!x->players[p->player].flags.hide_all_digits) {
 #ifdef TARGET_PC
-        pet_trace_hud_drawn();
+        desktop_melee_trace_hud_drawn();
 #endif
         HSD_GObj_JObjCallback(gobj, renderpass);
     }
@@ -521,7 +521,7 @@ void fn_802F9548(HSD_GObj* gobj, intptr_t renderpass)
 {
     struct HudIndex* x = ifStatus_GetHUDInfo();
 #ifdef TARGET_PC
-    if (pet_hide_stage() && pet_hud_mode() == PET_HUD_HIDDEN) {
+    if (desktop_melee_hide_stage() && desktop_melee_hud_mode() == DESKTOP_MELEE_HUD_HIDDEN) {
         return;
     }
 #endif

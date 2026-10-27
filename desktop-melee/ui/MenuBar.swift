@@ -4,7 +4,7 @@
 // thread, which pumps AppKit events every frame through SDL).
 import AppKit
 import Combine
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 
 final class MenuBarController: NSObject, NSPopoverDelegate {
@@ -32,7 +32,8 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         popover.behavior = .transient
         popover.animates = true
         popover.delegate = self
-        let hosting = NSHostingController(rootView: PetPanel(audio: audio, match: match, players: players, controls: controls, display: display))
+        let hosting = NSHostingController(rootView: DesktopMeleePanel(
+            audio: audio, match: match, players: players, controls: controls, display: display))
         // Size the popover from SwiftUI's layout, so it is placed for its real
         // height (otherwise the top can end up above the screen).
         hosting.sizingOptions = [.preferredContentSize]
@@ -72,7 +73,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
     func logStatus() {
         let frame = statusItem.button?.window?.frame ?? .zero
-        NSLog("pet: menu bar item %@ at %@ (visible %d)",
+        NSLog("desktop-melee: menu bar item %@ at %@ (visible %d)",
               statusItem.isVisible ? "shown" : "hidden",
               NSStringFromRect(frame), statusItem.button?.window?.isVisible == true ? 1 : 0)
     }
@@ -84,7 +85,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     /// Posted when the popover closes (the shortcut recorder stops).
-    static let popoverClosed = Notification.Name("PetPopoverClosed")
+    static let popoverClosed = Notification.Name("DesktopMeleePopoverClosed")
 
     func popoverDidClose(_ notification: Notification) {
         NotificationCenter.default.post(name: Self.popoverClosed, object: nil)
@@ -94,15 +95,15 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 }
 
 /// Called from C (Pause and hide's Show): the keyboard back to the game.
-@_cdecl("pet_ui_focus_game")
-public func petUIFocusGame() {
+@_cdecl("desktop_melee_ui_focus_game")
+public func desktopMeleeUIFocusGame() {
     NSApp.activate(ignoringOtherApps: true)
     MenuBarController.shared?.focusGame()
 }
 
-/// Called from C once the game window exists (pet/src/overlay_mac.m).
-@_cdecl("pet_ui_install")
-public func petUIInstall(_ gameWindow: UnsafeMutableRawPointer?) {
+/// Called from C once the game window exists (desktop-melee/src/overlay_mac.m).
+@_cdecl("desktop_melee_ui_install")
+public func desktopMeleeUIInstall(_ gameWindow: UnsafeMutableRawPointer?) {
     // A menu bar app: no Dock icon (and the Dock, Fox's floor, keeps its width).
     NSApp.setActivationPolicy(.accessory)
     let window = gameWindow.map { Unmanaged<NSWindow>.fromOpaque($0).takeUnretainedValue() }

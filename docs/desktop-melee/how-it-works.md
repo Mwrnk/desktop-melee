@@ -44,15 +44,15 @@ flowchart TB
     disc["<b>1. Your disc image</b><br/>Melee USA 1.02 (.iso)<br/>models, textures, sounds, stages"]
     game["<b>2. Game code</b><br/>src/melee, src/sysdolphin<br/>Melee's own logic, rebuilt as C"]
     port["<b>3. melee-pc + aurora</b><br/>src/pc, extern/aurora<br/>stand-ins for the GameCube hardware"]
-    pet["<b>4. Desktop Melee</b><br/>pet/<br/>overlay window, Dock floor, menu bar app"]
+    desktop_melee["<b>4. Desktop Melee</b><br/>desktop-melee/<br/>overlay window, Dock floor, menu bar app"]
     mac["macOS<br/>Metal, AppKit, SDL3, your controllers"]
 
     disc -->|read at runtime| game
     game -->|"GX, PAD, DVD, OS calls"| port
-    pet -. small hooks .-> game
-    pet --> port
+    desktop_melee -. small hooks .-> game
+    desktop_melee --> port
     port --> mac
-    pet --> mac
+    desktop_melee --> mac
 ```
 
 | Layer | Where | Who wrote it | What it does |
@@ -60,7 +60,7 @@ flowchart TB
 | 1. Disc | your own `.iso` | Nintendo / HAL | All the game's data: fighters, stages, sounds, text. Never stored in this repo. |
 | 2. Game code | `src/melee/`, `src/sysdolphin/` | [doldecomp/melee](https://github.com/doldecomp/melee), adapted by melee-pc | Melee's logic: physics, hitboxes, fighters, menus, rules. |
 | 3. Platform | `src/pc/`, `extern/aurora/` | [melee-pc](https://github.com/999sian/melee-pc), [aurora](https://github.com/encounter/aurora) | Replaces the GameCube's graphics chip, disc drive, controllers and OS with PC equivalents. |
-| 4. Desktop Melee | `pet/` (+ marked hooks) | this project | Turns a full-screen game into a desktop overlay with a menu bar app. |
+| 4. Desktop Melee | `desktop-melee/` (+ marked hooks) | this project | Turns a full-screen game into a desktop overlay with a menu bar app. |
 
 **Why this works well:** the game logic is Melee's own, frame for frame. No
 part of the fighting is re-imagined: wavedashes, hitstun, ledge grabs and
@@ -167,7 +167,7 @@ restores the rest (`extern/aurora/lib/dolphin/os/OSMemory.cpp`).
 ### 4.3 Marked divergences
 
 Every place where melee-pc had to change the decompiled code is tagged
-`/* PORT: ... */`, and every Desktop Melee hook is tagged `melee-pet` inside
+`/* PORT: ... */`, and every Desktop Melee hook is tagged `desktop-melee` inside
 `#ifdef TARGET_PC`. The rest is the decompiled code as it is. The long list
 of 64-bit bug classes (8-byte pointers, signed `char` on ARM, `bool`
 clamping, missing `GXEnd`) is in [porting-notes.md](../porting-notes.md).
@@ -224,34 +224,34 @@ More: [architecture.md](../architecture.md) (threads, memory map) and the
 
 ## 6. Layer 4: Desktop Melee
 
-Desktop Melee is about 7,000 lines in `pet/`, plus small marked hooks in
+Desktop Melee is about 7,000 lines in `desktop-melee/`, plus small marked hooks in
 upstream files. It is turned on by one environment variable,
-`MELEE_PET_OVERLAY=1`, which the app bundle always sets (`LSEnvironment` in
-`pet/macos/Info.plist`). Without it, the same binary is plain melee-pc.
+`DESKTOP_MELEE_OVERLAY=1`, which the app bundle always sets (`LSEnvironment` in
+`desktop-melee/macos/Info.plist`). Without it, the same binary is plain melee-pc.
 
 ```mermaid
 flowchart TB
-    subgraph petc["pet/src"]
-        PETC["pet.c<br/>camera, Dock floor, blastzones,<br/>HUD island math, match setup, button maps"]
+    subgraph dm_src["desktop-melee/src"]
+        DM_C["desktop_melee.c<br/>camera, Dock floor, blastzones,<br/>HUD island math, match setup, button maps"]
         MAC["overlay_mac.m<br/>transparent click-through window,<br/>Dock and notch measuring, island window"]
         ASSET["assets.c + gctex.c<br/>decode GameCube textures to RGBA"]
         DISC["disc_check.cpp<br/>only clean USA 1.02 passes"]
     end
-    subgraph petg["pet/game (GCC)"]
-        MODE["gmpetmode.c<br/>GM_PET: idle scene + VS match"]
-        PA["petassets.c<br/>find icons, portraits, sounds<br/>in the game's archives"]
+    subgraph dm_game["desktop-melee/game (GCC)"]
+        MODE["gmdesktopmelee.c<br/>GM_DESKTOP_MELEE: idle scene + VS match"]
+        PA["desktop_melee_assets.c<br/>find icons, portraits, sounds<br/>in the game's archives"]
     end
-    subgraph petui["pet/ui (SwiftUI)"]
+    subgraph dm_ui["desktop-melee/ui (SwiftUI)"]
         MB["MenuBar.swift, Panel.swift<br/>Match, Players, Controls, Display, Sound tabs"]
         WEL["Welcome.swift<br/>first launch: disc, buttons, how to play"]
         HK["Hotkey.swift<br/>Pause and hide shortcut"]
     end
     HOOKS["hooks in src/melee, src/sysdolphin,<br/>src/pc/main.c, extern/aurora"]
 
-    petui <-->|"PetBridge (C functions)"| petc
-    petg <--> petc
-    HOOKS --> petc
-    HOOKS --> petg
+    dm_ui <-->|"DesktopMeleeBridge (C functions)"| dm_src
+    dm_game <--> dm_src
+    HOOKS --> dm_src
+    HOOKS --> dm_game
 ```
 
 What each hook changes, in one line:
@@ -260,7 +260,7 @@ What each hook changes, in one line:
 |---|---|
 | `src/pc/main.c` | Overlay window settings, native disc picker; the overlay stays transparent until the game starts. |
 | `src/pc/launcher.cpp` | melee-pc's launcher still waits for the shaders, but is never shown and can't be skipped; no update check. |
-| `src/melee/gm/gmboot.c` | Boot straight into `GM_PET`, never the title screen. |
+| `src/melee/gm/gmboot.c` | Boot straight into `GM_DESKTOP_MELEE`, never the title screen. |
 | `src/sysdolphin/baselib/displayfunc.c` | "Clear the screen" clears to transparent, not black. |
 | `src/melee/gr/grdisplay.c`, `src/melee/gr/ground.c` | Don't draw the stage or background models. |
 | `src/melee/cm/camera.c` | Fixed desktop camera instead of Melee's zooming one. |
@@ -271,7 +271,7 @@ What each hook changes, in one line:
 | `src/melee/if/ifnametag.c` | P1/P2/CPU tags always on, or off. |
 | `src/melee/ft/fighter.c` | Per-player button remapping. |
 | `src/melee/ft/kinds/ftCommon/ftCo_Jump*.c` | Tap jump on or off per player. |
-| `src/melee/gm/gmvs.c`, `src/melee/gm/gmscdata.c`, `src/melee/gm/forward.h` | Register `GM_PET`, restart a running match. |
+| `src/melee/gm/gmvs.c`, `src/melee/gm/gmscdata.c`, `src/melee/gm/forward.h` | Register `GM_DESKTOP_MELEE`, restart a running match. |
 | `extern/aurora/` (several files) | Transparent, borderless, always-on-top window; coverage alpha; premultiplied presentation. |
 
 ---
@@ -285,18 +285,18 @@ work aurora hands to its render worker.
 sequenceDiagram
     participant Pad as Controllers / keyboard
     participant Game as Melee game loop
-    participant Pet as Desktop Melee hooks
+    participant DM as Desktop Melee hooks
     participant Aurora as aurora (GX → WebGPU)
     participant Mac as macOS compositor
 
     Pad->>Game: buttons and sticks (PAD)
-    Game->>Pet: pet_map_buttons(), pet_tap_jump()
-    Pet-->>Game: remapped buttons, jump allowed?
+    Game->>DM: desktop_melee_map_buttons(), desktop_melee_tap_jump()
+    DM-->>Game: remapped buttons, jump allowed?
     Game->>Game: physics, hitboxes, collision on the Dock-wide floor
-    Game->>Pet: pet_camera()
-    Pet-->>Game: fixed eye, target and 30° field of view
+    Game->>DM: desktop_melee_camera()
+    DM-->>Game: fixed eye, target and 30° field of view
     Game->>Aurora: erase to transparent, then draw fighters, effects, HUD
-    Note over Game,Pet: the stage and background are skipped (pet_hide_stage)
+    Note over Game,DM: the stage and background are skipped (desktop_melee_hide_stage)
     Aurora->>Mac: frame with alpha = coverage, premultiplied
     Mac->>Mac: blend over your desktop
     Game->>Game: VIWaitForRetrace (wait for the next frame)
@@ -336,8 +336,8 @@ Details that matter:
 - **The click-through guard.** SDL turns `ignoresMouseEvents` off whenever a
   transparent window gets a mouse-moved event (`updateIgnoreMouseState` in
   SDL's `SDL_cocoawindow.m`). A full-screen window that takes clicks, above
-  every app, would lock you out of your own Mac. `PetClickThroughGuard` in
-  `pet/src/overlay_mac.m` watches that property and turns it back on at once.
+  every app, would lock you out of your own Mac. `DesktopMeleeClickThroughGuard` in
+  `desktop-melee/src/overlay_mac.m` watches that property and turns it back on at once.
 - **Window level.** The overlay sits at `NSMainMenuWindowLevel - 1`: above
   every app window, below the menu bar, so the menu bar app and the notch
   island stay on top. It joins all Spaces, so it follows you between
@@ -376,8 +376,8 @@ melee_y = (point_y − floor) · u      point_y measured up from the bottom
 ### 9.2 The camera
 
 Melee's own camera zooms and pans to follow the fighters. On a desktop that
-would make the fighters drift away from the Dock, so `pet_camera()` in
-`pet/src/pet.c` replaces it with a fixed one:
+would make the fighters drift away from the Dock, so `desktop_melee_camera()` in
+`desktop-melee/src/desktop_melee.c` replaces it with a fixed one:
 
 - It looks straight down the −z axis at the screen's center.
 - Field of view: 30°, narrow, so the z = 0 plane (where fighters and the
@@ -402,7 +402,7 @@ it horizontally so the floor spans the Dock exactly:
 - The ledges sit at the floor's corners, so they move with it: you can grab
   the Dock's edges.
 
-**Measuring the Dock** (`pet/src/overlay_mac.m`):
+**Measuring the Dock** (`desktop-melee/src/overlay_mac.m`):
 
 | Accessibility permission | Dock width | Floor height |
 |---|---|---|
@@ -413,7 +413,7 @@ With no Dock on the overlay's screen, Final Destination keeps its own width.
 
 ### 9.4 Blastzones
 
-`pet_blastzones()` makes the screen edges the blastzones (`src/melee/gr/ground.c`):
+`desktop_melee_blastzones()` makes the screen edges the blastzones (`src/melee/gr/ground.c`):
 
 ```text
 left   = −U / 2              right  = +U / 2
@@ -427,7 +427,7 @@ Fly off any edge of your screen and you lose a stock.
 The camera, the floor and the blastzones all depend on the screen and the
 fighter size. Changing them mid-match would teleport the floor under the
 fighters. So the size and the HUD placement are *latched* when a match starts
-(`pet_match_began`), and screen or Dock changes wait until the match ends.
+(`desktop_melee_match_began`), and screen or Dock changes wait until the match ends.
 
 ---
 
@@ -439,16 +439,16 @@ on the left, P2 on the right.
 
 ```mermaid
 flowchart LR
-    A["Melee's HUD camera<br/>ifall.c reports its distance and FOV"] --> B["pet.c: points per HUD unit<br/>ppu = screen_h / (2 · distance · tan(fov/2))"]
+    A["Melee's HUD camera<br/>ifall.c reports its distance and FOV"] --> B["desktop_melee.c: points per HUD unit<br/>ppu = screen_h / (2 · distance · tan(fov/2))"]
     N["overlay_mac.m: notch edges<br/>from the screen's safe area"] --> C
-    B --> C["pet_hud_stock_anchor()<br/>pet_hud_percent_anchor()<br/>translation + scale per player"]
+    B --> C["desktop_melee_hud_stock_anchor()<br/>desktop_melee_hud_percent_anchor()<br/>translation + scale per player"]
     C --> D["ifstock.c / ifstatus.c draw the<br/>real HUD models at those spots"]
     I["black island window<br/>below the menu bar's level"] -.-> D
 ```
 
 - The island is sized from the menu bar height: padding, four stock icons,
   a gap, and room for a three-digit percent with its `%` sign
-  (`ISLAND_*` constants in `pet/src/pet.c`).
+  (`ISLAND_*` constants in `desktop-melee/src/desktop_melee.c`).
 - These are Melee's actual HUD models, moved and scaled, not redrawn
   copies, so damage colors and stock animations stay authentic.
 - The island only shows while the HUD is actually rendering (checked every
@@ -462,12 +462,12 @@ flowchart LR
 ## 11. The game mode: idle, match, idle
 
 Melee organizes everything into *game modes* (Classic, VS, Training...) made
-of *scenes*. Desktop Melee adds its own mode, `GM_PET`
-(`pet/game/gmpetmode.c`), and the overlay boots straight into it.
+of *scenes*. Desktop Melee adds its own mode, `GM_DESKTOP_MELEE`
+(`desktop-melee/game/gmdesktopmelee.c`), and the overlay boots straight into it.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Idle: boot (gmboot.c picks GM_PET)
+    [*] --> Idle: boot (gmboot.c picks GM_DESKTOP_MELEE)
     Idle: Idle scene
     Idle: nothing drawn, overlay fully clear
     Idle: loads icons, portraits, menu sounds once
@@ -480,7 +480,7 @@ stateDiagram-v2
 ```
 
 When a match starts (`onEnterVs`), the setup comes from the menu bar
-(`PetMatchSetup` in `pet/src/pet_game.h`):
+(`DesktopMeleeMatchSetup` in `desktop-melee/src/desktop_melee_game.h`):
 
 - Two players: character, costume, human or CPU, CPU level 1–9, and which
   controller port plays each human.
@@ -492,7 +492,7 @@ When a match starts (`onEnterVs`), the setup comes from the menu bar
 
 ## 12. The menu bar app
 
-The menu bar app is SwiftUI, compiled as a static library (`pet_ui`) and
+The menu bar app is SwiftUI, compiled as a static library (`desktop_melee_ui`) and
 linked **into the game binary**. There is one process and one main thread.
 
 ```mermaid
@@ -500,16 +500,16 @@ flowchart LR
     subgraph proc["Desktop Melee.app (one process)"]
         subgraph main["Main thread"]
             LOOP["Melee game loop<br/>60 frames a second"] -->|"SDL pumps AppKit events<br/>every frame"| UI["SwiftUI popover<br/>Match · Players · Controls · Display · Sound"]
-            UI -->|"PetBridge: plain C calls<br/>pet_set_match_setup(), pet_set_hud_mode(), ..."| STATE["pet.c state"]
+            UI -->|"DesktopMeleeBridge: plain C calls<br/>desktop_melee_set_match_setup(), desktop_melee_set_hud_mode(), ..."| STATE["desktop_melee.c state"]
             STATE -->|read every frame| LOOP
         end
     end
-    UI -->|UserDefaults suite melee-pet| PREFS[("saved settings")]
+    UI -->|UserDefaults suite desktop-melee| PREFS[("saved settings")]
 ```
 
 **Why one process:** the Swift code reads and writes the game's settings with
-ordinary C function calls (`pet/ui/bridge/pet_bridge.h`, imported as the
-`PetBridge` Swift module). There is no IPC, no locking and no latency: a
+ordinary C function calls (`desktop-melee/ui/bridge/desktop_melee_bridge.h`, imported as the
+`DesktopMeleeBridge` Swift module). There is no IPC, no locking and no latency: a
 button remap made in the Controls tab applies on the very next frame.
 
 **Why it stays responsive:** the game loop calls SDL's event pump every frame,
@@ -531,7 +531,7 @@ The tabs:
 | Sound | Master, music and effects volume (shared with melee-pc), menu sounds. |
 
 **Pause and hide's shortcut** is a Carbon system hotkey (`RegisterEventHotKey`
-in `pet/ui/Hotkey.swift`). It works while any app is in front and needs no
+in `desktop-melee/ui/Hotkey.swift`). It works while any app is in front and needs no
 permission. The recorder only accepts combinations with at least two
 modifiers, one of them Control, Option or Command, so it can never take an
 everyday shortcut like ⌘C from every app.
@@ -547,26 +547,26 @@ time the game boots.
 ```mermaid
 flowchart LR
     D[("your disc image")] --> AR["game archives in memory<br/>(character select screen, title)"]
-    AR --> PA["pet/game/petassets.c<br/>walks the models and texture<br/>animations (built as game code)"]
-    PA --> GT["pet/src/gctex.c<br/>decodes all ten GameCube<br/>texture formats"]
-    GT --> AS["pet/src/assets.c<br/>RGBA buffers in memory"]
-    AS --> SW["pet/ui/GameAssets.swift<br/>CGImage for SwiftUI"]
+    AR --> PA["desktop-melee/game/desktop_melee_assets.c<br/>walks the models and texture<br/>animations (built as game code)"]
+    PA --> GT["desktop-melee/src/gctex.c<br/>decodes all ten GameCube<br/>texture formats"]
+    GT --> AS["desktop-melee/src/assets.c<br/>RGBA buffers in memory"]
+    AS --> SW["desktop-melee/ui/GameAssets.swift<br/>CGImage for SwiftUI"]
 ```
 
 - **GameCube textures** are stored in tiles (8×8, 8×4 or 4×4 pixels),
   sometimes with a palette. `gctex.c` turns each format into plain RGBA:
   I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA8, CI4, CI8 and CMPR (the GameCube's
   DXT1 variant, with big-endian colors).
-- `petassets.c` is compiled with the game code because it walks the disc's
+- `desktop_melee_assets.c` is compiled with the game code because it walks the disc's
   structures, which need `DISC_STRUCT` and therefore GCC.
 - Sounds (menu clicks, the announcer's character names) are played through
   the game's own sound engine.
 - **Melee's font** is the one exception that leaves memory: it is saved to
   `~/Library/Application Support/Desktop Melee/melee-font.bin` on first boot,
-  and `pet/package.sh` copies it into the app so the welcome window can use it
+  and `desktop-melee/package.sh` copies it into the app so the welcome window can use it
   before a disc is chosen. That makes a built app personal: never upload one.
 
-`MELEE_PET_DUMP=<dir>` writes every asset found to PNG files, to help find
+`DESKTOP_MELEE_DUMP=<dir>` writes every asset found to PNG files, to help find
 assets. Never commit that output.
 
 ---
@@ -588,7 +588,7 @@ flowchart TB
   image experimentally; Desktop Melee does not, so the game is always the
   version the decompilation matches.
 - The hash runs once per file. After that the file's path, size and
-  modification date are enough (`pet/ui/DiscMemory.swift`).
+  modification date are enough (`desktop-melee/ui/DiscMemory.swift`).
 - Until a disc is in, the overlay window is hidden, so the welcome window
   never sits under an invisible full-screen window.
 
@@ -597,8 +597,8 @@ launcher builds every graphics pipeline it knows (about 6,600), so matches
 never stutter. That takes about 5 minutes on the first launch and a few
 seconds after that, because macOS caches the compiled shaders. Desktop Melee
 keeps the launcher running for that wait but never shows it: the overlay stays
-fully transparent until the game starts (`pet_launcher_wait_begin` /
-`pet_launcher_wait_end` in `pet/src/pet.c`). `pet/ui/Loading.swift` shows the
+fully transparent until the game starts (`desktop_melee_launcher_wait_begin` /
+`desktop_melee_launcher_wait_end` in `desktop-melee/src/desktop_melee.c`). `desktop-melee/ui/Loading.swift` shows the
 progress instead:
 
 - **First launch:** inside the welcome window's "Getting Melee ready…" screen,
@@ -619,12 +619,12 @@ progress instead:
   game never pauses because you clicked on your browser.
 - **Keyboard:** melee-pc ignores keys unless the game window is the key
   window. Starting a match or un-hiding brings the overlay forward
-  (`pet_ui_focus_game`) so keyboard play works; otherwise your keys would go
+  (`desktop_melee_ui_focus_game`) so keyboard play works; otherwise your keys would go
   to the app in front.
-- **Button map:** `pet_map_buttons()` runs in the fighter's human-input
+- **Button map:** `desktop_melee_map_buttons()` runs in the fighter's human-input
   branch (`src/melee/ft/fighter.c`) and rewrites the held buttons. A trigger
   remapped to another button stops giving an analog light shield.
-- **Tap jump:** `pet_tap_jump()` is checked where a stick-up jump would start
+- **Tap jump:** `desktop_melee_tap_jump()` is checked where a stick-up jump would start
   (`ftCo_Jump.c`, `ftCo_JumpAerial.c`, `ftCo_JumpAerialF1.c`). CPU players
   always keep it. The check uses the player's slot, so Nana follows her
   player's setting, the same as Popo.
@@ -635,13 +635,16 @@ progress instead:
 
 | Where | What |
 |---|---|
-| `defaults read melee-pet` (UserDefaults suite `melee-pet`) | `players.pN.*`, `controls.pN.*`, `display.size`, `display.screen`, `display.hud`, `display.timer`, `display.tags`, `display.shake`, `match.stocks`, `match.minutes`, `match.pauseKey`, `sound.menu`, `onboarding.done`, `disc.verified` |
+| `defaults read desktop-melee` (UserDefaults suite `desktop-melee`) | `players.pN.*`, `controls.pN.*`, `display.size`, `display.screen`, `display.hud`, `display.timer`, `display.tags`, `display.shake`, `match.stocks`, `match.minutes`, `match.pauseKey`, `sound.menu`, `onboarding.done`, `disc.verified` |
 | `launcher.cfg` in melee-pc's preferences folder | Volumes, UCF and the other melee-pc settings, shared with the melee-pc launcher. |
 | `~/Library/Application Support/Desktop Melee/` | `melee-font.bin` (section 13). |
 | `~/Library/Logs/Desktop Melee.log` | The log, when the app starts without a terminal. |
 
-Back up your settings with `defaults export melee-pet backup.plist`; restore
-with `defaults import melee-pet backup.plist`.
+Back up your settings with `defaults export desktop-melee backup.plist`; restore
+with `defaults import desktop-melee backup.plist`.
+Builds before the rename kept them in a `melee-pet` suite; the first launch
+copies them into `desktop-melee` once (`desktop-melee/ui/Settings.swift`) and
+leaves the old suite alone.
 
 ---
 
@@ -649,25 +652,25 @@ with `defaults import melee-pet backup.plist`.
 
 ```mermaid
 flowchart LR
-    SRC["sources"] --> CM["CMake + Ninja<br/>pet/build.sh"]
+    SRC["sources"] --> CM["CMake + Ninja<br/>desktop-melee/build.sh"]
     CM --> G["GCC: game code<br/>(melee_game)"]
-    CM --> C["Clang: melee-pc, aurora,<br/>pet/src"]
-    CM --> SW["swiftc: pet/ui → pet_ui.a"]
+    CM --> C["Clang: melee-pc, aurora,<br/>desktop-melee/src"]
+    CM --> SW["swiftc: desktop-melee/ui → desktop_melee_ui.a"]
     G --> L["clang++ links one binary: melee"]
     C --> L
     SW --> L
-    L --> P["pet/package.sh"]
+    L --> P["desktop-melee/package.sh"]
     P --> APP["Desktop Melee.app<br/>Info.plist, dylibs, icon (actool),<br/>font, signed"]
     APP --> INST["/Applications"]
 ```
 
-- `pet/build.sh` configures `build/macos` once and runs Ninja. Homebrew GCC
+- `desktop-melee/build.sh` configures `build/macos` once and runs Ninja. Homebrew GCC
   is required for the game code.
-- `pet/pet.cmake` adds Desktop Melee's sources and links SwiftUI, Combine,
+- `desktop-melee/desktop-melee.cmake` adds Desktop Melee's sources and links SwiftUI, Combine,
   Carbon and AppKit. The binary links with `clang++`, not `swiftc`, so it
   points the linker at the Swift runtime explicitly.
-- `pet/package.sh` builds through melee-pc's `tools/package_macos.sh`, swaps
-  in `pet/macos/Info.plist`, compiles the app icon with `actool` (a beige Mac
+- `desktop-melee/package.sh` builds through melee-pc's `tools/package_macos.sh`, swaps
+  in `desktop-melee/macos/Info.plist`, compiles the app icon with `actool` (a beige Mac
   in Light Mode, an indigo one in Dark Mode), copies the font, signs, and
   installs.
 - **Signing:** with an "Apple Development" certificate in your keychain the
@@ -679,32 +682,32 @@ flowchart LR
 
 ## 18. Testing and debugging
 
-`pet/tests/run_all.sh` runs every test (about 9 minutes). **The tests take
+`desktop-melee/tests/run_all.sh` runs every test (about 9 minutes). **The tests take
 over your screen** (they launch the real overlay and play matches), and some
-add and remove keys in the `melee-pet` defaults suite; back it up first.
+add and remove keys in the `desktop-melee` defaults suite; back it up first.
 
 | Variable | Effect |
 |---|---|
-| `MELEE_PET_OVERLAY=1` | Overlay mode (the app bundle sets it). |
-| `MELEE_PET_SCALE=<units>` | Melee units across the screen (50–5000), overriding the size setting. |
-| `MELEE_PET_LOG=<file>` | `pet/run-overlay.sh`: where the log goes. |
-| `MELEE_PET_TRACE=1` | Logs a `pet: trace` line every second during a match; SIGUSR1 presses Pause and hide. |
-| `MELEE_PET_INPUT_TRACE=1` | Logs blocked tap jumps and remapped buttons. |
-| `MELEE_PET_DUMP=<dir>` | Writes found assets and offscreen popover renders as PNGs. |
-| `MELEE_PET_WELCOME=1` / `disc` | Opens the welcome window (on the disc step). |
+| `DESKTOP_MELEE_OVERLAY=1` | Overlay mode (the app bundle sets it). |
+| `DESKTOP_MELEE_SCALE=<units>` | Melee units across the screen (50–5000), overriding the size setting. |
+| `DESKTOP_MELEE_LOG=<file>` | `desktop-melee/run-overlay.sh`: where the log goes. |
+| `DESKTOP_MELEE_TRACE=1` | Logs a `desktop-melee: trace` line every second during a match; SIGUSR1 presses Pause and hide. |
+| `DESKTOP_MELEE_INPUT_TRACE=1` | Logs blocked tap jumps and remapped buttons. |
+| `DESKTOP_MELEE_DUMP=<dir>` | Writes found assets and offscreen popover renders as PNGs. |
+| `DESKTOP_MELEE_WELCOME=1` / `disc` | Opens the welcome window (on the disc step). |
 | `MELEE_KEY_FIFO=<path>` | melee-pc: read key presses from a named pipe (tests drive matches with it). |
-| `MELEE_BOOT_SCENE=<name>` | melee-pc: boot a specific scene instead of `GM_PET`. |
+| `MELEE_BOOT_SCENE=<name>` | melee-pc: boot a specific scene instead of `GM_DESKTOP_MELEE`. |
 | `MELEE_INPUT_TRACE=1` | melee-pc: log port 1's controller every frame. |
 | `MELEE_LOG_FILE=<file>`, `MELEE_BACKEND=<name>` | melee-pc: log file, graphics backend. |
 
-Useful log lines: `pet: screen`, `pet: Dock ... (exact|estimated)`,
-`pet: floor`, `pet: blastzones`, `pet: match P1 ckind ...`, `boot scene:`.
+Useful log lines: `desktop-melee: screen`, `desktop-melee: Dock ... (exact|estimated)`,
+`desktop-melee: floor`, `desktop-melee: blastzones`, `desktop-melee: match P1 ckind ...`, `boot scene:`.
 
 ---
 
 ## Where Desktop Melee touches melee-pc
 
-Everything outside `pet/` that Desktop Melee changed is tagged `melee-pet` in
+Everything outside `desktop-melee/` that Desktop Melee changed is tagged `desktop-melee` in
 a comment, usually inside `#ifdef TARGET_PC`. The full list, required by the
 GPL for modified files, is in
 [licenses/LICENSE.md](../../licenses/LICENSE.md#desktop-melee); the table in
@@ -712,7 +715,7 @@ GPL for modified files, is in
 all:
 
 ```sh
-git grep -n 'melee-pet' -- ':!pet' ':!docs'
+git grep -n 'desktop-melee' -- src extern
 ```
 
 ---
@@ -720,28 +723,30 @@ git grep -n 'melee-pet' -- ':!pet' ':!docs'
 ## 20. File map
 
 ```text
-pet/
-├── build.sh              configure + build (Homebrew GCC for game code)
-├── package.sh            build the .app, icon, sign, install
-├── run-overlay.sh        run the installed app with a log
-├── pet.cmake             adds pet/ to the CMake build
+desktop-melee/
+├── build.sh                          configure + build (Homebrew GCC for game code)
+├── package.sh                        build the .app, icon, sign, install
+├── run-overlay.sh                    run the installed app with a log
+├── desktop-melee.cmake               adds desktop-melee/ to the CMake build
 ├── src/
-│   ├── pet.h, pet_game.h hooks the game and main.c call
-│   ├── pet.c             camera, floor, blastzones, island math, controls
-│   ├── overlay_mac.m     window, click-through, Dock/notch, island window
-│   ├── assets.c, gctex.c texture decoding for the menu bar
-│   └── disc_check.cpp    USA 1.02 check (background thread)
+│   ├── desktop_melee.h               hooks main.c calls
+│   ├── desktop_melee_game.h          hooks the game code calls
+│   ├── desktop_melee.c               camera, floor, blastzones, island math, controls
+│   ├── overlay_mac.m                 window, click-through, Dock/notch, island window
+│   ├── assets.c, gctex.c             texture decoding for the menu bar
+│   └── disc_check.cpp                USA 1.02 check (background thread)
 ├── game/
-│   ├── gmpetmode.c       GM_PET: idle scene + VS match
-│   └── petassets.c       finds icons/portraits/sounds in archives
-├── ui/                   SwiftUI menu bar app (one file per tab)
-│   └── bridge/           PetBridge: the C API Swift calls
+│   ├── gmdesktopmelee.c              GM_DESKTOP_MELEE: idle scene + VS match
+│   └── desktop_melee_assets.c        finds icons/portraits/sounds in archives
+├── ui/                               SwiftUI menu bar app (one file per tab)
+│   ├── Settings.swift                the desktop-melee defaults suite
+│   └── bridge/                       DesktopMeleeBridge: the C API Swift calls
 ├── macos/
-│   ├── Info.plist        bundle id, LSUIElement, MELEE_PET_OVERLAY=1
-│   ├── AppIcon.icon/     Icon Composer icon (light + dark)
-│   └── icon/             icon SVG sources + render.sh
-├── tests/                screen-driving tests (they take over the screen)
-└── tools/                small helpers (disc check CLI, window list)
+│   ├── Info.plist                    bundle id, LSUIElement, DESKTOP_MELEE_OVERLAY=1
+│   ├── AppIcon.icon/                 Icon Composer icon (light + dark, five layers each)
+│   └── icon/                         icon SVG sources + render.sh
+├── tests/                            screen-driving tests (they take over the screen)
+└── tools/                            small helpers (disc check CLI, window list)
 ```
 
 ---
@@ -767,7 +772,7 @@ pet/
 | **Coverage alpha** | How much of a pixel the game drew, kept in the alpha channel so the window can be see-through. |
 | **Premultiplied alpha** | Color already multiplied by its alpha: what macOS needs for transparent layers. |
 | **Notch island** | The black window around the MacBook notch that holds stocks and percents. |
-| **`GM_PET`** | Desktop Melee's game mode: an empty idle scene plus VS matches. |
+| **`GM_DESKTOP_MELEE`** | Desktop Melee's game mode: an empty idle scene plus VS matches. |
 | **Latched** | Fixed when a match starts and kept until it ends. |
 | **Accessory app** | A macOS app with no Dock icon or app menu (`LSUIElement`). |
 | **UCF** | Universal Controller Fix: a community fix for dashback and shield drop on worn sticks. |

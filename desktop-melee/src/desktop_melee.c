@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-#include "pet.h"
+#include "desktop_melee.h"
 
 #include <math.h>
 #include <signal.h>
@@ -31,7 +31,7 @@ static float s_floor = 0.0f;
 static float s_notch_left = 0.0f;
 static float s_notch_right = 0.0f;
 static float s_island_h = 0.0f;
-/* HUD camera (see pet_set_hud_camera) and the last HUD frame. */
+/* HUD camera (see desktop_melee_set_hud_camera) and the last HUD frame. */
 static float s_hud_distance = 0.0f;
 static float s_hud_fov = 0.0f;
 static volatile Uint64 s_hud_last_ms = 0;
@@ -70,32 +70,32 @@ static volatile bool s_hud_visible = false;
 static float s_dock_left = 0.0f;
 static float s_dock_right = 0.0f;
 
-bool pet_overlay_enabled(void) {
+bool desktop_melee_overlay_enabled(void) {
     if (s_overlay < 0) {
-        const char* env = getenv("MELEE_PET_OVERLAY");
+        const char* env = getenv("DESKTOP_MELEE_OVERLAY");
         s_overlay = env != NULL && env[0] != '\0' && env[0] != '0';
     }
     return s_overlay != 0;
 }
 
-bool pet_hide_stage(void) {
-    return pet_overlay_enabled();
+bool desktop_melee_hide_stage(void) {
+    return desktop_melee_overlay_enabled();
 }
 
 static bool trace_enabled(void);
 static void on_usr1(int sig);
 
-void pet_configure(AuroraConfig* config) {
-    if (!pet_overlay_enabled()) {
+void desktop_melee_configure(AuroraConfig* config) {
+    if (!desktop_melee_overlay_enabled()) {
         return;
     }
     config->overlayWindow = true;
     if (trace_enabled()) {
-        /* Tests: SIGUSR1 presses Pause and hide (pet_trace_tick). */
+        /* Tests: SIGUSR1 presses Pause and hide (desktop_melee_trace_tick). */
         signal(SIGUSR1, on_usr1);
     }
     /* A menu bar app: SDL must not turn the process into a regular app with a
-     * Dock icon (pet_ui_install makes it an accessory app). */
+     * Dock icon (desktop_melee_ui_install makes it an accessory app). */
     SDL_SetHint(SDL_HINT_MAC_BACKGROUND_APP, "1");
     config->startFullscreen = false;
     /* The overlay never asks for focus, so losing it must not pause the game,
@@ -107,54 +107,55 @@ void pet_configure(AuroraConfig* config) {
 static SDL_Window* s_window;
 
 /* Display settings from the menu bar. Size and island are what the next
- * match uses (latched in pet_match_began); the screen applies while idle. */
+ * match uses (latched in desktop_melee_match_began); the screen applies while idle. */
 #define DEFAULT_UNITS 490.0f
 static float s_units_next = DEFAULT_UNITS;
 static float s_units = DEFAULT_UNITS; /* the running (or last) match's */
-/* Where stocks and percents go (PET_HUD_*): the menu's choice, and the
+/* Where stocks and percents go (DESKTOP_MELEE_HUD_*): the menu's choice, and the
  * running match's (latched when it starts). */
-static int s_hud_next = PET_HUD_ISLAND;
-static int s_hud = PET_HUD_ISLAND;
+static int s_hud_next = DESKTOP_MELEE_HUD_ISLAND;
+static int s_hud = DESKTOP_MELEE_HUD_ISLAND;
 static char s_screen_name[128];
 static bool s_screen_pending = false;
 
-/* MELEE_PET_SCALE: Melee units across the screen width; overrides the menu. */
+/* DESKTOP_MELEE_SCALE: Melee units across the screen width; overrides the menu. */
 static float env_units(void) {
-    const char* env = getenv("MELEE_PET_SCALE");
+    const char* env = getenv("DESKTOP_MELEE_SCALE");
     const float units = env != NULL ? (float)atof(env) : 0.0f;
     return units >= 50.0f && units <= 5000.0f ? units : 0.0f;
 }
 
 static bool s_dock_exact = false;
-bool pet_dock_exact(void) { return s_dock_exact; }
+bool desktop_melee_dock_exact(void) { return s_dock_exact; }
 
 /* Screen size, floor, Dock and notch island for the screen the overlay is
  * on. Run at startup and whenever the overlay changes screens. */
 static void layout(void) {
 #ifdef __APPLE__
     float w, h, floor_pt;
-    pet_mac_screen_geometry(s_window, &w, &h, &floor_pt);
+    desktop_melee_mac_screen_geometry(s_window, &w, &h, &floor_pt);
     float dock_left = 0.0f, dock_right = 0.0f, dock_top = floor_pt;
     bool exact = false;
-    const bool dock = pet_mac_dock_frame(w, h, &dock_left, &dock_right, &dock_top, &exact);
+    const bool dock =
+        desktop_melee_mac_dock_frame(w, h, &dock_left, &dock_right, &dock_top, &exact);
     if (dock && exact) {
         floor_pt = dock_top;
     }
     s_dock_exact = dock && exact;
-    pet_set_screen_geometry(w, h, floor_pt);
+    desktop_melee_set_screen_geometry(w, h, floor_pt);
     s_dock_left = dock ? dock_left : 0.0f;
     s_dock_right = dock ? dock_right : 0.0f;
     if (dock) {
-        SDL_Log("pet: Dock %.0f..%.0f pt (%s)", dock_left, dock_right,
+        SDL_Log("desktop-melee: Dock %.0f..%.0f pt (%s)", dock_left, dock_right,
                 exact ? "exact" : "estimated; grant Accessibility for the exact size");
     } else {
-        SDL_Log("pet: no Dock on this screen: Final Destination's own floor");
+        SDL_Log("desktop-melee: no Dock on this screen: Final Destination's own floor");
     }
 
-    pet_mac_notch(&s_notch_left, &s_notch_right, &s_island_h);
+    desktop_melee_mac_notch(&s_notch_left, &s_notch_right, &s_island_h);
     const float side = s_island_h * ISLAND_SIDE;
-    pet_mac_island_place(s_notch_left - side, s_notch_right + side, s_island_h);
-    SDL_Log("pet: notch %.0f..%.0f pt, island %.0f..%.0f x %.0f pt", s_notch_left,
+    desktop_melee_mac_island_place(s_notch_left - side, s_notch_right + side, s_island_h);
+    SDL_Log("desktop-melee: notch %.0f..%.0f pt, island %.0f..%.0f x %.0f pt", s_notch_left,
             s_notch_right, s_notch_left - side, s_notch_right + side, s_island_h);
 #endif
 }
@@ -188,24 +189,24 @@ static void apply_screen(void) {
         SDL_SetWindowPosition(s_window, bounds.x, bounds.y);
         SDL_SetWindowSize(s_window, bounds.w, bounds.h);
         SDL_SyncWindow(s_window);
-        SDL_Log("pet: overlay moved to \"%s\" (%dx%d at %d,%d)", SDL_GetDisplayName(target),
-                bounds.w, bounds.h, bounds.x, bounds.y);
+        SDL_Log("desktop-melee: overlay moved to \"%s\" (%dx%d at %d,%d)",
+                SDL_GetDisplayName(target), bounds.w, bounds.h, bounds.x, bounds.y);
     }
     layout();
 }
 
-void pet_window_created(SDL_Window* window) {
-    if (!pet_overlay_enabled() || window == NULL) {
+void desktop_melee_window_created(SDL_Window* window) {
+    if (!desktop_melee_overlay_enabled() || window == NULL) {
         return;
     }
 #ifdef __APPLE__
-    pet_overlay_mac_setup(window);
+    desktop_melee_overlay_mac_setup(window);
 #endif
     s_window = window;
     int count = 0;
     SDL_DisplayID* displays = SDL_GetDisplays(&count);
     for (int i = 0; displays != NULL && i < count; i++) {
-        SDL_Log("pet: screen %d: \"%s\"%s", i + 1, SDL_GetDisplayName(displays[i]),
+        SDL_Log("desktop-melee: screen %d: \"%s\"%s", i + 1, SDL_GetDisplayName(displays[i]),
                 displays[i] == SDL_GetPrimaryDisplay() ? " (primary)" : "");
     }
     SDL_free(displays);
@@ -214,11 +215,11 @@ void pet_window_created(SDL_Window* window) {
 
 /* Measure the screen and Dock again (Accessibility was just granted): now
  * when idle, else when the running match ends (its floor is set). */
-void pet_relayout(void) {
+void desktop_melee_relayout(void) {
     if (s_window == NULL) {
         return;
     }
-    if (pet_match_active()) {
+    if (desktop_melee_match_active()) {
         s_screen_pending = true;
     } else {
         layout();
@@ -228,17 +229,19 @@ void pet_relayout(void) {
 /* ---- tweaks (Display tab) ------------------------------------------------ */
 
 static bool s_shake = true;
-void pet_set_shake(bool on) { s_shake = on; }
-bool pet_shake_enabled(void) { return s_shake; }
+void desktop_melee_set_shake(bool on) { s_shake = on; }
+bool desktop_melee_shake_enabled(void) { return s_shake; }
 
-static int s_timer_mode = PET_TIMER_TOP;
-void pet_set_timer_mode(int mode) { s_timer_mode = mode == PET_TIMER_HIDDEN ? mode : PET_TIMER_TOP; }
-int pet_timer_mode(void) { return s_timer_mode; }
-float pet_timer_scale(void) { return pet_overlay_enabled() ? 0.5f : 1.0f; }
+static int s_timer_mode = DESKTOP_MELEE_TIMER_TOP;
+void desktop_melee_set_timer_mode(int mode) {
+    s_timer_mode = mode == DESKTOP_MELEE_TIMER_HIDDEN ? mode : DESKTOP_MELEE_TIMER_TOP;
+}
+int desktop_melee_timer_mode(void) { return s_timer_mode; }
+float desktop_melee_timer_scale(void) { return desktop_melee_overlay_enabled() ? 0.5f : 1.0f; }
 
 static bool s_tags = true;
-void pet_set_tags(bool on) { s_tags = on; }
-bool pet_tags_enabled(void) { return s_tags; }
+void desktop_melee_set_tags(bool on) { s_tags = on; }
+bool desktop_melee_tags_enabled(void) { return s_tags; }
 
 static int s_trace = -1;
 static float s_trace_shake;
@@ -246,15 +249,15 @@ static int s_hud_drawn;
 
 static bool trace_enabled(void) {
     if (s_trace < 0) {
-        const char* env = getenv("MELEE_PET_TRACE");
+        const char* env = getenv("DESKTOP_MELEE_TRACE");
         s_trace = env != NULL && env[0] == '1';
     }
     return s_trace != 0;
 }
 
-bool pet_trace_enabled(void) { return trace_enabled(); }
+bool desktop_melee_trace_enabled(void) { return trace_enabled(); }
 
-void pet_trace_shake(float x, float y) {
+void desktop_melee_trace_shake(float x, float y) {
     const float m = fmaxf(fabsf(x), fabsf(y));
     if (m > s_trace_shake) {
         s_trace_shake = m;
@@ -268,11 +271,11 @@ static int s_pause_port = 0;
 static bool s_pause_request = false;
 static volatile sig_atomic_t s_usr1 = 0;
 
-bool pet_hidden(void) { return s_hidden; }
+bool desktop_melee_hidden(void) { return s_hidden; }
 
-void pet_set_pause_port(int port) { s_pause_port = port >= 0 && port < 4 ? port : 0; }
+void desktop_melee_set_pause_port(int port) { s_pause_port = port >= 0 && port < 4 ? port : 0; }
 
-int pet_take_pause_request(void) {
+int desktop_melee_take_pause_request(void) {
     if (!s_pause_request) {
         return -1;
     }
@@ -280,20 +283,21 @@ int pet_take_pause_request(void) {
     return s_pause_port;
 }
 
-void pet_toggle_pause_and_hide(void) {
+void desktop_melee_toggle_pause_and_hide(void) {
     s_hidden = !s_hidden;
     /* Hiding pauses a running match (Melee's own pause, as the first human
      * player); showing again leaves it paused until that player's Start. */
-    s_pause_request = s_hidden && pet_match_active() && !pet_game_paused();
+    s_pause_request = s_hidden && desktop_melee_match_active() && !desktop_melee_game_paused();
 #ifdef __APPLE__
-    pet_mac_overlay_set_faded(s_hidden);
+    desktop_melee_mac_overlay_set_faded(s_hidden);
     /* Back from another app: the game needs the keyboard again, or Start
      * on the keyboard would type into whatever app is in front. */
-    if (!s_hidden && pet_match_active()) {
-        pet_ui_focus_game();
+    if (!s_hidden && desktop_melee_match_active()) {
+        desktop_melee_ui_focus_game();
     }
 #endif
-    SDL_Log("pet: pause and hide %s (match %d)", s_hidden ? "on" : "off", pet_match_active() ? 1 : 0);
+    SDL_Log("desktop-melee: pause and hide %s (match %d)", s_hidden ? "on" : "off",
+            desktop_melee_match_active() ? 1 : 0);
 }
 
 static void on_usr1(int sig) {
@@ -302,75 +306,79 @@ static void on_usr1(int sig) {
 }
 
 /* Once a second (overlay_mac.m), also while the game is paused. */
-void pet_trace_tick(void) {
+void desktop_melee_trace_tick(void) {
     if (!trace_enabled()) {
         return;
     }
     if (s_usr1) {
         s_usr1 = 0;
-        pet_toggle_pause_and_hide();
+        desktop_melee_toggle_pause_and_hide();
     }
-    if (!pet_match_active()) {
+    if (!desktop_melee_match_active()) {
         return;
     }
     float timer_scale = 1.0f;
-    const bool timer_hidden = pet_timer_trace(&timer_scale);
+    const bool timer_hidden = desktop_melee_timer_trace(&timer_scale);
     static const char* hud_names[] = {"island", "bottom", "hidden"};
-    SDL_Log("pet: trace shake %.2f timer %s scale %.2f tags %d hud %s island %d paused %d hidden %d drawn %d",
-            s_trace_shake, timer_hidden ? "hidden" : "top", timer_scale, pet_tags_trace(),
-            hud_names[s_hud], pet_island_wanted() ? 1 : 0, pet_game_paused() ? 1 : 0,
-            s_hidden ? 1 : 0, s_hud_drawn);
+    SDL_Log("desktop-melee: trace shake %.2f timer %s scale %.2f tags %d hud %s island %d "
+            "paused %d hidden %d drawn %d",
+            s_trace_shake, timer_hidden ? "hidden" : "top", timer_scale, desktop_melee_tags_trace(),
+            hud_names[s_hud], desktop_melee_island_wanted() ? 1 : 0,
+            desktop_melee_game_paused() ? 1 : 0, s_hidden ? 1 : 0, s_hud_drawn);
     s_hud_drawn = 0;
     s_trace_shake = 0.0f;
 }
 
-void pet_set_fighter_size(float percent) {
+void desktop_melee_set_fighter_size(float percent) {
     if (percent >= 25.0f && percent <= 400.0f) {
         s_units_next = DEFAULT_UNITS * 100.0f / percent;
     }
 }
 
-bool pet_fighter_size_locked(void) { return env_units() > 0.0f; }
+bool desktop_melee_fighter_size_locked(void) { return env_units() > 0.0f; }
 
-void pet_set_hud_mode(int mode) {
-    s_hud_next = mode >= PET_HUD_ISLAND && mode <= PET_HUD_HIDDEN ? mode : PET_HUD_ISLAND;
+void desktop_melee_set_hud_mode(int mode) {
+    s_hud_next = mode >= DESKTOP_MELEE_HUD_ISLAND && mode <= DESKTOP_MELEE_HUD_HIDDEN
+                     ? mode
+                     : DESKTOP_MELEE_HUD_ISLAND;
 }
-int pet_hud_mode(void) { return s_hud; }
+int desktop_melee_hud_mode(void) { return s_hud; }
 
-void pet_trace_hud_drawn(void) { s_hud_drawn++; }
+void desktop_melee_trace_hud_drawn(void) { s_hud_drawn++; }
 
-void pet_set_screen(const char* name) {
+void desktop_melee_set_screen(const char* name) {
     snprintf(s_screen_name, sizeof s_screen_name, "%s", name != NULL ? name : "");
     if (s_window == NULL) {
-        return; /* startup: pet_window_created applies it */
+        return; /* startup: desktop_melee_window_created applies it */
     }
-    if (pet_match_active()) {
+    if (desktop_melee_match_active()) {
         s_screen_pending = true; /* the camera and floor are set for this one */
     } else {
         apply_screen();
     }
 }
 
-void pet_set_hud_camera(float distance, float fov_deg) {
+void desktop_melee_set_hud_camera(float distance, float fov_deg) {
     s_hud_distance = distance;
     s_hud_fov = fov_deg;
 }
 
-void pet_hud_frame(bool visible) {
+void desktop_melee_hud_frame(bool visible) {
     s_hud_last_ms = SDL_GetTicks();
     s_hud_visible = visible;
 }
 
-bool pet_island_wanted(void) {
-    return pet_overlay_enabled() && s_hud == PET_HUD_ISLAND && s_hud_visible && !s_hidden &&
-           SDL_GetTicks() - s_hud_last_ms < 250;
+bool desktop_melee_island_wanted(void) {
+    return desktop_melee_overlay_enabled() && s_hud == DESKTOP_MELEE_HUD_ISLAND && s_hud_visible &&
+           !s_hidden && SDL_GetTicks() - s_hud_last_ms < 250;
 }
 
 /* Points per HUD unit on the HUD plane. The projection is widened to the
  * window's aspect, so the scale is the same horizontally. 0 when unknown. */
 static float hud_ppu(int player) {
-    if (!pet_overlay_enabled() || s_hud != PET_HUD_ISLAND || (player != 0 && player != 1) || s_island_h <= 0.0f ||
-        s_hud_distance <= 0.0f || s_hud_fov <= 0.0f || s_screen_h <= 0.0f) {
+    if (!desktop_melee_overlay_enabled() || s_hud != DESKTOP_MELEE_HUD_ISLAND ||
+        (player != 0 && player != 1) || s_island_h <= 0.0f || s_hud_distance <= 0.0f ||
+        s_hud_fov <= 0.0f || s_screen_h <= 0.0f) {
         return 0.0f;
     }
     const float half_h = s_hud_distance * tanf(0.5f * s_hud_fov * (float)M_PI / 180.0f);
@@ -381,7 +389,7 @@ static float hud_ppu(int player) {
 static float hud_x(float x_pt, float ppu) { return (x_pt - 0.5f * s_screen_w) / ppu; }
 static float hud_y(float y_pt, float ppu) { return (0.5f * s_screen_h - y_pt) / ppu; }
 
-bool pet_hud_stock_anchor(int player, float* x, float* y, float* scale) {
+bool desktop_melee_hud_stock_anchor(int player, float* x, float* y, float* scale) {
     const float ppu = hud_ppu(player);
     if (ppu <= 0.0f) {
         return false;
@@ -400,7 +408,7 @@ bool pet_hud_stock_anchor(int player, float* x, float* y, float* scale) {
     return true;
 }
 
-bool pet_hud_percent_anchor(int player, float* x, float* y, float* scale) {
+bool desktop_melee_hud_percent_anchor(int player, float* x, float* y, float* scale) {
     const float ppu = hud_ppu(player);
     if (ppu <= 0.0f) {
         return false;
@@ -423,13 +431,13 @@ bool pet_hud_percent_anchor(int player, float* x, float* y, float* scale) {
     return true;
 }
 
-bool pet_hud_in_island(int player) { return hud_ppu(player) > 0.0f; }
+bool desktop_melee_hud_in_island(int player) { return hud_ppu(player) > 0.0f; }
 
-void pet_set_screen_geometry(float width_pt, float height_pt, float floor_pt) {
+void desktop_melee_set_screen_geometry(float width_pt, float height_pt, float floor_pt) {
     s_screen_w = width_pt;
     s_screen_h = height_pt;
     s_floor = floor_pt;
-    SDL_Log("pet: screen %.0fx%.0f pt, floor (Dock top) at %.0f pt", width_pt, height_pt,
+    SDL_Log("desktop-melee: screen %.0fx%.0f pt, floor (Dock top) at %.0f pt", width_pt, height_pt,
             floor_pt);
 }
 
@@ -437,9 +445,9 @@ void pet_set_screen_geometry(float width_pt, float height_pt, float floor_pt) {
  * bigger fighters), as the current match started with. */
 static float screen_units(void) { return s_units; }
 
-bool pet_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
+bool desktop_melee_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
                 float* interest_y, float* interest_z, float* fov) {
-    if (!pet_overlay_enabled() || s_screen_w <= 0.0f || s_screen_h <= 0.0f) {
+    if (!desktop_melee_overlay_enabled() || s_screen_w <= 0.0f || s_screen_h <= 0.0f) {
         return false;
     }
     /* A narrow perspective looking straight down -z: the z = 0 plane (where the
@@ -460,19 +468,19 @@ bool pet_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
     return true;
 }
 
-bool pet_dock_span(float* left, float* right) {
-    if (!pet_overlay_enabled() || s_screen_w <= 0.0f || s_dock_right <= s_dock_left) {
+bool desktop_melee_dock_span(float* left, float* right) {
+    if (!desktop_melee_overlay_enabled() || s_screen_w <= 0.0f || s_dock_right <= s_dock_left) {
         return false;
     }
     const float units_per_pt = screen_units() / s_screen_w;
     *left = (s_dock_left - 0.5f * s_screen_w) * units_per_pt;
     *right = (s_dock_right - 0.5f * s_screen_w) * units_per_pt;
-    SDL_Log("pet: floor %.0f..%.0f units (Dock)", *left, *right);
+    SDL_Log("desktop-melee: floor %.0f..%.0f units (Dock)", *left, *right);
     return true;
 }
 
-bool pet_blastzones(float* left, float* right, float* top, float* bottom) {
-    if (!pet_overlay_enabled() || s_screen_w <= 0.0f || s_screen_h <= 0.0f) {
+bool desktop_melee_blastzones(float* left, float* right, float* top, float* bottom) {
+    if (!desktop_melee_overlay_enabled() || s_screen_w <= 0.0f || s_screen_h <= 0.0f) {
         return false;
     }
     /* The camera maps x = 0 to the screen's middle and y = 0 to the floor. */
@@ -481,58 +489,58 @@ bool pet_blastzones(float* left, float* right, float* top, float* bottom) {
     *right = 0.5f * screen_units();
     *top = (s_screen_h - s_floor) * units_per_pt;
     *bottom = -s_floor * units_per_pt;
-    SDL_Log("pet: blastzones x %.0f..%.0f, y %.0f..%.0f units (screen edges)", *left, *right,
-            *bottom, *top);
+    SDL_Log("desktop-melee: blastzones x %.0f..%.0f, y %.0f..%.0f units (screen edges)", *left,
+            *right, *bottom, *top);
     return true;
 }
 
-void pet_launcher_wait_begin(void) {
-    if (!pet_overlay_enabled()) {
+void desktop_melee_launcher_wait_begin(void) {
+    if (!desktop_melee_overlay_enabled()) {
         return;
     }
 #ifdef __APPLE__
-    pet_mac_overlay_set_faded(true);
-    pet_ui_loading_begin();
+    desktop_melee_mac_overlay_set_faded(true);
+    desktop_melee_ui_loading_begin();
 #endif
 }
 
-void pet_launcher_wait_end(void) {
-    if (!pet_overlay_enabled()) {
+void desktop_melee_launcher_wait_end(void) {
+    if (!desktop_melee_overlay_enabled()) {
         return;
     }
 #ifdef __APPLE__
-    pet_ui_loading_end();
+    desktop_melee_ui_loading_end();
     /* Pause and hide may have been pressed meanwhile: it stays hidden. */
     if (!s_hidden) {
-        pet_mac_overlay_set_faded(false);
+        desktop_melee_mac_overlay_set_faded(false);
     }
 #endif
 }
 
 /* Graphics pipelines still being built (the menu bar's loading progress). */
-unsigned pet_pipelines_pending(void) {
+unsigned desktop_melee_pipelines_pending(void) {
     return aurora_wait_pipelines(0);
 }
 
-void pet_after_menu_init(void) {
-    if (!pet_overlay_enabled()) {
+void desktop_melee_after_menu_init(void) {
+    if (!desktop_melee_overlay_enabled()) {
         return;
     }
     /* "Auto (window aspect)": the match fills the whole screen, not a 4:3 box. */
     pc_widescreen_set_mode(2);
 }
 
-void pet_request_quit(void) {
-    SDL_Log("pet: quit requested from the menu bar");
+void desktop_melee_request_quit(void) {
+    SDL_Log("desktop-melee: quit requested from the menu bar");
     SDL_Event event;
     SDL_zero(event);
     event.type = SDL_EVENT_QUIT;
     SDL_PushEvent(&event);
 }
 
-/* ---- match flow (GM_PET) -------------------------------------------------- */
+/* ---- match flow (GM_DESKTOP_MELEE) -------------------------------------------------- */
 
-static PetMatchSetup s_setup = {
+static DesktopMeleeMatchSetup s_setup = {
     .stocks = 4,
     .time_seconds = 7 * 60,
     .players = {
@@ -543,20 +551,20 @@ static PetMatchSetup s_setup = {
 static bool s_match_requested = false;
 static bool s_in_match = false;
 
-void pet_match_setup(PetMatchSetup* out) { *out = s_setup; }
+void desktop_melee_match_setup(DesktopMeleeMatchSetup* out) { *out = s_setup; }
 
-void pet_set_match_setup(const PetMatchSetup* setup) { s_setup = *setup; }
+void desktop_melee_set_match_setup(const DesktopMeleeMatchSetup* setup) { s_setup = *setup; }
 
-void pet_request_match(void) { s_match_requested = true; }
+void desktop_melee_request_match(void) { s_match_requested = true; }
 
 static bool s_start_starts_match = true;
-bool pet_start_starts_match(void) { return s_start_starts_match; }
-void pet_set_start_starts_match(bool on) { s_start_starts_match = on; }
+bool desktop_melee_start_starts_match(void) { return s_start_starts_match; }
+void desktop_melee_set_start_starts_match(bool on) { s_start_starts_match = on; }
 
 /* A keyboard binding's key name ("X", "Up", "Tab"), slot as in
  * pc_get_key_binding: A B X Y Start Z L R, D-pad up down left right, stick
  * right left up down, C-stick right left up down, analog L R. */
-const char* pet_key_name(int slot) {
+const char* desktop_melee_key_name(int slot) {
     if (slot < 0 || slot > 21) {
         return "";
     }
@@ -564,32 +572,35 @@ const char* pet_key_name(int slot) {
     return name != NULL ? name : "";
 }
 
-bool pet_match_wanted(void) { return s_match_requested && !s_in_match; }
+bool desktop_melee_match_wanted(void) { return s_match_requested && !s_in_match; }
 
-bool pet_match_restart_wanted(void) {
-    return pet_overlay_enabled() && s_in_match && s_match_requested;
+bool desktop_melee_match_restart_wanted(void) {
+    return desktop_melee_overlay_enabled() && s_in_match && s_match_requested;
 }
 
-void pet_match_began(void) {
+void desktop_melee_match_began(void) {
     s_match_requested = false;
     s_pause_request = false;
     /* Starting a match shows the fighters: nobody means to play unseen. */
     if (s_hidden) {
         s_hidden = false;
 #ifdef __APPLE__
-        pet_mac_overlay_set_faded(false);
+        desktop_melee_mac_overlay_set_faded(false);
 #endif
-        SDL_Log("pet: pause and hide off (a match started)");
+        SDL_Log("desktop-melee: pause and hide off (a match started)");
     }
     s_in_match = true;
     const float env = env_units();
     s_units = env > 0.0f ? env : s_units_next;
     s_hud = s_hud_next;
-    SDL_Log("pet: match display: %.0f units across (size %.0f%%), island %s", s_units,
-            100.0f * DEFAULT_UNITS / s_units, s_hud == PET_HUD_ISLAND ? "island" : s_hud == PET_HUD_BOTTOM ? "bottom" : "hidden");
+    SDL_Log("desktop-melee: match display: %.0f units across (size %.0f%%), island %s", s_units,
+            100.0f * DEFAULT_UNITS / s_units,
+            s_hud == DESKTOP_MELEE_HUD_ISLAND   ? "island"
+            : s_hud == DESKTOP_MELEE_HUD_BOTTOM ? "bottom"
+                                                : "hidden");
 }
 
-void pet_match_ended(void) {
+void desktop_melee_match_ended(void) {
     s_in_match = false;
     s_pause_request = false;
     if (s_screen_pending) {
@@ -597,87 +608,88 @@ void pet_match_ended(void) {
     }
 }
 
-bool pet_match_active(void) { return s_in_match; }
+bool desktop_melee_match_active(void) { return s_in_match; }
 
 /* ---- per-player controls --------------------------------------------------- */
 
-#define PET_PLAYERS 2
+#define DESKTOP_MELEE_PLAYERS 2
 
-/* HSD_PAD_* bits of the buttons a map covers, in PET_BTN_* order. */
-static const unsigned s_btn_bits[PET_BTN_COUNT] = {
+/* HSD_PAD_* bits of the buttons a map covers, in DESKTOP_MELEE_BTN_* order. */
+static const unsigned s_btn_bits[DESKTOP_MELEE_BTN_COUNT] = {
     1u << 8, 1u << 9, 1u << 10, 1u << 11, /* A B X Y */
     1u << 4, 1u << 6, 1u << 5,            /* Z L R */
 };
 
 static struct {
     bool tap_jump;
-    unsigned char map[PET_BTN_COUNT]; /* physical button -> PET_BTN_* or NONE */
-} s_controls[PET_PLAYERS] = {
+    unsigned char map[DESKTOP_MELEE_BTN_COUNT]; /* physical button -> DESKTOP_MELEE_BTN_* or NONE */
+} s_controls[DESKTOP_MELEE_PLAYERS] = {
     { true, { 0, 1, 2, 3, 4, 5, 6 } },
     { true, { 0, 1, 2, 3, 4, 5, 6 } },
 };
 
-/* MELEE_PET_INPUT_TRACE=1: log blocked tap jumps and remapped presses. */
+/* DESKTOP_MELEE_INPUT_TRACE=1: log blocked tap jumps and remapped presses. */
 static bool input_trace(void) {
     static int on = -1;
     if (on < 0) {
-        const char* env = getenv("MELEE_PET_INPUT_TRACE");
+        const char* env = getenv("DESKTOP_MELEE_INPUT_TRACE");
         on = env != NULL && env[0] != '\0' && env[0] != '0';
     }
     return on;
 }
 
-void pet_set_tap_jump(int player, bool on) {
-    if (player >= 0 && player < PET_PLAYERS) {
+void desktop_melee_set_tap_jump(int player, bool on) {
+    if (player >= 0 && player < DESKTOP_MELEE_PLAYERS) {
         s_controls[player].tap_jump = on;
     }
 }
 
-void pet_set_button_map(int player, int button, int target) {
-    if (player >= 0 && player < PET_PLAYERS && button >= 0 && button < PET_BTN_COUNT &&
-        target >= 0 && target <= PET_BTN_NONE) {
+void desktop_melee_set_button_map(int player, int button, int target) {
+    if (player >= 0 && player < DESKTOP_MELEE_PLAYERS && button >= 0 &&
+        button < DESKTOP_MELEE_BTN_COUNT && target >= 0 && target <= DESKTOP_MELEE_BTN_NONE) {
         s_controls[player].map[button] = (unsigned char)target;
     }
 }
 
-bool pet_tap_jump(int player) {
-    if (player < 0 || player >= PET_PLAYERS || s_controls[player].tap_jump) {
+bool desktop_melee_tap_jump(int player) {
+    if (player < 0 || player >= DESKTOP_MELEE_PLAYERS || s_controls[player].tap_jump) {
         return true;
     }
     if (input_trace()) {
-        SDL_Log("pet: P%d tap jump blocked", player + 1);
+        SDL_Log("desktop-melee: P%d tap jump blocked", player + 1);
     }
     return false;
 }
 
-unsigned pet_map_buttons(int player, unsigned held, int* analog_mask) {
+unsigned desktop_melee_map_buttons(int player, unsigned held, int* analog_mask) {
     *analog_mask = 3;
-    if (player < 0 || player >= PET_PLAYERS) {
+    if (player < 0 || player >= DESKTOP_MELEE_PLAYERS) {
         return held;
     }
     unsigned out = held;
-    for (int b = 0; b < PET_BTN_COUNT; b++) {
+    for (int b = 0; b < DESKTOP_MELEE_BTN_COUNT; b++) {
         out &= ~s_btn_bits[b];
     }
-    for (int b = 0; b < PET_BTN_COUNT; b++) {
+    for (int b = 0; b < DESKTOP_MELEE_BTN_COUNT; b++) {
         const int target = s_controls[player].map[b];
-        if ((held & s_btn_bits[b]) != 0 && target < PET_BTN_COUNT) {
+        if ((held & s_btn_bits[b]) != 0 && target < DESKTOP_MELEE_BTN_COUNT) {
             out |= s_btn_bits[target];
         }
     }
     /* A physical trigger keeps its analog (light) shield only while it is
      * still a shield button. */
-    const int l = s_controls[player].map[PET_BTN_L], r = s_controls[player].map[PET_BTN_R];
-    *analog_mask = (l == PET_BTN_L || l == PET_BTN_R ? 1 : 0) |
-                   (r == PET_BTN_L || r == PET_BTN_R ? 2 : 0);
+    const int l = s_controls[player].map[DESKTOP_MELEE_BTN_L];
+    const int r = s_controls[player].map[DESKTOP_MELEE_BTN_R];
+    *analog_mask = (l == DESKTOP_MELEE_BTN_L || l == DESKTOP_MELEE_BTN_R ? 1 : 0) |
+                   (r == DESKTOP_MELEE_BTN_L || r == DESKTOP_MELEE_BTN_R ? 2 : 0);
     if (out != held && input_trace()) {
-        SDL_Log("pet: P%d buttons %04x -> %04x", player + 1, held & 0xFFFF, out & 0xFFFF);
+        SDL_Log("desktop-melee: P%d buttons %04x -> %04x", player + 1, held & 0xFFFF, out & 0xFFFF);
     }
     return out;
 }
 
 /* What is plugged into a controller port, for the Controls tab. */
-const char* pet_port_device(int port) {
+const char* desktop_melee_port_device(int port) {
     static char name[4][96];
     if (port < 0 || port > 3) {
         return "";
@@ -699,12 +711,12 @@ const char* pet_port_device(int port) {
 
 const char* pc_prefs_get_disc(void);
 
-const char* pet_choose_disc(const char* command_line_disc) {
-    if (!pet_overlay_enabled()) {
+const char* desktop_melee_choose_disc(const char* command_line_disc) {
+    if (!desktop_melee_overlay_enabled()) {
         return command_line_disc;
     }
 #ifdef __APPLE__
-    return pet_ui_choose_disc(command_line_disc != NULL ? command_line_disc
+    return desktop_melee_ui_choose_disc(command_line_disc != NULL ? command_line_disc
                                                         : pc_prefs_get_disc());
 #else
     return NULL;

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build melee-pet on macOS: Apple clang for C++, Homebrew GCC for the game C
+# Build desktop-melee on macOS: Apple clang for C++, Homebrew GCC for the game C
 # (via tools/gcc_launcher.py). Same flags as tools/package_macos.sh.
 # SDKROOT: Homebrew's gcc bottle can point at an SDK that isn't installed
 # (e.g. MacOSX27.sdk), which fails with "sys/types.h: No such file".

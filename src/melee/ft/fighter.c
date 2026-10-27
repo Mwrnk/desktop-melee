@@ -94,7 +94,7 @@
 #include <sysdolphin/baselib/random.h>
 #ifdef TARGET_PC
 #include "pc/slp.h"
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #endif
 
 extern MotionState* ftData_CharacterStateTables[Ft_Kind_Max];
@@ -1836,7 +1836,7 @@ void Fighter_procInput(Fighter_GObj* gobj)
                 s8* h = ftCo_ucf_raw_x[fp->player_idx];
                 h[2] = h[1];
                 h[1] = h[0];
-                /* The pad this player plays on (melee-pet can move P2 off port 2). */
+                /* The pad this player plays on (desktop-melee can move P2 off port 2). */
                 h[0] = pc_pad_game_raw_x[fp->pad_port];
                 SET_STICKS(fp->input.lstick[0].x, fp->input.lstick[0].y,
                            HSD_PadGameStatus[fp->pad_port].nml_stickX,
@@ -1895,10 +1895,10 @@ void Fighter_procInput(Fighter_GObj* gobj)
                     HSD_PadGameStatus[fp->pad_port].button;
 #ifdef TARGET_PC
                 {
-                    /* melee-pet: the player's button map (Controls tab),
+                    /* desktop-melee: the player's button map (Controls tab),
                      * before Z grows into shield + A below. */
                     int analog;
-                    fp->input.held_buttons[0] = pet_map_buttons(
+                    fp->input.held_buttons[0] = desktop_melee_map_buttons(
                         fp->player_idx, fp->input.held_buttons[0], &analog);
                     if (analog != 3) {
                         float l = (analog & 1)

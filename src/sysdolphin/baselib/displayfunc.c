@@ -16,7 +16,7 @@
 #include <dolphin/mtx.h>
 
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #endif
 
 #define FLT_EPSILON 1.00000001335e-10F
@@ -584,7 +584,7 @@ void HSD_EraseRect(f32 top, f32 bottom, f32 left, f32 right, f32 z,
 
     color = erase_color;
 #ifdef TARGET_PC
-    if (pet_overlay_enabled()) {
+    if (desktop_melee_overlay_enabled()) {
         /* Desktop overlay: erasing makes the screen transparent, not black. */
         color = (GXColor) { 0, 0, 0, 0 };
         GXSetDstAlpha(GX_ENABLE, 0);
@@ -605,7 +605,7 @@ void HSD_EraseRect(f32 top, f32 bottom, f32 left, f32 right, f32 z,
     GXTexCoord2u8(0, 1);
     GXEnd();
 #ifdef TARGET_PC
-    if (pet_overlay_enabled()) {
+    if (desktop_melee_overlay_enabled()) {
         GXSetDstAlpha(GX_DISABLE, 0);
     }
 #endif

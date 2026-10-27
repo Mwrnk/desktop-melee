@@ -25,7 +25,7 @@
 #include <sysdolphin/baselib/tobj.h>
 
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #endif
 
 /* 2F491C */ static void
@@ -588,16 +588,16 @@ static inline IfDamageState* getPlayerByHUDParent(HSD_GObj* parent)
 void ifStatus_802F5DE0(HSD_GObj* player, intptr_t arg1)
 {
 #ifdef TARGET_PC
-    if (pet_hide_stage() && pet_hud_mode() == PET_HUD_HIDDEN) {
-        return; /* melee-pet: stocks and percents hidden */
+    if (desktop_melee_hide_stage() && desktop_melee_hud_mode() == DESKTOP_MELEE_HUD_HIDDEN) {
+        return; /* desktop-melee: stocks and percents hidden */
     }
     {
-        /* melee-pet: the percent lives in the notch island. Set every frame
+        /* desktop-melee: the percent lives in the notch island. Set every frame
          * here, after the group's animation has rewritten its root. */
         IfDamageState* state = getPlayerByHUDParent(player);
         f32 ix, iy, is;
         if (state != NULL &&
-            pet_hud_percent_anchor((int) (state - &ifStatus_GetHUDInfo()->players[0]),
+            desktop_melee_hud_percent_anchor((int) (state - &ifStatus_GetHUDInfo()->players[0]),
                                    &ix, &iy, &is))
         {
             HSD_JObj* jobj = HSD_GObjGetHSDObj(player);
@@ -613,7 +613,7 @@ void ifStatus_802F5DE0(HSD_GObj* player, intptr_t arg1)
 #endif
     if (!getPlayerByHUDParent(player)->flags.hide_all_digits) {
 #ifdef TARGET_PC
-        pet_trace_hud_drawn();
+        desktop_melee_trace_hud_drawn();
 #endif
         HSD_GObj_JObjCallback(player, arg1);
     }
@@ -634,12 +634,12 @@ void ifStatus_802F5E50(HSD_GObj* gobj, intptr_t arg1)
 {
     IfDamageState* player = getPlayerByNext(gobj);
 #ifdef TARGET_PC
-    if (pet_hide_stage() && pet_hud_mode() == PET_HUD_HIDDEN) {
+    if (desktop_melee_hide_stage() && desktop_melee_hud_mode() == DESKTOP_MELEE_HUD_HIDDEN) {
         return;
     }
-    /* melee-pet: no series emblem behind a percent that lives in the notch
+    /* desktop-melee: no series emblem behind a percent that lives in the notch
      * island; it would not fit. */
-    if (pet_hud_in_island((int) (player - &ifStatus_GetHUDInfo()->players[0]))) {
+    if (desktop_melee_hud_in_island((int) (player - &ifStatus_GetHUDInfo()->players[0]))) {
         return;
     }
 #endif

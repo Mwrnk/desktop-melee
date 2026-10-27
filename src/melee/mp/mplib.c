@@ -46,7 +46,7 @@
 #include <sysdolphin/baselib/texp.h>
 
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #endif
 
 #define LINEID_CHECK(line, line_id)                                           \
@@ -924,13 +924,13 @@ void mpLibLoad(MapCollData* coll_data)
     }
     scale = Ground_801C0498();
 #ifdef TARGET_PC
-    /* melee-pet overlay: stretch the stage horizontally so its floor spans
+    /* desktop-melee overlay: stretch the stage horizontally so its floor spans
      * the Dock exactly (ledges sit at the floor's corners, so they follow). */
-    float pet_k = 1.0f;
-    float pet_c = 0.0f;
+    float desktop_melee_k = 1.0f;
+    float desktop_melee_c = 0.0f;
     {
         float dock_left, dock_right;
-        if (pet_dock_span(&dock_left, &dock_right)) {
+        if (desktop_melee_dock_span(&dock_left, &dock_right)) {
             float half = 0.0f;
             for (i = 0; i < coll_data->vert_count; i++) {
                 float ax = scale * DP(DiscVec2, coll_data->verts)[i].x;
@@ -942,14 +942,14 @@ void mpLibLoad(MapCollData* coll_data)
                 }
             }
             if (half > 0.0f) {
-                pet_k = 0.5f * (dock_right - dock_left) / half;
-                pet_c = 0.5f * (dock_left + dock_right);
+                desktop_melee_k = 0.5f * (dock_right - dock_left) / half;
+                desktop_melee_c = 0.5f * (dock_left + dock_right);
             }
         }
     }
-#define PET_X(x) (pet_c + pet_k * (x))
+#define DESKTOP_MELEE_X(x) (desktop_melee_c + desktop_melee_k * (x))
 #else
-#define PET_X(x) (x)
+#define DESKTOP_MELEE_X(x) (x)
 #endif
     mpLib_80458868[0].right = F32_MAX;
     mpLib_80458868[0].top = F32_MAX;
@@ -960,11 +960,11 @@ void mpLibLoad(MapCollData* coll_data)
         joint->inner = DP(MapJoint, coll_data->joints) + i;
         joint->flags = CollJoint_Enabled;
         joint->bounding_min.x =
-            PET_X(scale * DP(MapJoint, coll_data->joints)[i].left_bound);
+            DESKTOP_MELEE_X(scale * DP(MapJoint, coll_data->joints)[i].left_bound);
         joint->bounding_min.y =
             scale * DP(MapJoint, coll_data->joints)[i].bottom_bound;
         joint->bounding_max.x =
-            PET_X(scale * DP(MapJoint, coll_data->joints)[i].right_bound);
+            DESKTOP_MELEE_X(scale * DP(MapJoint, coll_data->joints)[i].right_bound);
         joint->bounding_max.y =
             scale * DP(MapJoint, coll_data->joints)[i].top_bound;
         joint->jobj = NULL;
@@ -997,7 +997,7 @@ void mpLibLoad(MapCollData* coll_data)
 
     for (i = 0; i < coll_data->vert_count; i++) {
         raw_x = DP(DiscVec2, coll_data->verts)[i].x;
-        x = PET_X(scale * raw_x);
+        x = DESKTOP_MELEE_X(scale * raw_x);
         raw_x = scale != 0.0f ? x / scale : raw_x;
         groundCollVtx[i].base_pos.x = raw_x;
         groundCollVtx[i].pos.x = x;
@@ -1020,7 +1020,7 @@ void mpLibLoad(MapCollData* coll_data)
             mpLib_80458868[0].left = x;
         }
     }
-#undef PET_X
+#undef DESKTOP_MELEE_X
     mpLib_804D64B4 = coll_data;
     if (coll_data != NULL) {
         mpIsland_8005A728();

@@ -4,10 +4,10 @@
 // Accessibility permission.
 import AppKit
 import Carbon
-import PetBridge
+import DesktopMeleeBridge
 
 enum PauseHotkey {
-    private static let defaults = UserDefaults(suiteName: "melee-pet") ?? .standard
+    private static var defaults: UserDefaults { Settings.defaults }
     private static let key = "match.pauseKey"
     static let defaultKeyCode = UInt32(kVK_ANSI_M)
     static let defaultMods = UInt32(controlKey | optionKey)
@@ -38,11 +38,12 @@ enum PauseHotkey {
         guard handler == nil else { return }
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         InstallEventHandler(GetApplicationEventTarget(), { _, _, _ in
-            pet_toggle_pause_and_hide()
+            desktop_melee_toggle_pause_and_hide()
             return noErr
         }, 1, &spec, nil, &handler)
         _ = register(keyCode: keyCode, mods: mods)
-        NSLog("pet: Pause and hide shortcut %@ %@", display, hotKey != nil ? "registered" : "taken")
+        NSLog("desktop-melee: Pause and hide shortcut %@ %@", display,
+              hotKey != nil ? "registered" : "taken")
     }
 
     /// Makes this the system hotkey; false (and none registered) when
@@ -63,7 +64,7 @@ enum PauseHotkey {
     static func set(keyCode: UInt32, mods: UInt32, label: String) -> Bool {
         guard register(keyCode: keyCode, mods: mods) else {
             _ = register(keyCode: self.keyCode, mods: self.mods)
-            NSLog("pet: Pause and hide shortcut not changed: taken by another app")
+            NSLog("desktop-melee: Pause and hide shortcut not changed: taken by another app")
             return false
         }
         defaults.set(["key": keyCode, "mods": mods, "label": label], forKey: key)

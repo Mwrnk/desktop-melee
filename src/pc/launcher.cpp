@@ -10,8 +10,8 @@
 #include "net.h"
 #include "pc.h"
 #include "android_hooks.h"
-/* melee-pet (pet/src/pet_game.h). */
-extern "C" bool pet_overlay_enabled(void);
+/* desktop-melee (desktop-melee/src/desktop_melee_game.h). */
+extern "C" bool desktop_melee_overlay_enabled(void);
 #include <RmlUi/Core/Elements/ElementFormControl.h>
 #include <aurora/dvd.h>
 #include <aurora/event.h>
@@ -734,9 +734,9 @@ class Launcher final : public Rml::EventListener {
 #endif
             controls();
         } else if (id == "play" && supported) {
-            /* melee-pet: nobody sees this screen, so nothing may skip the
+            /* desktop-melee: nobody sees this screen, so nothing may skip the
              * wait (the first match would draw with shaders missing). */
-            if (pet_overlay_enabled() && shaders_waited)
+            if (desktop_melee_overlay_enabled() && shaders_waited)
                 return;
             /* The pipeline queue may still be draining. Take the wait here,
              * where the player is already looking at a screen, rather than
@@ -939,16 +939,16 @@ public:
 #if defined(__ANDROID__)
         document->SetClass("android", true);
 #endif
-        /* melee-pet: Desktop Melee shows its own loading window; this one
+        /* desktop-melee: Desktop Melee shows its own loading window; this one
          * only waits for the shaders, unseen and taking no input. */
-        if (!pet_overlay_enabled())
+        if (!desktop_melee_overlay_enabled())
             document->Show();
         text("app-version", pc::get_app_version());
         text("check-status", "Current version: " + pc::get_app_version());
         text("disc-note", disc_note);
-        /* melee-pet: Desktop Melee is not a melee-pc release, so it never
+        /* desktop-melee: Desktop Melee is not a melee-pc release, so it never
          * asks melee-pc's GitHub releases for an update. */
-        if (prefs.check_updates && !pet_overlay_enabled()) {
+        if (prefs.check_updates && !desktop_melee_overlay_enabled()) {
             pc::updater::check_for_updates_async(true);
         }
         controls();
@@ -2424,7 +2424,7 @@ extern "C" int pc_get_key_binding(int slot) {
     return slot >= 0 && slot < int(prefs.keys.size()) ? prefs.keys[slot] : 0;
 }
 
-/* melee-pet: the menu bar app reads and changes the sound settings through
+/* desktop-melee: the menu bar app reads and changes the sound settings through
  * these, sharing launcher.cfg with the launcher and the F1 menu. */
 extern "C" void pc_prefs_get_audio(float* volume, float* music, float* sfx, bool* mute,
                                    bool* reverb) {
@@ -2463,7 +2463,7 @@ extern "C" void pc_prefs_save(void) {
     }
 }
 
-/* melee-pet: the disc image the launcher last booted (empty if none). */
+/* desktop-melee: the disc image the launcher last booted (empty if none). */
 extern "C" const char* pc_prefs_get_disc(void) {
     return prefs.disc.c_str();
 }

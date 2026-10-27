@@ -1,4 +1,4 @@
-module PetBridge {
-    header "pet_bridge.h"
+module DesktopMeleeBridge {
+    header "desktop_melee_bridge.h"
     export *
 }

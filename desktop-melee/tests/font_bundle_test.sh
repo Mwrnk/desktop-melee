@@ -1,10 +1,10 @@
 #!/bin/bash
 # Checks that Desktop Melee.app carries Melee's font (Contents/Resources/
-# melee-font.bin, written by pet/ui/GameAssets.swift and copied in by
-# pet/package.sh): the format is right and every ASCII letter and digit has
+# melee-font.bin, written by desktop-melee/ui/GameAssets.swift and copied in by
+# desktop-melee/package.sh): the format is right and every ASCII letter and digit has
 # a glyph with ink in it.
 #
-# Usage: pet/tests/font_bundle_test.sh [path/to/Desktop Melee.app]
+# Usage: desktop-melee/tests/font_bundle_test.sh [path/to/Desktop Melee.app]
 set -uo pipefail
 APP="${1:-/Applications/Desktop Melee.app}"
 FONT="${APP}/Contents/Resources/melee-font.bin"

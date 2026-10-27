@@ -25,7 +25,7 @@
 #include "pc/pc.h"
 #include "pc/android_hooks.h"
 #include "pc/launcher.h"
-#include "pet.h"
+#include "desktop_melee.h"
 
 int melee_main(void);
 
@@ -583,10 +583,10 @@ MELEE_EXPORT int main(int argc, char* argv[]) {
      * hidapi hint so SDL's rescaling driver leaves it for our raw path. */
     pc_gcadapter_init();
     pc_launcher_configure(&config);
-    pet_configure(&config);
+    desktop_melee_configure(&config);
 
     const AuroraInfo info = aurora_initialize(argc, argv, &config);
-    pet_window_created(info.window);
+    desktop_melee_window_created(info.window);
 
     /* Built-in fallback mappings for common 3rd-party GameCube adapters
      * (DragonRise / Mayflash in PC mode) so they work out-of-the-box even if
@@ -693,23 +693,23 @@ MELEE_EXPORT int main(int argc, char* argv[]) {
      * sits on top of it: leave the overlay inert until the game itself is
      * running, or it eats the taps meant for the disc picker. */
     pc_android_set_launcher_active(true);
-    /* melee-pet: the overlay never shows the launcher; pick the disc natively
+    /* desktop-melee: the overlay never shows the launcher; pick the disc natively
      * on first run, and quit if that is cancelled. The launcher still runs to
      * wait for the shader cache, unseen behind a transparent overlay, while
      * Desktop Melee's own window shows the progress. */
-    pet_launcher_wait_begin();
-    disc = pet_choose_disc(disc);
-    if (pet_overlay_enabled() && disc == NULL) {
+    desktop_melee_launcher_wait_begin();
+    disc = desktop_melee_choose_disc(disc);
+    if (desktop_melee_overlay_enabled() && disc == NULL) {
         return 0;
     }
     const int launched = pc_launcher_run(disc, info.window);
-    pet_launcher_wait_end();
+    desktop_melee_launcher_wait_end();
     if (launched != 1)
         return launched == 0 ? 0 : 1;
     pc_android_set_launcher_active(false);
 
     pc_menu_init(info.window);
-    pet_after_menu_init();
+    desktop_melee_after_menu_init();
     pc_platform_init();
     aurora_card_set_present(card);
     int rc = melee_main();

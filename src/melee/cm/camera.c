@@ -47,7 +47,7 @@
 #include <sysdolphin/baselib/wobj.h>
 
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #endif
 
 /* 029AAC */ static void Camera_80029AAC(CameraBounds* bounds,
@@ -1061,17 +1061,17 @@ void Camera_8002A4AC(HSD_GObj* gobj)
     cobj = GET_COBJ(gobj);
 #ifdef TARGET_PC
     {
-        /* melee-pet overlay: a fixed camera that maps the screen 1:1 onto the
+        /* desktop-melee overlay: a fixed camera that maps the screen 1:1 onto the
          * desktop, instead of zooming to follow the fighters. Screen shake
          * (game_camera.translation) still applies. */
         f32 ex, ey, ez, ix, iy, iz, fov;
-        if (pet_camera(&ex, &ey, &ez, &ix, &iy, &iz, &fov)) {
+        if (desktop_melee_camera(&ex, &ey, &ez, &ix, &iy, &iz, &fov)) {
             Vec3 eye, interest;
-            /* Screen shake can be turned off (pet_shake_enabled). */
-            const f32 sx = pet_shake_enabled() ? game_camera.translation.x : 0.0f;
-            const f32 sy = pet_shake_enabled() ? game_camera.translation.y : 0.0f;
-            pet_trace_shake(sx, sy);
-            pet_timer_frame();
+            /* Screen shake can be turned off (desktop_melee_shake_enabled). */
+            const f32 sx = desktop_melee_shake_enabled() ? game_camera.translation.x : 0.0f;
+            const f32 sy = desktop_melee_shake_enabled() ? game_camera.translation.y : 0.0f;
+            desktop_melee_trace_shake(sx, sy);
+            desktop_melee_timer_frame();
             eye.x = ex + sx;
             eye.y = ey + sy;
             eye.z = ez;

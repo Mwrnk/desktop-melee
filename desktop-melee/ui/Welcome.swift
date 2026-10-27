@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The welcome window: what Desktop Melee is, the
 // player's own disc (checked, only a clean USA 1.02 passes), then how to
-// play. Steps 1-2 run modally before the game boots, from pet_choose_disc.
+// play. Steps 1-2 run modally before the game boots, from desktop_melee_choose_disc.
 import AppKit
 import Combine
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -27,7 +27,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     /// The disc step after the first run: the saved disc moved or changed.
     @Published var findAgain = false
     @Published var oldPath: String?
-    /// An offscreen sample for MELEE_PET_DUMP renders, not the live window.
+    /// An offscreen sample for DESKTOP_MELEE_DUMP renders, not the live window.
     var isSample = false
     /// Phase 2: the disc is in and the game is booting ("Getting Melee ready").
     @Published var loading = false
@@ -68,21 +68,21 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         findAgain = !firstRun
         oldPath = firstRun ? nil : self.candidate
         step = firstRun ? .welcome : .disc
-        // MELEE_PET_WELCOME=disc: open on the disc step (testing).
-        if ProcessInfo.processInfo.environment["MELEE_PET_WELCOME"] == "disc" { step = .disc }
+        // DESKTOP_MELEE_WELCOME=disc: open on the disc step (testing).
+        if ProcessInfo.processInfo.environment["DESKTOP_MELEE_WELCOME"] == "disc" { step = .disc }
         if step == .disc { startCandidateCheck() }
         let window = makeWindow()
         MainActor.assumeIsolated { dumpPhaseOne() }
         // Until a disc is in, the overlay has nothing to show: hide it, so
         // the whole desktop stays the player's.
-        pet_mac_overlay_set_hidden(true)
+        desktop_melee_mac_overlay_set_hidden(true)
         NSApp.activate(ignoringOtherApps: true)
         window.center()
         window.makeKeyAndOrderFront(nil)
         modal = true
         NSApp.runModal(for: window)
         modal = false
-        pet_mac_overlay_set_hidden(false)
+        desktop_melee_mac_overlay_set_hidden(false)
         if result != nil, loading {
             beginPhaseTwo(window)
         } else {
@@ -93,7 +93,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     func goTo(_ next: WelcomeStep) {
         // Accessibility already granted: nothing to ask.
-        if next == .permission, pet_ax_trusted() {
+        if next == .permission, desktop_melee_ax_trusted() {
             goTo(.ready)
             return
         }
@@ -103,7 +103,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         if next == .ready {
             DiscMemory.onboardingDone = true
             // "Or press Start on your controller."
-            pet_set_start_starts_match(true)
+            desktop_melee_set_start_starts_match(true)
         }
     }
 
@@ -112,7 +112,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     /// Start a match (the Match tab's Start) and close the window.
     func startMatch() {
         DiscMemory.onboardingDone = true
-        pet_request_match()
+        desktop_melee_request_match()
         window?.close()
     }
 
@@ -127,7 +127,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         window.level = .popUpMenu
         goTo(next)
         if step == .controls {
-            pet_set_start_starts_match(false)
+            desktop_melee_set_start_starts_match(false)
             startPadPolling()
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -143,7 +143,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     /// Open System Settings: the system dialog, then watch for the switch.
     func requestAccessibility() {
-        pet_ax_request()
+        desktop_melee_ax_request()
         watchAccessibility()
     }
 
@@ -155,12 +155,12 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     }
 
     private func checkAccessibility() {
-        guard step == .permission, pet_ax_trusted() else { return }
+        guard step == .permission, desktop_melee_ax_trusted() else { return }
         axTimer?.invalidate()
         axTimer = nil
         axGranted = true
         // The Dock's exact size, right away: no relaunch.
-        pet_relayout()
+        desktop_melee_relayout()
         MenuSound.confirm.play()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             if self?.step == .permission { self?.goTo(.ready) }
@@ -172,7 +172,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         guard let path = candidate, FileManager.default.fileExists(atPath: path) else { return }
         if DiscMemory.isVerified(path) {
             // Already checked, and unchanged: no need to hash it again.
-            NSLog("pet: disc %@ (remembered)", path)
+            NSLog("desktop-melee: disc %@ (remembered)", path)
             disc = .verified(path: path)
         } else {
             startCheck(path)
@@ -211,7 +211,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     func startCheck(_ path: String) {
         stopCheck()
         disc = .checking(path: path, percent: 0)
-        check = pet_disc_check_start(path)
+        check = desktop_melee_disc_check_start(path)
         let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in self?.pollCheck() }
         // .common includes the modal panel mode runModal(for:) runs in.
         RunLoop.main.add(timer, forMode: .common)
@@ -222,17 +222,17 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         guard let check, case .checking(let path, _) = disc else { return }
         var message = [CChar](repeating: 0, count: 512)
         var percent: Int32 = 0
-        let state = pet_disc_check_poll(check, &percent, &message, Int32(message.count))
+        let state = desktop_melee_disc_check_poll(check, &percent, &message, Int32(message.count))
         switch state {
-        case PET_DISC_CHECKING:
+        case DESKTOP_MELEE_DISC_CHECKING:
             disc = .checking(path: path, percent: Int(percent))
-        case PET_DISC_VERIFIED:
-            NSLog("pet: disc %@ (checked)", path)
+        case DESKTOP_MELEE_DISC_VERIFIED:
+            NSLog("desktop-melee: disc %@ (checked)", path)
             stopCheck()
             disc = .verified(path: path)
         default:
             let text = String(cString: message)
-            NSLog("pet: disc %@ (refused: %@)", path, text)
+            NSLog("desktop-melee: disc %@ (refused: %@)", path, text)
             stopCheck()
             disc = .failed(path: path, message: text)
         }
@@ -242,7 +242,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         timer?.invalidate()
         timer = nil
         if let check {
-            pet_disc_check_free(check)
+            desktop_melee_disc_check_free(check)
             self.check = nil
         }
     }
@@ -270,7 +270,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         // Not modal any more: stay above the game overlay.
         window.level = .popUpMenu
         // "Press any button" must not start a match underneath.
-        pet_set_start_starts_match(false)
+        desktop_melee_set_start_starts_match(false)
         assetsReady = GameAssets.shared.$ready.sink { [weak self] ready in
             guard ready else { return }
             // @Published announces before the value changes.
@@ -292,7 +292,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     private func startPadPolling() {
         padTimer?.invalidate()
-        lastButtons = (0..<4).map { pet_pad_buttons(Int32($0)) }
+        lastButtons = (0..<4).map { desktop_melee_pad_buttons(Int32($0)) }
         let timer = Timer(timeInterval: 1.0 / 30, repeats: true) { [weak self] _ in self?.pollPads() }
         RunLoop.main.add(timer, forMode: .common)
         padTimer = timer
@@ -301,11 +301,11 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     private func pollPads() {
         guard step == .controls else { return }
         for port in 0..<4 {
-            let held = pet_pad_buttons(Int32(port))
+            let held = desktop_melee_pad_buttons(Int32(port))
             let newlyPressed = held & ~lastButtons[port]
             lastButtons[port] = held
             guard newlyPressed != 0, !pressed.contains(where: { $0.port == port }) else { continue }
-            let device = String(cString: pet_port_device(Int32(port)))
+            let device = String(cString: desktop_melee_port_device(Int32(port)))
             let name = device.isEmpty ? (port == 0 ? "Keyboard" : "Controller") : device
             pressed.append(PortPress(port: port, name: name))
             pressed.sort { $0.port < $1.port }
@@ -330,7 +330,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         axTimer?.invalidate()
         axTimer = nil
         assetsReady = nil
-        pet_set_start_starts_match(true)
+        desktop_melee_set_start_starts_match(true)
     }
 
     // MARK: Window
@@ -373,11 +373,11 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         }
     }
 
-    // MARK: Dumps (MELEE_PET_DUMP)
+    // MARK: Dumps (DESKTOP_MELEE_DUMP)
 
     @MainActor
     private func dumpPhaseOne() {
-        guard let dir = ProcessInfo.processInfo.environment["MELEE_PET_DUMP"] else { return }
+        guard let dir = ProcessInfo.processInfo.environment["DESKTOP_MELEE_DUMP"] else { return }
         let samples: [(String, WelcomeStep, DiscStatus, Bool)] = [
             ("welcome_1", .welcome, .empty, false),
             ("welcome_2_empty", .disc, .empty, false),
@@ -398,8 +398,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         }
     }
 
-    /// MELEE_PET_DUMP: steps 3+ and the loading screen, once the game is up
-    /// (called from pet_ui_assets_ready on any boot).
+    /// DESKTOP_MELEE_DUMP: steps 3+ and the loading screen, once the game is up
+    /// (called from desktop_melee_ui_assets_ready on any boot).
     @MainActor
     static func dumpPhaseTwo(to dir: String) {
         let sample = WelcomeController()

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Game assets for the menu bar app: textures from the game's archives,
- * decoded to RGBA. MELEE_PET_DUMP=<dir> writes everything found as PNGs (to
+ * decoded to RGBA. DESKTOP_MELEE_DUMP=<dir> writes everything found as PNGs (to
  * locate assets; nothing is ever stored in the repo). */
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,14 +10,14 @@
 #include <SDL3/SDL_log.h>
 
 #include "gctex.h"
-#include "pet.h"
+#include "desktop_melee.h"
 
 #define DUMP_SEEN_MAX 4096
 static const void* s_seen[DUMP_SEEN_MAX];
 static int s_seen_n;
 
 static void dump_named(const char* name, const uint8_t* rgba, int w, int h) {
-    const char* dir = getenv("MELEE_PET_DUMP");
+    const char* dir = getenv("DESKTOP_MELEE_DUMP");
     if (dir == NULL || dir[0] == '\0' || rgba == NULL) {
         return;
     }
@@ -25,7 +25,7 @@ static void dump_named(const char* name, const uint8_t* rgba, int w, int h) {
     mkdir(dir, 0755);
     snprintf(path, sizeof path, "%s/%s.png", dir, name);
 #ifdef __APPLE__
-    pet_mac_write_png(path, rgba, w, h);
+    desktop_melee_mac_write_png(path, rgba, w, h);
 #endif
 }
 
@@ -41,14 +41,14 @@ static bool seen(const void* data) {
     return false;
 }
 
-void pet_asset_found(const char* tag, int index, const struct GcTexture* tex) {
-    const char* dir = getenv("MELEE_PET_DUMP");
+void desktop_melee_asset_found(const char* tag, int index, const struct GcTexture* tex) {
+    const char* dir = getenv("DESKTOP_MELEE_DUMP");
     if (dir == NULL || dir[0] == '\0' || tex->data == NULL || seen(tex->data)) {
         return;
     }
     uint8_t* rgba = gctex_decode(tex);
     if (rgba == NULL) {
-        SDL_Log("pet: dump: %s %d: format %d not decoded", tag, index, tex->format);
+        SDL_Log("desktop-melee: dump: %s %d: format %d not decoded", tag, index, tex->format);
         return;
     }
     char path[1024];
@@ -56,30 +56,30 @@ void pet_asset_found(const char* tag, int index, const struct GcTexture* tex) {
     snprintf(path, sizeof path, "%s/%s_%03d_%dx%d_f%d.png", dir, tag, index, tex->width,
              tex->height, tex->format);
 #ifdef __APPLE__
-    pet_mac_write_png(path, rgba, tex->width, tex->height);
+    desktop_melee_mac_write_png(path, rgba, tex->width, tex->height);
 #endif
     free(rgba);
 }
 
 /* ---- the character roster, decoded once at boot --------------------------- */
 
-#define PET_CKIND_MAX 32
+#define DESKTOP_MELEE_CKIND_MAX 32
 
 static struct {
     int ckind;
     int costumes;
     uint8_t* icon;
     int icon_w, icon_h;
-} s_roster[PET_ROSTER_SIZE];
+} s_roster[DESKTOP_MELEE_ROSTER_SIZE];
 static int s_roster_n;
 
 static struct {
     uint8_t* rgba;
     int w, h;
-} s_portraits[PET_CKIND_MAX][PET_MAX_COSTUMES];
+} s_portraits[DESKTOP_MELEE_CKIND_MAX][DESKTOP_MELEE_MAX_COSTUMES];
 
-void pet_asset_roster(int i, int ckind, int costumes, const struct GcTexture* icon) {
-    if (i < 0 || i >= PET_ROSTER_SIZE) {
+void desktop_melee_asset_roster(int i, int ckind, int costumes, const struct GcTexture* icon) {
+    if (i < 0 || i >= DESKTOP_MELEE_ROSTER_SIZE) {
         return;
     }
     s_roster[i].ckind = ckind;
@@ -96,21 +96,21 @@ void pet_asset_roster(int i, int ckind, int costumes, const struct GcTexture* ic
     }
 }
 
-static int s_costumes[PET_CKIND_MAX];
+static int s_costumes[DESKTOP_MELEE_CKIND_MAX];
 
-void pet_asset_costumes(int ckind, int costumes) {
-    if (ckind >= 0 && ckind < PET_CKIND_MAX) {
+void desktop_melee_asset_costumes(int ckind, int costumes) {
+    if (ckind >= 0 && ckind < DESKTOP_MELEE_CKIND_MAX) {
         s_costumes[ckind] = costumes;
     }
 }
 
-int pet_costume_count(int ckind) {
-    return ckind >= 0 && ckind < PET_CKIND_MAX ? s_costumes[ckind] : 0;
+int desktop_melee_costume_count(int ckind) {
+    return ckind >= 0 && ckind < DESKTOP_MELEE_CKIND_MAX ? s_costumes[ckind] : 0;
 }
 
-void pet_asset_portrait(int ckind, int costume, const struct GcTexture* portrait) {
-    if (ckind < 0 || ckind >= PET_CKIND_MAX || costume < 0 || costume >= PET_MAX_COSTUMES ||
-        portrait->data == NULL) {
+void desktop_melee_asset_portrait(int ckind, int costume, const struct GcTexture* portrait) {
+    if (ckind < 0 || ckind >= DESKTOP_MELEE_CKIND_MAX || costume < 0 ||
+        costume >= DESKTOP_MELEE_MAX_COSTUMES || portrait->data == NULL) {
         return;
     }
     free(s_portraits[ckind][costume].rgba);
@@ -122,9 +122,9 @@ void pet_asset_portrait(int ckind, int costume, const struct GcTexture* portrait
     dump_named(name, s_portraits[ckind][costume].rgba, portrait->width, portrait->height);
 }
 
-int pet_roster_count(void) { return s_roster_n; }
+int desktop_melee_roster_count(void) { return s_roster_n; }
 
-bool pet_roster_entry(int i, int* ckind, int* costumes) {
+bool desktop_melee_roster_entry(int i, int* ckind, int* costumes) {
     if (i < 0 || i >= s_roster_n) {
         return false;
     }
@@ -133,7 +133,7 @@ bool pet_roster_entry(int i, int* ckind, int* costumes) {
     return true;
 }
 
-const uint8_t* pet_roster_icon(int i, int* w, int* h) {
+const uint8_t* desktop_melee_roster_icon(int i, int* w, int* h) {
     if (i < 0 || i >= s_roster_n || s_roster[i].icon == NULL) {
         return NULL;
     }
@@ -142,9 +142,9 @@ const uint8_t* pet_roster_icon(int i, int* w, int* h) {
     return s_roster[i].icon;
 }
 
-const uint8_t* pet_portrait(int ckind, int costume, int* w, int* h) {
-    if (ckind < 0 || ckind >= PET_CKIND_MAX || costume < 0 || costume >= PET_MAX_COSTUMES ||
-        s_portraits[ckind][costume].rgba == NULL) {
+const uint8_t* desktop_melee_portrait(int ckind, int costume, int* w, int* h) {
+    if (ckind < 0 || ckind >= DESKTOP_MELEE_CKIND_MAX || costume < 0 ||
+        costume >= DESKTOP_MELEE_MAX_COSTUMES || s_portraits[ckind][costume].rgba == NULL) {
         return NULL;
     }
     *w = s_portraits[ckind][costume].w;
@@ -166,11 +166,11 @@ extern const unsigned char HSD_SisLib_8040CB00[][2]; /* left, right margin per g
 
 static uint8_t* s_glyph_alpha[SIS_GLYPHS];
 
-int pet_font_glyph_count(void) { return SIS_CHARS; }
+int desktop_melee_font_glyph_count(void) { return SIS_CHARS; }
 
 /* Character entry i: its Shift-JIS bytes, the atlas glyph that draws it
  * (glyph code - 0x2000, as sislib does) and that glyph's margins. */
-bool pet_font_glyph_info(int i, uint8_t* sjis_hi, uint8_t* sjis_lo, int* atlas, int* left,
+bool desktop_melee_font_glyph_info(int i, uint8_t* sjis_hi, uint8_t* sjis_lo, int* atlas, int* left,
                          int* right) {
     if (i < 0 || i >= SIS_CHARS) {
         return false;
@@ -189,7 +189,7 @@ bool pet_font_glyph_info(int i, uint8_t* sjis_hi, uint8_t* sjis_lo, int* atlas, 
 }
 
 /* Atlas glyph i: 32x32 coverage (0..255), one byte per pixel, top row first. */
-const uint8_t* pet_font_glyph_alpha(int i) {
+const uint8_t* desktop_melee_font_glyph_alpha(int i) {
     if (i < 0 || i >= SIS_GLYPHS) {
         return NULL;
     }
@@ -211,13 +211,13 @@ const uint8_t* pet_font_glyph_alpha(int i) {
 }
 
 #ifdef __APPLE__
-void pet_ui_assets_ready(void); /* pet/ui/GameAssets.swift */
+void desktop_melee_ui_assets_ready(void); /* desktop-melee/ui/GameAssets.swift */
 #endif
 
-void pet_assets_ready(void) {
+void desktop_melee_assets_ready(void) {
 #ifdef __APPLE__
-    if (pet_overlay_enabled()) {
-        pet_ui_assets_ready();
+    if (desktop_melee_overlay_enabled()) {
+        desktop_melee_ui_assets_ready();
     }
 #endif
 }
@@ -233,7 +233,7 @@ static struct {
     int w, h;
 } s_named[NAMED_MAX];
 
-void pet_asset_named(const char* name, const struct GcTexture* tex) {
+void desktop_melee_asset_named(const char* name, const struct GcTexture* tex) {
     uint8_t* rgba = gctex_decode(tex);
     if (rgba == NULL) {
         return;
@@ -255,7 +255,7 @@ void pet_asset_named(const char* name, const struct GcTexture* tex) {
     free(rgba);
 }
 
-const uint8_t* pet_named_alpha(const char* name, int* w, int* h) {
+const uint8_t* desktop_melee_named_alpha(const char* name, int* w, int* h) {
     for (int i = 0; i < NAMED_MAX; i++) {
         if (s_named[i].alpha != NULL && strcmp(s_named[i].name, name) == 0) {
             *w = s_named[i].w;

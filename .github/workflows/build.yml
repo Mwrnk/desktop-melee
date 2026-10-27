@@ -1,7 +1,7 @@
 name: Build
 
 # melee-pc's multi-platform build and release. Desktop Melee is macOS only and
-# builds locally (pet/package.sh), so this runs only when started by hand from
+# builds locally (desktop-melee/package.sh), so this runs only when started by hand from
 # the Actions tab: pushes, tags and pull requests no longer trigger it.
 on:
   workflow_dispatch:

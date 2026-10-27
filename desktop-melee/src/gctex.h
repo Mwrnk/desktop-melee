@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* GameCube texture decoding (see gctex.c). Plain types only: this header is
- * shared by the game code (GCC) and the pet code (clang). */
+ * shared by the game code (GCC) and the Desktop Melee code (clang). */
 #pragma once
 #include <stdint.h>
 

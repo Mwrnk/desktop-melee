@@ -1,15 +1,16 @@
 #!/bin/bash
-# Tests the disc check (pet/src/disc_check.cpp) through its command-line
+# Tests the disc check (desktop-melee/src/disc_check.cpp) through its command-line
 # tester: only a clean USA 1.02 image passes. Builds the tester, makes fake
 # disc images (sparse, so they cost no disk) and checks each verdict. The
 # real disc from launcher.cfg is checked too when it exists.
 #
-# Usage: pet/tests/disc_check_test.sh
+# Usage: desktop-melee/tests/disc_check_test.sh
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 export SDKROOT="${SDKROOT:-$(xcrun --show-sdk-path)}"
-ninja -C build/macos pet_disc_check > /dev/null || { echo "FAIL: build pet_disc_check"; exit 1; }
-BIN="build/macos/pet_disc_check"
+ninja -C build/macos desktop_melee_disc_check > /dev/null ||
+    { echo "FAIL: build desktop_melee_disc_check"; exit 1; }
+BIN="build/macos/desktop_melee_disc_check"
 DIR="$(mktemp -d)"
 trap 'rm -rf "${DIR}"' EXIT
 SIZE=1459978240

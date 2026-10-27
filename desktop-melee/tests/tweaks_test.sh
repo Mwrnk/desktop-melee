@@ -1,11 +1,11 @@
 #!/bin/bash
 # Tests the Display tab tweaks and Pause and hide on the installed
 # Desktop Melee.app. Each case starts a real match through MELEE_KEY_FIFO
-# with MELEE_PET_TRACE=1 and checks the game's "pet: trace" lines. It takes
+# with DESKTOP_MELEE_TRACE=1 and checks the game's "desktop-melee: trace" lines. It takes
 # over the screen for about 30 s per case. Settings are changed one key at a
 # time and each is put back exactly as it was (or removed if it was absent).
 #
-# Usage: pet/tests/tweaks_test.sh [case...]   (after pet/package.sh)
+# Usage: desktop-melee/tests/tweaks_test.sh [case...]   (after desktop-melee/package.sh)
 set -uo pipefail
 # A key written after the app died must fail the case, not kill the script.
 trap '' PIPE
@@ -24,19 +24,19 @@ fi
 DIR="$(mktemp -d)"
 SAVED=()
 
-# with_setting <key> <bool|int|string|absent> [value]: set a melee-pet key for
+# with_setting <key> <bool|int|string|absent> [value]: set a desktop-melee key for
 # this run; restore() puts the old value back.
 with_setting() {
     local key="$1" type="$2" value="${3:-}" old
-    if old="$(defaults read-type melee-pet "${key}" 2> /dev/null)"; then
-        SAVED+=("${key}|${old#Type is }|$(defaults read melee-pet "${key}")")
+    if old="$(defaults read-type desktop-melee "${key}" 2> /dev/null)"; then
+        SAVED+=("${key}|${old#Type is }|$(defaults read desktop-melee "${key}")")
     else
         SAVED+=("${key}|absent|")
     fi
     if [[ "${type}" == absent ]]; then
-        defaults delete melee-pet "${key}" 2> /dev/null
+        defaults delete desktop-melee "${key}" 2> /dev/null
     else
-        defaults write melee-pet "${key}" "-${type}" "${value}"
+        defaults write desktop-melee "${key}" "-${type}" "${value}"
     fi
 }
 
@@ -50,15 +50,15 @@ restore() {
         type="${type%%|*}"
         value="${entry#*|*|}"
         case "${type}" in
-            absent) defaults delete melee-pet "${key}" 2> /dev/null ;;
+            absent) defaults delete desktop-melee "${key}" 2> /dev/null ;;
             boolean) [[ "${value}" == 1 ]] && value=true || value=false
-                defaults write melee-pet "${key}" -bool "${value}" ;;
-            integer) defaults write melee-pet "${key}" -int "${value}" ;;
-            float) defaults write melee-pet "${key}" -float "${value}" ;;
-            *) defaults write melee-pet "${key}" -string "${value}" ;;
+                defaults write desktop-melee "${key}" -bool "${value}" ;;
+            integer) defaults write desktop-melee "${key}" -int "${value}" ;;
+            float) defaults write desktop-melee "${key}" -float "${value}" ;;
+            *) defaults write desktop-melee "${key}" -string "${value}" ;;
         esac
     done
-    [[ ${ADDED_VERIFIED} -eq 1 ]] && defaults delete melee-pet disc.verified 2> /dev/null
+    [[ ${ADDED_VERIFIED} -eq 1 ]] && defaults delete desktop-melee disc.verified 2> /dev/null
     PID="$(pgrep -n -f "${EXE}")"
     [[ "${PID}" =~ ^[0-9]+$ ]] && kill -9 "${PID}"
     rm -rf "${DIR}"
@@ -66,21 +66,22 @@ restore() {
 trap restore EXIT
 
 # Boot straight in: the disc remembered as checked, the welcome done.
-if ! defaults read melee-pet disc.verified > /dev/null 2>&1; then
+if ! defaults read desktop-melee disc.verified > /dev/null 2>&1; then
     cat > "${DIR}/remember.swift" << 'SWIFT'
 import Foundation
 let path = CommandLine.arguments[1]
 let a = try! FileManager.default.attributesOfItem(atPath: path)
-UserDefaults(suiteName: "melee-pet")!.set(
+UserDefaults(suiteName: "desktop-melee")!.set(
     ["path": path, "size": (a[.size] as! NSNumber).intValue,
      "mtime": (a[.modificationDate] as! Date).timeIntervalSince1970], forKey: "disc.verified")
 SWIFT
     swift "${DIR}/remember.swift" "${DISC}" 2> /dev/null && ADDED_VERIFIED=1
 fi
-[[ "$(defaults read melee-pet onboarding.done 2> /dev/null)" == "1" ]] ||
+[[ "$(defaults read desktop-melee onboarding.done 2> /dev/null)" == "1" ]] ||
     with_setting onboarding.done bool true
 
-swiftc -O -o "${DIR}/window_list" pet/tools/window_list.swift 2> /dev/null || { echo "FAIL: build window_list"; exit 1; }
+swiftc -O -o "${DIR}/window_list" desktop-melee/tools/window_list.swift 2> /dev/null ||
+    { echo "FAIL: build window_list"; exit 1; }
 
 # run_match <log> [action...]: boot, press Start, then each action: a FIFO
 # key line ("Right 3500"), "sleep N", or "usr1" (SIGUSR1: Pause and hide).
@@ -93,8 +94,8 @@ run_game() {
     shift
     rm -f "${DIR}/keys"
     mkfifo "${DIR}/keys"
-    env MELEE_KEY_FIFO="${DIR}/keys" MELEE_PET_TRACE=1 MELEE_PET_LOG="${log}" \
-        pet/run-overlay.sh > /dev/null 2>&1 &
+    env MELEE_KEY_FIFO="${DIR}/keys" DESKTOP_MELEE_TRACE=1 DESKTOP_MELEE_LOG="${log}" \
+        desktop-melee/run-overlay.sh > /dev/null 2>&1 &
     exec 3> "${DIR}/keys"
     sleep 12
     if [[ ${START_MATCH} -eq 1 ]]; then
@@ -125,7 +126,7 @@ PASS=0
 FAIL=0
 ok() { echo "ok   $*"; PASS=$((PASS + 1)); }
 bad() { echo "FAIL $*"; FAIL=$((FAIL + 1)); }
-traces() { grep -a "pet: trace" "$1" | sed 's/.*pet: trace //'; }
+traces() { grep -a "desktop-melee: trace" "$1" | sed 's/.*desktop-melee: trace //'; }
 
 # Largest "shake" value across the trace lines.
 max_shake() { traces "$1" | awk '{ if ($2 > m) m = $2 } END { printf "%.2f", m + 0 }'; }
@@ -290,7 +291,8 @@ case_pause() {
 case_pause_idle() {
     run_idle "${DIR}/pause_idle.log" usr1 "sleep 2" usr1 "sleep 2" "Return 150" "sleep 6"
     local toggles last
-    toggles="$(grep -ac "pet: pause and hide \(on\|off\) (match 0)" "${DIR}/pause_idle.log")"
+    toggles="$(grep -ac "desktop-melee: pause and hide \(on\|off\) (match 0)" \
+        "${DIR}/pause_idle.log")"
     last="$(traces "${DIR}/pause_idle.log" | tail -1)"
     if [[ ${toggles} -eq 2 && "${last}" == *"paused 0 hidden 0"* ]]; then
         ok "pause idle: hid and showed with no match; the next match isn't paused"

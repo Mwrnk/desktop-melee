@@ -30,15 +30,15 @@
 #include <sysdolphin/baselib/jobj.h>
 
 #ifdef TARGET_PC
-#include "pet_game.h"
+#include "desktop_melee_game.h"
 #include <melee/pl/player.h>
-/* melee-pet: tap jump can be turned off per player. CPUs always keep it;
+/* desktop-melee: tap jump can be turned off per player. CPUs always keep it;
  * Nana (reported as a CPU) follows her player's setting, like Popo. */
-#define PET_TAP_JUMP(fp)                                                      \
+#define DESKTOP_MELEE_TAP_JUMP(fp)                                                      \
     (Player_8003248C((fp)->player_idx, false) == Gm_PKind_Cpu ||              \
-     pet_tap_jump((fp)->player_idx))
+     desktop_melee_tap_jump((fp)->player_idx))
 #else
-#define PET_TAP_JUMP(fp) true
+#define DESKTOP_MELEE_TAP_JUMP(fp) true
 #endif
 
 /* 0CC3C4 */ static void ftYs_JumpAerial_Anim_Cb(Fighter_GObj* gobj);
@@ -60,7 +60,7 @@ bool ft_did_jump(Fighter* fp, bool arg1)
     if (fp->x1968_jumpsUsed < fp->co_attrs.max_jumps &&
         ((fp->input.lstick[0].y >= p_ftCommonData->tap_jump_threshold &&
           fp->active_timer.lstick.y < p_ftCommonData->tap_jump_window &&
-          PET_TAP_JUMP(fp)) ||
+          DESKTOP_MELEE_TAP_JUMP(fp)) ||
          fp->input.pressed_buttons & HSD_PAD_XY) &&
         !(arg1 && (fp->x68A < p_ftCommonData->x1C)))
     {

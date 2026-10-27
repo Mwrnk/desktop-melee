@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* GM_PET (see gmpetmode.h). Built with the game code (melee_game). */
-#include "gmpetmode.h"
+/* GM_DESKTOP_MELEE (see gmdesktopmelee.h). Built with the game code (melee_game). */
+#include "gmdesktopmelee.h"
 
 #include <dolphin/os.h>
 #include <melee/gm/forward.h>
@@ -15,34 +15,34 @@
 #include <melee/mn/types.h>
 #include <sysdolphin/baselib/controller.h>
 
-#include "pet_game.h"
-#include "petassets.h"
+#include "desktop_melee_game.h"
+#include "desktop_melee_assets.h"
 
 #include <stdlib.h>
 
 enum {
-    state_pet_idle = 0,
-    state_pet_vs = 1,
+    state_desktop_melee_idle = 0,
+    state_desktop_melee_vs = 1,
 };
 
 static void onEnterVs(GameModeState* state);
 static void onExitVs(GameModeState* state);
 
-GameModeState gm_Mode_Pet_States[] = {
+GameModeState gm_Mode_DesktopMelee_States[] = {
     {
-        state_pet_idle,
+        state_desktop_melee_idle,
         lbDvdPreload_2,
         0,
         NULL,
         NULL,
         {
-            GS_PET_IDLE,
+            GS_DESKTOP_MELEE_IDLE,
             NULL,
             NULL,
         },
     },
     {
-        state_pet_vs,
+        state_desktop_melee_vs,
         lbDvdPreload_2,
         0,
         onEnterVs,
@@ -57,13 +57,13 @@ GameModeState gm_Mode_Pet_States[] = {
 };
 
 /* Pause and hide pauses as a chosen port; otherwise Melee's own check. */
-static int pet_pauser_override(void)
+static int desktop_melee_pauser_override(void)
 {
-    int port = pet_take_pause_request();
+    int port = desktop_melee_take_pause_request();
     return port >= 0 ? port : gm_DefaultVSGetPauser();
 }
 
-bool pet_game_paused(void)
+bool desktop_melee_game_paused(void)
 {
     return gm_GetDbPauseFlag(1) || gm_GetDbPauseFlag(2);
 }
@@ -73,10 +73,10 @@ bool pet_game_paused(void)
 static void onEnterVs(GameModeState* state)
 {
     StartMeleeData* start = gm_GetGameModeStateEnterData(state);
-    PetMatchSetup setup;
+    DesktopMeleeMatchSetup setup;
     ssize_t i;
 
-    pet_match_setup(&setup);
+    desktop_melee_match_setup(&setup);
     gm_SetupRulesDefaults(&start->rules);
     start->rules.stkind = St_Kind_Last;
     start->rules.item_freq = -1;
@@ -86,7 +86,7 @@ static void onEnterVs(GameModeState* state)
     start->rules.timer_enabled = setup.time_seconds > 0;
     start->rules.time_limit = setup.time_seconds;
     start->rules.disable_pausing = 0;
-    start->rules.check_for_pauser_override = pet_pauser_override;
+    start->rules.check_for_pauser_override = desktop_melee_pauser_override;
 
     for (i = 0; i < Gm_Player_NumMax; i++) {
         gm_SetupPlayerDefaults(&start->players[i]);
@@ -106,7 +106,7 @@ static void onEnterVs(GameModeState* state)
         {
             start->players[i].slot = (u8) (setup.players[i].port + 1);
         }
-        OSReport("pet: match P%d ckind %d costume %d %s level %d port %d\n", (int) i + 1,
+        OSReport("desktop-melee: match P%d ckind %d costume %d %s level %d port %d\n", (int) i + 1,
                  setup.players[i].ckind, setup.players[i].costume,
                  setup.players[i].cpu ? "cpu" : "human", setup.players[i].cpu_level,
                  setup.players[i].port + 1);
@@ -122,56 +122,56 @@ static void onEnterVs(GameModeState* state)
                                  : (int) i;
             }
         }
-        pet_set_pause_port(pause_port);
+        desktop_melee_set_pause_port(pause_port);
     }
     gm_LoadAnnouncer();
-    pet_match_began();
+    desktop_melee_match_began();
 }
 
 /* Straight back to idle: no results screen on the desktop. */
 static void onExitVs(GameModeState* state)
 {
-    gmVsMelee_ExitVs(state, state_pet_idle, state_pet_idle);
-    pet_match_ended();
+    gmVsMelee_ExitVs(state, state_desktop_melee_idle, state_desktop_melee_idle);
+    desktop_melee_match_ended();
 }
 
-void gm_Scene_PetIdle_OnEnter(void* unused)
+void gm_Scene_DesktopMeleeIdle_OnEnter(void* unused)
 {
     static bool loaded;
-    pet_assets_load_menu_sounds();
+    desktop_melee_assets_load_menu_sounds();
     if (!loaded) {
         loaded = true;
         /* Character icons and portraits for the menu bar, decoded once. */
-        pet_assets_load_roster();
-        pet_assets_load_named();
-        pet_assets_ready();
-        /* MELEE_PET_DUMP=<dir>: write every asset found to PNGs. */
-        if (getenv("MELEE_PET_DUMP") != NULL) {
-            pet_assets_scan_css();
-            pet_assets_scan_title();
+        desktop_melee_assets_load_roster();
+        desktop_melee_assets_load_named();
+        desktop_melee_assets_ready();
+        /* DESKTOP_MELEE_DUMP=<dir>: write every asset found to PNGs. */
+        if (getenv("DESKTOP_MELEE_DUMP") != NULL) {
+            desktop_melee_assets_scan_css();
+            desktop_melee_assets_scan_title();
         }
     }
 }
 
-void gm_Scene_PetIdle_OnExit(void* unused) {}
+void gm_Scene_DesktopMeleeIdle_OnExit(void* unused) {}
 
 /* Nothing is drawn (the overlay stays transparent) until a match is asked
  * for, from the menu bar or with Start on any controller. */
-void gm_Scene_PetIdle_OnFrame(void)
+void gm_Scene_DesktopMeleeIdle_OnFrame(void)
 {
     if ((gm_GetButtonsTriggered(PAD_MAX_CONTROLLERS) & HSD_PAD_START) != 0 &&
-        pet_start_starts_match())
+        desktop_melee_start_starts_match())
     {
-        pet_request_match();
+        desktop_melee_request_match();
     }
-    if (pet_match_wanted()) {
+    if (desktop_melee_match_wanted()) {
         gm_801A4B60();
     }
 }
 
 /* The buttons held on controller port 0..3 (HSD_PAD_* bits), for the welcome
  * window's "press any button". */
-u32 pet_pad_buttons(int port)
+u32 desktop_melee_pad_buttons(int port)
 {
     if (port < 0 || port >= PAD_MAX_CONTROLLERS) {
         return 0;

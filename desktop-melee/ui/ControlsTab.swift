@@ -2,13 +2,13 @@
 // The Controls tab: per player, the controller port, tap jump, Z = jump and
 // a button map; for everyone, UCF. Button changes apply mid-match (the game
 // reads them every frame); the port applies at the next match.
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 
 // MARK: - Settings
 
 final class ControlsSettings: ObservableObject {
-    /// The Melee buttons a map covers, in PET_BTN_* order.
+    /// The Melee buttons a map covers, in DESKTOP_MELEE_BTN_* order.
     static let buttons = ["A", "B", "X", "Y", "Z", "L", "R"]
     static let none = buttons.count
     static let x = 2, z = 4
@@ -23,7 +23,7 @@ final class ControlsSettings: ObservableObject {
         var isDefault: Bool { tapJump && map == Array(0..<ControlsSettings.buttons.count) }
     }
 
-    private static let defaults = UserDefaults(suiteName: "melee-pet") ?? .standard
+    private static var defaults: UserDefaults { Settings.defaults }
 
     @Published private(set) var players: [Player]
     @Published var editing = 0
@@ -57,7 +57,7 @@ final class ControlsSettings: ObservableObject {
         pc_prefs_get_ucf(&on, &locked)
         if ucf != on { ucf = on }
         if ucfLocked != locked { ucfLocked = locked }
-        let now = (0..<4).map { String(cString: pet_port_device(Int32($0))) }
+        let now = (0..<4).map { String(cString: desktop_melee_port_device(Int32($0))) }
         if devices != now { devices = now }
     }
 
@@ -117,16 +117,16 @@ final class ControlsSettings: ObservableObject {
 
     private func push() {
         for (i, p) in players.enumerated() {
-            pet_set_tap_jump(Int32(i), p.tapJump)
+            desktop_melee_set_tap_jump(Int32(i), p.tapJump)
             for (b, t) in p.map.enumerated() {
-                pet_set_button_map(Int32(i), Int32(b), Int32(t))
+                desktop_melee_set_button_map(Int32(i), Int32(b), Int32(t))
             }
         }
-        var setup = PetMatchSetup()
-        pet_match_setup(&setup)
+        var setup = DesktopMeleeMatchSetup()
+        desktop_melee_match_setup(&setup)
         setup.players.0.port = Int32(players[0].port)
         setup.players.1.port = Int32(players[1].port)
-        pet_set_match_setup(&setup)
+        desktop_melee_set_match_setup(&setup)
     }
 }
 

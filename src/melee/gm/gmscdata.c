@@ -62,7 +62,7 @@
 #include <melee/vi/vi1201v1.h>
 #include <melee/vi/vi1201v2.h>
 #include <melee/vi/vi1202.h>
-#include "gmpetmode.h"
+#include "gmdesktopmelee.h"
 
 static GameScene scenes[] = {
     {
@@ -381,10 +381,10 @@ static GameScene scenes[] = {
         NULL,
     },
     {
-        GS_PET_IDLE,
-        gm_Scene_PetIdle_OnFrame,
-        gm_Scene_PetIdle_OnEnter,
-        gm_Scene_PetIdle_OnExit,
+        GS_DESKTOP_MELEE_IDLE,
+        gm_Scene_DesktopMeleeIdle_OnFrame,
+        gm_Scene_DesktopMeleeIdle_OnEnter,
+        gm_Scene_DesktopMeleeIdle_OnExit,
         NULL,
     },
     {
@@ -767,11 +767,11 @@ static GameMode modes[] = {
     },
     {
         false,
-        GM_PET,
+        GM_DESKTOP_MELEE,
         NULL,
         NULL,
         NULL,
-        gm_Mode_Pet_States,
+        gm_Mode_DesktopMelee_States,
     },
     {
         false,

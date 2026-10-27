@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Melee's own assets for the popover, decoded from the user's disc at boot
-// (pet/src/assets.c): the text font, the character roster's face icons and
+// (desktop-melee/src/assets.c): the text font, the character roster's face icons and
 // the per-costume portraits.
 import AppKit
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 
 // MARK: - Images
@@ -27,7 +27,8 @@ enum GameImages {
     /// template image `height` points tall, tinted like text.
     static func template(_ name: String, height: CGFloat) -> NSImage? {
         var w: Int32 = 0, h: Int32 = 0
-        guard GameAssets.shared.ready, let alpha = pet_named_alpha(name, &w, &h) else { return nil }
+        guard GameAssets.shared.ready,
+              let alpha = desktop_melee_named_alpha(name, &w, &h) else { return nil }
         let count = Int(w * h)
         var rgba = [UInt8](repeating: 255, count: count * 4)
         for p in 0..<count { rgba[p * 4 + 3] = alpha[p] }
@@ -44,7 +45,7 @@ enum GameImages {
     static func icon(_ index: Int) -> CGImage? {
         if let cached = icons[index] { return cached }
         var w: Int32 = 0, h: Int32 = 0
-        guard let px = pet_roster_icon(Int32(index), &w, &h),
+        guard let px = desktop_melee_roster_icon(Int32(index), &w, &h),
               let image = cgImage(px, width: Int(w), height: Int(h)) else { return nil }
         icons[index] = image
         return image
@@ -55,7 +56,7 @@ enum GameImages {
         let key = ckind * 16 + costume
         if let cached = portraits[key] { return cached }
         var w: Int32 = 0, h: Int32 = 0
-        guard let px = pet_portrait(Int32(ckind), Int32(costume), &w, &h),
+        guard let px = desktop_melee_portrait(Int32(ckind), Int32(costume), &w, &h),
               let image = cgImage(px, width: Int(w), height: Int(h)) else { return nil }
         portraits[key] = image
         return image
@@ -68,7 +69,7 @@ enum GameImages {
 enum MenuSound: Int32 {
     case back = 0, confirm = 1, move = 2, denied = 3
 
-    private static let defaults = UserDefaults(suiteName: "melee-pet") ?? .standard
+    private static var defaults: UserDefaults { Settings.defaults }
 
     /// The Sound tab's "Menu sounds" switch (on by default).
     static var enabled: Bool {
@@ -78,14 +79,14 @@ enum MenuSound: Int32 {
 
     func play() {
         guard MenuSound.enabled, GameAssets.shared.ready else { return }
-        pet_sound_menu(rawValue)
+        desktop_melee_sound_menu(rawValue)
     }
 
     /// The announcer calls out roster entry `index`'s name. Not during a
     /// match: the match swaps in its own sound banks.
     static func announce(rosterIndex index: Int) {
-        guard enabled, GameAssets.shared.ready, !pet_match_active() else { return }
-        pet_sound_announce(Int32(index))
+        guard enabled, GameAssets.shared.ready, !desktop_melee_match_active() else { return }
+        desktop_melee_sound_announce(Int32(index))
     }
 }
 
@@ -113,7 +114,7 @@ enum MeleeFont {
     /// The font file: "DMFONT1\0", a little-endian UInt32 count, then per
     /// glyph hi, lo, left, right and 1024 coverage bytes. Written from the
     /// player's disc on first boot (cacheURL) and bundled into the app by
-    /// pet/package.sh, so Melee's font is there before any disc is.
+    /// desktop-melee/package.sh, so Melee's font is there before any disc is.
     static let fileName = "melee-font.bin"
     private static let magic = Array("DMFONT1\0".utf8)
 
@@ -124,11 +125,11 @@ enum MeleeFont {
 
     private static func fromGame() -> [Stored] {
         var out: [Stored] = []
-        for i in 0..<Int(pet_font_glyph_count()) {
+        for i in 0..<Int(desktop_melee_font_glyph_count()) {
             var hi: UInt8 = 0, lo: UInt8 = 0
             var atlas: Int32 = 0, left: Int32 = 0, right: Int32 = 0
-            guard pet_font_glyph_info(Int32(i), &hi, &lo, &atlas, &left, &right),
-                  let alpha = pet_font_glyph_alpha(atlas) else { continue }
+            guard desktop_melee_font_glyph_info(Int32(i), &hi, &lo, &atlas, &left, &right),
+                  let alpha = desktop_melee_font_glyph_alpha(atlas) else { continue }
             out.append(Stored(hi: hi, lo: lo, left: Int8(clamping: left), right: Int8(clamping: right),
                               alpha: Array(UnsafeBufferPointer(start: alpha, count: 32 * 32))))
         }
@@ -150,7 +151,7 @@ enum MeleeFont {
         }
     }
 
-    /// Saves the game's font to cacheURL (once), for pet/package.sh to bundle.
+    /// Saves the game's font to cacheURL (once), for desktop-melee/package.sh to bundle.
     static func saveCache() {
         let url = cacheURL
         guard !FileManager.default.fileExists(atPath: url.path) else { return }
@@ -165,7 +166,7 @@ enum MeleeFont {
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
                                                  withIntermediateDirectories: true)
         if (try? data.write(to: url)) != nil {
-            NSLog("pet: saved Melee's font (%d glyphs) to %@", stored.count, url.path)
+            NSLog("desktop-melee: saved Melee's font (%d glyphs) to %@", stored.count, url.path)
         }
     }
 
@@ -354,11 +355,11 @@ final class GameAssets: ObservableObject {
 }
 
 /// Called from C once the roster and font are available.
-@_cdecl("pet_ui_assets_ready")
-public func petUIAssetsReady() {
+@_cdecl("desktop_melee_ui_assets_ready")
+public func desktopMeleeUIAssetsReady() {
     MeleeFont.saveCache()
     GameAssets.shared.markReady()
-    if let dir = ProcessInfo.processInfo.environment["MELEE_PET_DUMP"] {
+    if let dir = ProcessInfo.processInfo.environment["DESKTOP_MELEE_DUMP"] {
         // The game calls this on the main thread.
         MainActor.assumeIsolated {
             dumpSamples(to: dir)
@@ -367,7 +368,7 @@ public func petUIAssetsReady() {
     }
 }
 
-/// MELEE_PET_DUMP: render sample text in Melee's font, to check it.
+/// DESKTOP_MELEE_DUMP: render sample text in Melee's font, to check it.
 @MainActor
 private func dumpSamples(to dir: String) {
     let samples = ["MATCH  PLAYERS  CONTROLS  SOUND  DISPLAY",
@@ -384,8 +385,8 @@ private func dumpSamples(to dir: String) {
     // The popover itself, rendered offscreen (no frosted background). One
     // DisplaySettings: each one re-sends the screen choice to the game.
     let dumpDisplay = DisplaySettings()
-    for tab in [PetTab.match, .players, .controls, .sound, .display] {
-        let panel = PetPanel(audio: AudioSettings(), match: MatchSettings(),
+    for tab in [DesktopMeleeTab.match, .players, .controls, .sound, .display] {
+        let panel = DesktopMeleePanel(audio: AudioSettings(), match: MatchSettings(),
                              players: PlayerSettings(), controls: ControlsSettings(),
                              display: dumpDisplay,
                              initialTab: tab, scrolls: false)

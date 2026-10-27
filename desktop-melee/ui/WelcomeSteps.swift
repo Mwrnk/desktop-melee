@@ -3,7 +3,7 @@
 // font (bundled with the app, so it is there before the disc). The emblem and
 // sounds still come from the disc.
 import AppKit
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 
 struct WelcomeView: View {
@@ -417,7 +417,7 @@ struct WelcomeControlsStep: View {
         }
     }
 
-    private func key(_ slot: Int32) -> String { String(cString: pet_key_name(slot)) }
+    private func key(_ slot: Int32) -> String { String(cString: desktop_melee_key_name(slot)) }
 
     /// The stick and C-stick keys, read live from the bindings.
     private var stickKeys: String {

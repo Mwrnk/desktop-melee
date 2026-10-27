@@ -63,7 +63,7 @@ typedef enum GameModeKind {
     /* 2B */ GM_EVENT,
     /* 2C */ GM_SINGLE_BUTTON_VS,
     /* 2D */ GM_ONLINE, ///< PC: netplay (docs/netcode-plan.md §10)
-    /* 2E */ GM_PET,    ///< PC: melee-pet desktop overlay (pet/game/gmpetmode.c)
+    /* 2E */ GM_DESKTOP_MELEE,    ///< PC: Desktop Melee overlay (desktop-melee/game/)
     /* 2F */ GM_COUNT,
 } GameModeKind;
 
@@ -139,7 +139,7 @@ typedef enum GameSceneKind {
     /* +2B */ GS_STAFFROLL, ///< Credits
     /* +2C */ GS_CAMERA_VS,
     /* +2D */ GS_ONLINE_LOBBY, ///< PC: LAN lobby (gmonlinemode.c)
-    /* +2E */ GS_PET_IDLE,     ///< PC: melee-pet idle (pet/game/gmpetmode.c)
+    /* +2E */ GS_DESKTOP_MELEE_IDLE,     ///< PC: Desktop Melee idle (desktop-melee/game/)
     /* +2F */ GS_COUNT
 } GameSceneKind;
 

@@ -33,8 +33,8 @@ Nintendo or HAL Laboratory.
 flowchart LR
     disc[("your disc<br/>Melee USA 1.02")] --> game["Melee's game code<br/>(decompiled C, built with GCC)"]
     game --> port["melee-pc + aurora<br/>GameCube hardware → Metal, SDL3"]
-    port --> pet["Desktop Melee<br/>transparent window, Dock floor,<br/>menu bar app"]
-    pet --> desk["your desktop"]
+    port --> desktop_melee["Desktop Melee<br/>transparent window, Dock floor,<br/>menu bar app"]
+    desktop_melee --> desk["your desktop"]
 ```
 
 The full explanation, layer by layer, with diagrams: **[How Desktop Melee
@@ -62,10 +62,10 @@ into Melee's world, the menu bar app, and every file.
 ```sh
 git clone https://github.com/Mwrnk/desktop-melee.git
 cd desktop-melee
-pet/package.sh
+desktop-melee/package.sh
 ```
 
-`pet/package.sh` builds everything, makes `Desktop Melee.app`, signs it and
+`desktop-melee/package.sh` builds everything, makes `Desktop Melee.app`, signs it and
 installs it in `/Applications` (set `DESKTOP_MELEE_INSTALL=0` to keep it in
 `build/macos`). The first build downloads dependencies and takes a while.
 
@@ -81,7 +81,7 @@ and press **Start**, or press Start on a controller.
 To run it from a terminal with the log visible:
 
 ```sh
-pet/run-overlay.sh path/to/melee.iso
+desktop-melee/run-overlay.sh path/to/melee.iso
 ```
 
 ### Permissions
@@ -96,7 +96,7 @@ pet/run-overlay.sh path/to/melee.iso
 
 | Path | What |
 |---|---|
-| `pet/` | Desktop Melee: overlay, game mode, menu bar app, packaging. |
+| `desktop-melee/` | Desktop Melee: overlay, game mode, menu bar app, packaging. |
 | `src/melee/`, `src/sysdolphin/` | Melee's decompiled game code (from doldecomp/melee). |
 | `src/pc/` | melee-pc's platform layer. |
 | `extern/aurora/` | aurora: GameCube SDK → WebGPU/SDL3. |
@@ -105,12 +105,12 @@ pet/run-overlay.sh path/to/melee.iso
 
 ## Before you share anything
 
-- **Never share a built app.** `pet/package.sh` copies Melee's font from your
+- **Never share a built app.** `desktop-melee/package.sh` copies Melee's font from your
   disc into the app so the welcome window can use it. A built
   `Desktop Melee.app` (or a zip of it) therefore contains Nintendo's data. Share
   the source; everyone builds their own.
 - **Never commit game data:** no disc images, no extracted textures, no
-  `MELEE_PET_DUMP` output.
+  `DESKTOP_MELEE_DUMP` output.
 - **Bug reports:** don't attach or link disc images.
 
 ## Legal
@@ -122,7 +122,7 @@ This is not legal advice.
   [doldecomp/melee](https://github.com/doldecomp/melee). Neither this project
   nor melee-pc can grant a license to it. This is the same position as
   doldecomp and melee-pc.
-- **Port code and Desktop Melee (`src/pc/`, `pet/`, tools, build files) are
+- **Port code and Desktop Melee (`src/pc/`, `desktop-melee/`, tools, build files) are
   GPL-3.0-or-later.** Third-party parts keep their own licenses (MIT, zlib,
   BSD, OFL).
 - No game assets are in this repository. Everything is read from your disc

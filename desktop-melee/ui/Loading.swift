@@ -5,7 +5,7 @@
 // appears only when the wait takes more than two seconds (a new build or a
 // macOS update rebuilds them).
 import AppKit
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 
 final class ShaderProgress: ObservableObject {
@@ -26,7 +26,7 @@ final class ShaderProgress: ObservableObject {
     /// The last second or so of (time, pending), for the current rate.
     private var recent: [(Date, Int)] = []
 
-    /// A fixed sample, for MELEE_PET_DUMP renders.
+    /// A fixed sample, for DESKTOP_MELEE_DUMP renders.
     static func sample(done: Int, total: Int, secondsLeft: Int?) -> ShaderProgress {
         let p = ShaderProgress()
         p.total = total
@@ -56,7 +56,7 @@ final class ShaderProgress: ObservableObject {
     }
 
     private func tick() {
-        let now = Int(pet_pipelines_pending())
+        let now = Int(desktop_melee_pipelines_pending())
         total = max(total, now)
         pending = now
         let elapsed = Date().timeIntervalSince(started)
@@ -97,7 +97,7 @@ final class ShaderProgress: ObservableObject {
         panel.center()
         panel.orderFrontRegardless()
         window = panel
-        NSLog("pet: loading window shown (%d pipelines left)", pending)
+        NSLog("desktop-melee: loading window shown (%d pipelines left)", pending)
     }
 
     /// "about 4 min left", "less than a minute left", or "" while unknown.
@@ -160,12 +160,12 @@ struct LoadingWindowView: View {
     }
 }
 
-@_cdecl("pet_ui_loading_begin")
-public func petUILoadingBegin() {
+@_cdecl("desktop_melee_ui_loading_begin")
+public func desktopMeleeUILoadingBegin() {
     ShaderProgress.shared.begin()
 }
 
-@_cdecl("pet_ui_loading_end")
-public func petUILoadingEnd() {
+@_cdecl("desktop_melee_ui_loading_end")
+public func desktopMeleeUILoadingEnd() {
     ShaderProgress.shared.end()
 }

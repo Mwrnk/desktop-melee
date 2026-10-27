@@ -26,9 +26,9 @@ mv "${BUILD_DIR}/Melee.app" "${APP}"
 VERSION="$(cat VERSION)"
 VERSION="${VERSION#v}"
 VERSION="${VERSION%%-*}"
-sed "s/@MELEE_VERSION@/${VERSION}/g" pet/macos/Info.plist > "${APP}/Contents/Info.plist"
+sed "s/@MELEE_VERSION@/${VERSION}/g" desktop-melee/macos/Info.plist > "${APP}/Contents/Info.plist"
 
-# Melee's font, saved from the disc on the first boot (pet/ui/GameAssets.swift),
+# Melee's font, saved from the disc on the first boot (desktop-melee/ui/GameAssets.swift),
 # so the welcome window has it before any disc is in.
 FONT="${HOME}/Library/Application Support/Desktop Melee/melee-font.bin"
 if [[ -f "${FONT}" ]]; then
@@ -43,7 +43,7 @@ fi
 # writes Assets.car for macOS 26+ and AppIcon.icns for older systems.
 echo "=== Compiling the app icon ==="
 ICON_PLIST="$(mktemp)"
-xcrun actool pet/macos/AppIcon.icon --compile "${APP}/Contents/Resources" \
+xcrun actool desktop-melee/macos/AppIcon.icon --compile "${APP}/Contents/Resources" \
     --platform macosx --minimum-deployment-target 13.0 --app-icon AppIcon \
     --output-partial-info-plist "${ICON_PLIST}" > /dev/null
 rm -f "${ICON_PLIST}"

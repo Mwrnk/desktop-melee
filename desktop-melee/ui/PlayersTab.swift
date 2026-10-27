@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The Players tab: character, costume and Human/CPU for P1 and P2, picked
 // from Melee's own select grid.
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 
 // MARK: - Roster
@@ -37,9 +37,9 @@ enum Roster {
     static func rows() -> [[Fighter]] {
         var all: [Fighter] = []
         var zeldaIndex: Int?
-        for i in 0..<Int(pet_roster_count()) {
+        for i in 0..<Int(desktop_melee_roster_count()) {
             var ckind: Int32 = 0, costumes: Int32 = 0
-            guard pet_roster_entry(Int32(i), &ckind, &costumes) else { continue }
+            guard desktop_melee_roster_entry(Int32(i), &ckind, &costumes) else { continue }
             let ck = Int(ckind)
             all.append(Fighter(ckind: ck, name: names[ck] ?? "?", rosterIndex: i))
             if ck == zelda { zeldaIndex = i }
@@ -53,7 +53,7 @@ enum Roster {
 
     /// How many costumes `ckind` has, or nil before the roster is loaded.
     static func costumes(_ ckind: Int) -> Int? {
-        let n = Int(pet_costume_count(Int32(ckind)))
+        let n = Int(desktop_melee_costume_count(Int32(ckind)))
         return n > 0 ? n : nil
     }
 
@@ -65,9 +65,9 @@ enum Roster {
     /// The select grid entry for `ckind` (its announcer callout); none for Sheik.
     static func rosterIndex(_ ckind: Int) -> Int? {
         guard ckind != sheik else { return nil }
-        for i in 0..<Int(pet_roster_count()) {
+        for i in 0..<Int(desktop_melee_roster_count()) {
             var ck: Int32 = 0, n: Int32 = 0
-            if pet_roster_entry(Int32(i), &ck, &n), Int(ck) == ckind { return i }
+            if desktop_melee_roster_entry(Int32(i), &ck, &n), Int(ck) == ckind { return i }
         }
         return nil
     }
@@ -83,7 +83,7 @@ enum PlayerColor {
 // MARK: - Settings
 
 /// P1 and P2's picks, remembered across launches and handed to the game's
-/// GM_PET mode whenever they change. The rules part of the setup is left as
+/// GM_DESKTOP_MELEE mode whenever they change. The rules part of the setup is left as
 /// the game has it (the Match tab owns it).
 final class PlayerSettings: ObservableObject {
     struct Player: Equatable {
@@ -93,15 +93,15 @@ final class PlayerSettings: ObservableObject {
         var level: Int
     }
 
-    private static let defaults = UserDefaults(suiteName: "melee-pet") ?? .standard
+    private static var defaults: UserDefaults { Settings.defaults }
 
     @Published private(set) var players: [Player]
     /// The player the grid picks for.
     @Published var editing = 0
 
     init() {
-        var setup = PetMatchSetup()
-        pet_match_setup(&setup)
+        var setup = DesktopMeleeMatchSetup()
+        desktop_melee_match_setup(&setup)
         let game = [setup.players.0, setup.players.1]
         let d = Self.defaults
         players = (0..<2).map { i in
@@ -202,10 +202,10 @@ final class PlayerSettings: ObservableObject {
     }
 
     private func push() {
-        var setup = PetMatchSetup()
-        pet_match_setup(&setup)
+        var setup = DesktopMeleeMatchSetup()
+        desktop_melee_match_setup(&setup)
         // Only this tab's fields: the port belongs to the Controls tab.
-        func apply(_ p: Player, to g: inout PetPlayerSetup) {
+        func apply(_ p: Player, to g: inout DesktopMeleePlayerSetup) {
             g.ckind = Int32(p.ckind)
             g.costume = Int32(p.costume)
             g.cpu = p.cpu ? 1 : 0
@@ -213,7 +213,7 @@ final class PlayerSettings: ObservableObject {
         }
         apply(players[0], to: &setup.players.0)
         apply(players[1], to: &setup.players.1)
-        pet_set_match_setup(&setup)
+        desktop_melee_set_match_setup(&setup)
     }
 }
 

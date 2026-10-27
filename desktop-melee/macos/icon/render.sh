@@ -2,7 +2,7 @@
 # Re-render the app icon's layers after editing AppIcon-light.svg or
 # AppIcon-dark.svg. Each top-level <g id="..."> in the SVGs is one Icon
 # Composer layer (base, screen, stage, dots, gloss); this writes one 1024 px
-# PNG per layer and appearance to pet/macos/AppIcon.icon/Assets, as
+# PNG per layer and appearance to desktop-melee/macos/AppIcon.icon/Assets, as
 # <appearance>-<layer>.png. Keeping the layers apart lets macOS tint the
 # icon in its tinted and clear styles. Needs Google Chrome; package.sh only
 # needs the committed PNGs.
@@ -23,6 +23,6 @@ for variant in light dark; do
             --window-size=1024,1024 --default-background-color=00000000 \
             --screenshot="../AppIcon.icon/Assets/${variant}-${layer}.png" \
             "file://${WORK}/${variant}-${layer}.svg" > /dev/null 2>&1
-        echo "wrote pet/macos/AppIcon.icon/Assets/${variant}-${layer}.png"
+        echo "wrote desktop-melee/macos/AppIcon.icon/Assets/${variant}-${layer}.png"
     done
 done

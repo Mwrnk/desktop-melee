@@ -3,7 +3,7 @@
 // tabs have their own files). Text uses the system font until the game has
 // decoded Melee's own glyphs.
 import AppKit
-import PetBridge
+import DesktopMeleeBridge
 import SwiftUI
 
 // MARK: - Settings
@@ -42,7 +42,7 @@ final class AudioSettings: ObservableObject {
 
 // MARK: - Tabs
 
-enum PetTab: String, CaseIterable, Identifiable {
+enum DesktopMeleeTab: String, CaseIterable, Identifiable {
     case match = "Match"
     case players = "Players"
     case controls = "Controls"
@@ -64,16 +64,16 @@ enum PetTab: String, CaseIterable, Identifiable {
 
 // MARK: - Panel
 
-struct PetPanel: View {
+struct DesktopMeleePanel: View {
     @ObservedObject var audio: AudioSettings
     @ObservedObject var match: MatchSettings
     @ObservedObject var players: PlayerSettings
     @ObservedObject var controls: ControlsSettings
     @ObservedObject var display: DisplaySettings
     @ObservedObject private var assets = GameAssets.shared
-    @State private var tab: PetTab
+    @State private var tab: DesktopMeleeTab
     @State private var tabHeight: CGFloat = 0
-    /// False for offscreen renders (MELEE_PET_DUMP): ImageRenderer cannot
+    /// False for offscreen renders (DESKTOP_MELEE_DUMP): ImageRenderer cannot
     /// draw a ScrollView.
     private let scrolls: Bool
 
@@ -101,7 +101,7 @@ struct PetPanel: View {
     }
 
     init(audio: AudioSettings, match: MatchSettings, players: PlayerSettings,
-         controls: ControlsSettings, display: DisplaySettings, initialTab: PetTab = .match,
+         controls: ControlsSettings, display: DisplaySettings, initialTab: DesktopMeleeTab = .match,
          scrolls: Bool = true) {
         self.display = display
         self.scrolls = scrolls
@@ -158,7 +158,7 @@ struct PetPanel: View {
 
     private var tabBar: some View {
         HStack(spacing: 4) {
-            ForEach(PetTab.allCases) { item in
+            ForEach(DesktopMeleeTab.allCases) { item in
                 Button {
                     if tab != item { MenuSound.move.play() }
                     tab = item
@@ -192,7 +192,7 @@ struct PetPanel: View {
             Spacer()
             Button {
                 MenuSound.back.play()
-                pet_request_quit()
+                desktop_melee_request_quit()
             } label: { MText("Quit", size: 18) }
                 .keyboardShortcut("q")
         }

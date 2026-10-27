@@ -46,16 +46,16 @@ The full text is in [`COPYING`](COPYING).
 
 ### Desktop Melee
 
-`pet/` is Desktop Melee, the desktop overlay built on melee-pc. It is under
+`desktop-melee/` is Desktop Melee, the desktop overlay built on melee-pc. It is under
 the same GPL-3.0-or-later terms.
 
     Copyright (C) 2026 Mateus Werneck
 
 Desktop Melee also changes these melee-pc files (GPL-3.0 section 5a). Each
-change is tagged `melee-pet` in a comment and listed in
+change is tagged `desktop-melee` in a comment and listed in
 [`docs/desktop-melee/how-it-works.md`](../docs/desktop-melee/how-it-works.md#where-desktop-melee-touches-melee-pc):
 
-- Build: `CMakeLists.txt` (includes `pet/pet.cmake`), `.gitignore`.
+- Build: `CMakeLists.txt` (includes `desktop-melee/desktop-melee.cmake`), `.gitignore`.
 - Port code: `src/pc/main.c`, `src/pc/launcher.cpp`.
 - aurora: `extern/aurora/include/aurora/aurora.h`, `extern/aurora/lib/aurora.cpp`,
   `extern/aurora/lib/window.cpp`, `extern/aurora/lib/webgpu/gpu.cpp`,
