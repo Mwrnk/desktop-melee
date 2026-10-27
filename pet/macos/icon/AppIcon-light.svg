@@ -1,36 +1,102 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Desktop Melee app icon, light appearance: a beige compact Mac whose
-       body is the whole icon tile; macOS masks it to the icon shape. -->
+  <!-- Desktop Melee app icon (light appearance), CRT style.
+       Layers, bottom to top: base, screen, stage, dots, gloss. render.sh
+       renders each top-level <g id> on its own for Icon Composer. -->
   <defs>
-    <linearGradient id="body" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#F3EEE2"/>
-      <stop offset="1" stop-color="#D8CFBB"/>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F6F1E6"/><stop offset="1" stop-color="#D5CCB7"/>
     </linearGradient>
-    <linearGradient id="screen" x1="512" y1="240" x2="512" y2="580" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#6A5FD8"/>
-      <stop offset="1" stop-color="#2E2384"/>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#A89E86" stop-opacity="0.7"/>
     </linearGradient>
-    <linearGradient id="gloss" x1="512" y1="240" x2="512" y2="420" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.25"/>
+    <linearGradient id="lip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B9AF98"/><stop offset="1" stop-color="#FBF8F1"/>
+    </linearGradient>
+    <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#26222E"/><stop offset="1" stop-color="#121016"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#7563F2"/><stop offset="1" stop-color="#3420B0"/>
+    </linearGradient>
+    <radialGradient id="vign" cx="0.5" cy="0.45" r="0.75">
+      <stop offset="0.55" stop-color="#140A4A" stop-opacity="0"/>
+      <stop offset="1" stop-color="#140A4A" stop-opacity="0.6"/>
+    </radialGradient>
+    <linearGradient id="dotfade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="1"/>
+    </linearGradient>
+    <pattern id="dotp" width="13" height="13" patternUnits="userSpaceOnUse" x="150" y="122">
+      <circle cx="6.5" cy="6.5" r="3.2" fill="#FFFFFF" fill-opacity="0.16"/>
+    </pattern>
+    <pattern id="gridp" width="13" height="13" patternUnits="userSpaceOnUse" x="150" y="122">
+      <path d="M0 0H13V13H0Z M6.5 1.4A5.1 5.1 0 1 0 6.51 1.4Z" fill="#000000" fill-opacity="0.3" fill-rule="evenodd"/>
+    </pattern>
+    <mask id="dotmask"><rect x="150" y="122" width="724" height="520" fill="url(#dotfade)"/></mask>
+    <clipPath id="scr"><rect x="150" y="122" width="724" height="520" rx="58"/></clipPath>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.26"/>
+      <stop offset="0.8" stop-color="#FFFFFF" stop-opacity="0.02"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
-  </defs>
-  <rect width="1024" height="1024" fill="url(#body)"/>
-  <rect y="965" width="1024" height="59" fill="#000000" fill-opacity="0.06"/>
-  <g transform="translate(512 512) scale(1.38) translate(-512 -512)">
-    <rect x="236" y="206" width="552" height="408" rx="52" fill="#CFC5AE"/>
-    <rect x="272" y="240" width="480" height="340" rx="36" fill="url(#screen)"/>
-    <g fill="#FFFFFF">
+    <linearGradient id="stagefill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF8C8"/><stop offset="0.45" stop-color="#FFE45C"/>
+      <stop offset="1" stop-color="#FFE45C"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-80%" width="180%" height="260%">
+      <feGaussianBlur stdDeviation="30"/>
+    </filter>
+    <filter id="glow2" x="-20%" y="-40%" width="140%" height="180%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+    <g id="glyph" transform="translate(512 390.0) scale(1.62) translate(-512 -418)">
       <rect x="462" y="330" width="100" height="18" rx="9"/>
       <rect x="360" y="382" width="100" height="18" rx="9"/>
       <rect x="564" y="382" width="100" height="18" rx="9"/>
       <path d="M350,432 H674 Q684,432 684,442 V450 Q684,460 674,460 H634 L580,505 H444 L390,460 H350 Q340,460 340,450 V442 Q340,432 350,432 Z"/>
     </g>
-    <path d="M272,276 Q272,240 308,240 H716 Q752,240 752,276 V400 Q512,350 272,420 Z" fill="url(#gloss)"/>
-    <rect x="560" y="712" width="210" height="24" rx="8" fill="#3A352C"/>
-    <rect x="712" y="702" width="58" height="44" rx="8" fill="#3A352C" fill-opacity="0.35"/>
-    <path d="M300,694 L326,709 L300,724 L274,709 Z" fill="#B9B0F5"/>
-    <path d="M274,709 L300,724 L300,754 L274,739 Z" fill="#7D71DD"/>
-    <path d="M300,724 L326,709 L326,739 L300,754 Z" fill="#4A3DAE"/>
+  </defs>
+
+  <g id="base">
+    <rect width="1024" height="1024" fill="url(#body)"/>
+    <rect x="7" y="7" width="1010" height="1010" rx="224" fill="none" stroke="url(#rim)" stroke-width="10"/>
+    <!-- recess around the screen: shadow on top, light on the bottom lip -->
+    <rect x="98" y="70" width="828" height="624" rx="106" fill="url(#lip)"/>
+    <rect x="112" y="84" width="800" height="596" rx="92" fill="url(#bezel)"/>
+    <rect x="115" y="87" width="794" height="590" rx="89" fill="none" stroke="#000000" stroke-opacity="0.45" stroke-width="6"/>
+    <!-- floppy slot -->
+    <rect x="566" y="800" width="300" height="34" rx="11" fill="#8F8571"/>
+    <rect x="566" y="830" width="300" height="5" rx="2.5" fill="#FFFFFF" fill-opacity="0.55"/>
+    <rect x="802" y="786" width="64" height="62" rx="11" fill="#8F8571" fill-opacity="0.45"/>
+    <!-- cube badge -->
+    <g transform="translate(196 815) scale(1.5) translate(-300 -724)">
+      <path d="M300,694 L326,709 L300,724 L274,709 Z" fill="#E2DDFF"/>
+      <path d="M274,709 L300,724 L300,754 L274,739 Z" fill="#B3AAF2"/>
+      <path d="M300,724 L326,709 L326,739 L300,754 Z" fill="#7A6FD9"/>
+    </g>
+  </g>
+
+  <g id="screen">
+    <rect x="150" y="122" width="724" height="520" rx="58" fill="url(#screen)"/>
+    <rect x="150" y="122" width="724" height="520" rx="58" fill="url(#vign)"/>
+  </g>
+
+  <g id="stage">
+    <use href="#glyph" fill="#FFD23F" opacity="0.95" filter="url(#glow)"/>
+    <use href="#glyph" fill="#FFD23F" opacity="0.6" filter="url(#glow)"/>
+    <use href="#glyph" fill="#FFD23F" opacity="0.9" filter="url(#glow2)"/>
+    <use href="#glyph" fill="url(#stagefill)" stroke="#FFF8C8" stroke-width="6"/>
+  </g>
+
+  <g id="dots" clip-path="url(#scr)">
+    <rect x="150" y="122" width="724" height="520" fill="url(#gridp)"/>
+    <rect x="150" y="122" width="724" height="520" fill="url(#dotp)" mask="url(#dotmask)"/>
+  </g>
+
+  <g id="gloss">
+    <path clip-path="url(#scr)" d="M150,122 H874 V242 C674,272 410,322 150,392 Z" fill="url(#gloss)"/>
+    <rect x="152" y="124" width="720" height="516" rx="56" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="3"/>
   </g>
 </svg>

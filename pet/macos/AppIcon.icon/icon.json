@@ -17,8 +17,8 @@
       "layers": [
         {
           "glass": false,
-          "image-name": "dark.png",
-          "name": "Dark",
+          "image-name": "dark-gloss.png",
+          "name": "Gloss (Dark)",
           "hidden-specializations": [
             {
               "value": true
@@ -31,8 +31,120 @@
         },
         {
           "glass": false,
-          "image-name": "light.png",
-          "name": "Light",
+          "image-name": "light-gloss.png",
+          "name": "Gloss (Light)",
+          "hidden-specializations": [
+            {
+              "value": false
+            },
+            {
+              "appearance": "dark",
+              "value": true
+            }
+          ]
+        },
+        {
+          "glass": false,
+          "image-name": "dark-dots.png",
+          "name": "CRT Dots (Dark)",
+          "hidden-specializations": [
+            {
+              "value": true
+            },
+            {
+              "appearance": "dark",
+              "value": false
+            }
+          ]
+        },
+        {
+          "glass": false,
+          "image-name": "light-dots.png",
+          "name": "CRT Dots (Light)",
+          "hidden-specializations": [
+            {
+              "value": false
+            },
+            {
+              "appearance": "dark",
+              "value": true
+            }
+          ]
+        },
+        {
+          "glass": false,
+          "image-name": "dark-stage.png",
+          "name": "Stage (Dark)",
+          "hidden-specializations": [
+            {
+              "value": true
+            },
+            {
+              "appearance": "dark",
+              "value": false
+            }
+          ]
+        },
+        {
+          "glass": false,
+          "image-name": "light-stage.png",
+          "name": "Stage (Light)",
+          "hidden-specializations": [
+            {
+              "value": false
+            },
+            {
+              "appearance": "dark",
+              "value": true
+            }
+          ]
+        },
+        {
+          "glass": false,
+          "image-name": "dark-screen.png",
+          "name": "Screen (Dark)",
+          "hidden-specializations": [
+            {
+              "value": true
+            },
+            {
+              "appearance": "dark",
+              "value": false
+            }
+          ]
+        },
+        {
+          "glass": false,
+          "image-name": "light-screen.png",
+          "name": "Screen (Light)",
+          "hidden-specializations": [
+            {
+              "value": false
+            },
+            {
+              "appearance": "dark",
+              "value": true
+            }
+          ]
+        },
+        {
+          "glass": false,
+          "image-name": "dark-base.png",
+          "name": "Base (Dark)",
+          "hidden-specializations": [
+            {
+              "value": true
+            },
+            {
+              "appearance": "dark",
+              "value": false
+            }
+          ]
+        },
+        {
+          "glass": false,
+          "image-name": "light-base.png",
+          "name": "Base (Light)",
           "hidden-specializations": [
             {
               "value": false
