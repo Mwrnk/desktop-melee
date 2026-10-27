@@ -52,7 +52,7 @@ into Melee's world, the menu bar app, and every file.
   the game code uses a GCC-only feature (see
   [how it works](docs/desktop-melee/how-it-works.md#41-big-endian-data-read-for-free)).
 - Your own Super Smash Bros. Melee disc image: **USA, revision 2 (1.02),
-  unmodified** (`.iso`, `.ciso` or `.rvz`). Desktop Melee checks it on first
+  unmodified** (`.iso`, `.gcm`, `.ciso` or `.rvz`). Desktop Melee checks it on first
   launch and refuses other versions.
 - A controller is recommended: an official GameCube controller with a USB
   adapter, or any gamepad macOS supports. The keyboard works too.
@@ -71,7 +71,11 @@ installs it in `/Applications` (set `DESKTOP_MELEE_INSTALL=0` to keep it in
 
 Open **Desktop Melee** from `/Applications`. On first launch the welcome
 window asks for your disc, checks it, has you press a button on each
-controller, and shows how to play. Then click the stage icon in the menu bar
+controller, and shows how to play.
+
+**The first launch takes several minutes** ("Getting Melee ready…"): the game
+builds all of its graphics shaders once, so matches never stutter. Later
+launches take a few seconds. Then click the stage icon in the menu bar
 and press **Start**, or press Start on a controller.
 
 To run it from a terminal with the log visible:
