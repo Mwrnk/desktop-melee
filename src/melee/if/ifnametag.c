@@ -1,4 +1,7 @@
 #include "ifnametag.h"
+#ifdef TARGET_PC
+#include "pet_game.h"
+#endif
 
 #include "forward.h"
 #include "ifall.h"
@@ -209,12 +212,19 @@ void fn_802FCC44(HSD_GObj* gobj)
     u8* slot = HSD_GObjGetUserData(gobj);
     HSD_JObj* jobj = gobj->hsd_obj;
     PAD_STACK(8);
-    if (Player_GetPlayerSlotType(*slot) != Gm_PKind_NA &&
-        Player_GetPlayerState(*slot) && Player_GetStocks(*slot) &&
-        (un_804D6D70[*slot] ||
-         Player_GetNametagSlotID(*slot) != NAMETAG_DISABLED ||
-         Player_80036058(*slot) || gm_8016B258(*slot)))
-    {
+    bool show = Player_GetPlayerSlotType(*slot) != Gm_PKind_NA &&
+                Player_GetPlayerState(*slot) && Player_GetStocks(*slot) &&
+                (un_804D6D70[*slot] ||
+                 Player_GetNametagSlotID(*slot) != NAMETAG_DISABLED ||
+                 Player_80036058(*slot) || gm_8016B258(*slot));
+#ifdef TARGET_PC
+    /* melee-pet: player tags always on (while in the match) or always off. */
+    if (pet_hide_stage()) {
+        show = pet_tags_enabled() && Player_GetPlayerSlotType(*slot) != Gm_PKind_NA &&
+               Player_GetPlayerState(*slot) && Player_GetStocks(*slot);
+    }
+#endif
+    if (show) {
         HSD_JObjClearFlags(HSD_JObjGetChild(jobj), JOBJ_HIDDEN);
     } else {
         HSD_JObjSetFlags(HSD_JObjGetChild(jobj), JOBJ_HIDDEN);
@@ -376,3 +386,20 @@ void un_802FD4C8(void)
         NameTag_Create(i);
     }
 }
+
+#ifdef TARGET_PC
+/* melee-pet trace: how many player tags are showing. */
+int pet_tags_trace(void)
+{
+    int i, n = 0;
+    for (i = 0; i < Gm_Player_NumMax; i++) {
+        HSD_GObj* gobj = un_804A1EE0[i];
+        if (gobj != NULL && gobj->hsd_obj != NULL &&
+            !(HSD_JObjGetFlags(HSD_JObjGetChild(gobj->hsd_obj)) & JOBJ_HIDDEN))
+        {
+            n++;
+        }
+    }
+    return n;
+}
+#endif

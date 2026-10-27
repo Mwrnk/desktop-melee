@@ -40,6 +40,13 @@ float pet_timer_scale(void);
 void pet_timer_frame(void);
 bool pet_timer_trace(float* scale);
 
+/* Player tags (Display tab): the P1 / P2 / CPU markers over fighters, always
+ * shown in the match or never. Applies immediately. */
+bool pet_tags_enabled(void);
+void pet_set_tags(bool on);
+/* src/melee/if/ifnametag.c: tags showing now (trace). */
+int pet_tags_trace(void);
+
 /* The Dock's left and right edges in Melee units (x), for stretching the main
  * stage floor across it. False when not in overlay mode. */
 bool pet_dock_span(float* left, float* right);

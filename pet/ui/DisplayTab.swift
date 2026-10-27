@@ -23,6 +23,8 @@ final class DisplaySettings: ObservableObject {
     @Published private(set) var shake: Bool
     /// Timer (Effects): "top" (half size) or "hidden".
     @Published private(set) var timer: String
+    /// Player tags (Effects): the P1 / P2 / CPU markers over fighters.
+    @Published private(set) var tags: Bool
     /// The chosen screen's name; "" follows the primary screen.
     @Published private(set) var screen: String
     @Published private(set) var screens: [String] = []
@@ -38,11 +40,13 @@ final class DisplaySettings: ObservableObject {
         island = d.object(forKey: "display.island") as? Bool ?? true
         shake = d.object(forKey: "display.shake") as? Bool ?? true
         timer = d.string(forKey: "display.timer") == "hidden" ? "hidden" : "top"
+        tags = d.object(forKey: "display.tags") as? Bool ?? true
         screen = d.string(forKey: "display.screen") ?? ""
         refreshScreens()
         pet_set_fighter_size(Float(size))
         pet_set_island_enabled(island)
         pet_set_shake(shake)
+        pet_set_tags(tags)
         pet_set_timer_mode(timer == "hidden" ? Int32(PET_TIMER_HIDDEN) : Int32(PET_TIMER_TOP))
         pet_set_screen(screen)
         // A display plugged in or out, or the Dock resized: the overlay goes

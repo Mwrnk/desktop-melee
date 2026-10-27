@@ -173,8 +173,28 @@ case_timer_hidden() {
     fi
 }
 
+# The last trace line's tag count, about 10 s into the match (after Melee's
+# start-of-match flash of the tags).
+last_tags() { traces "$1" | tail -1 | awk '{ for (i = 1; i < NF; i++) if ($i == "tags") print $(i + 1) }'; }
+
+case_tags_on() {
+    with_setting display.tags bool true
+    run_match "${DIR}/tags_on.log" "sleep 6"
+    local t
+    t="$(last_tags "${DIR}/tags_on.log")"
+    if [[ "${t}" == 2 ]]; then ok "tags on: 2 shown"; else bad "tags on: ${t:-none} shown (want 2)"; fi
+}
+
+case_tags_off() {
+    with_setting display.tags bool false
+    run_match "${DIR}/tags_off.log" "sleep 6"
+    local t
+    t="$(last_tags "${DIR}/tags_off.log")"
+    if [[ "${t}" == 0 ]]; then ok "tags off: none shown"; else bad "tags off: ${t:-none} shown (want 0)"; fi
+}
+
 CASES=("$@")
-[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off timer_top timer_hidden)
+[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off timer_top timer_hidden tags_on tags_off)
 for c in "${CASES[@]}"; do
     "case_${c}"
 done
