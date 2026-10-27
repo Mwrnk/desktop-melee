@@ -56,6 +56,8 @@ void pet_set_fighter_size(float percent);
 bool pet_fighter_size_locked(void);
 void pet_set_island_enabled(bool on);
 void pet_set_screen(const char* name);
+/* Effects (pet/src/pet.c): screen shake on or off, immediately. */
+void pet_set_shake(bool on);
 
 /* UCF (src/pc/launcher.cpp): Universal Controller Fix. Applies immediately;
  * locked is true when MELEE_UCF in the environment decides it. */

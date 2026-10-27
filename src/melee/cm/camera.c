@@ -1067,11 +1067,16 @@ void Camera_8002A4AC(HSD_GObj* gobj)
         f32 ex, ey, ez, ix, iy, iz, fov;
         if (pet_camera(&ex, &ey, &ez, &ix, &iy, &iz, &fov)) {
             Vec3 eye, interest;
-            eye.x = ex + game_camera.translation.x;
-            eye.y = ey + game_camera.translation.y;
+            /* Screen shake can be turned off (pet_shake_enabled). */
+            const f32 sx = pet_shake_enabled() ? game_camera.translation.x : 0.0f;
+            const f32 sy = pet_shake_enabled() ? game_camera.translation.y : 0.0f;
+            pet_trace_shake(sx, sy);
+            pet_trace_frame();
+            eye.x = ex + sx;
+            eye.y = ey + sy;
             eye.z = ez;
-            interest.x = ix + game_camera.translation.x;
-            interest.y = iy + game_camera.translation.y;
+            interest.x = ix + sx;
+            interest.y = iy + sy;
             interest.z = iz;
             HSD_CObjSetFov(cobj, fov);
             HSD_CObjSetInterest(cobj, &interest);

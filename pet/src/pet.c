@@ -213,6 +213,41 @@ void pet_relayout(void) {
     }
 }
 
+/* ---- tweaks (Display tab) ------------------------------------------------ */
+
+static bool s_shake = true;
+void pet_set_shake(bool on) { s_shake = on; }
+bool pet_shake_enabled(void) { return s_shake; }
+
+static int s_trace = -1;
+static float s_trace_shake;
+static int s_trace_frames;
+
+static bool trace_enabled(void) {
+    if (s_trace < 0) {
+        const char* env = getenv("MELEE_PET_TRACE");
+        s_trace = env != NULL && env[0] == '1';
+    }
+    return s_trace != 0;
+}
+
+void pet_trace_shake(float x, float y) {
+    const float m = fmaxf(fabsf(x), fabsf(y));
+    if (m > s_trace_shake) {
+        s_trace_shake = m;
+    }
+}
+
+void pet_trace_frame(void) {
+    if (!trace_enabled() || !pet_match_active() || ++s_trace_frames < 60) {
+        return;
+    }
+    s_trace_frames = 0;
+    SDL_Log("pet: trace shake %.2f timer %s scale %.2f tags %d hud %s island %d paused %d hidden %d",
+            s_trace_shake, "top", 1.0f, 1, "island", pet_island_wanted() ? 1 : 0, 0, 0);
+    s_trace_shake = 0.0f;
+}
+
 void pet_set_fighter_size(float percent) {
     if (percent >= 25.0f && percent <= 400.0f) {
         s_units_next = DEFAULT_UNITS * 100.0f / percent;

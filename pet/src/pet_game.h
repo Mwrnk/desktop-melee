@@ -19,6 +19,17 @@ bool pet_hide_stage(void);
 bool pet_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
                 float* interest_y, float* interest_z, float* fov);
 
+/* Screen shake (Display tab): when off, Melee's quake offset is not applied
+ * to the overlay camera. Applies immediately. */
+bool pet_shake_enabled(void);
+void pet_set_shake(bool on);
+
+/* MELEE_PET_TRACE=1 (tests): the overlay camera reports the shake it applied
+ * each frame and calls pet_trace_frame, which logs a "pet: trace" line every
+ * 60 frames during a match. */
+void pet_trace_shake(float x, float y);
+void pet_trace_frame(void);
+
 /* The Dock's left and right edges in Melee units (x), for stretching the main
  * stage floor across it. False when not in overlay mode. */
 bool pet_dock_span(float* left, float* right);
