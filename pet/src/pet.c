@@ -2,6 +2,7 @@
 #include "pet.h"
 
 #include <math.h>
+#include <signal.h>
 #include <unistd.h>
 #include <stdlib.h>
 
@@ -79,11 +80,18 @@ bool pet_hide_stage(void) {
     return pet_overlay_enabled();
 }
 
+static bool trace_enabled(void);
+static void on_usr1(int sig);
+
 void pet_configure(AuroraConfig* config) {
     if (!pet_overlay_enabled()) {
         return;
     }
     config->overlayWindow = true;
+    if (trace_enabled()) {
+        /* Tests: SIGUSR1 presses Pause and hide (pet_trace_tick). */
+        signal(SIGUSR1, on_usr1);
+    }
     /* A menu bar app: SDL must not turn the process into a regular app with a
      * Dock icon (pet_ui_install makes it an accessory app). */
     SDL_SetHint(SDL_HINT_MAC_BACKGROUND_APP, "1");
@@ -232,7 +240,6 @@ bool pet_tags_enabled(void) { return s_tags; }
 
 static int s_trace = -1;
 static float s_trace_shake;
-static int s_trace_frames;
 static int s_hud_drawn;
 
 static bool trace_enabled(void) {
@@ -243,6 +250,8 @@ static bool trace_enabled(void) {
     return s_trace != 0;
 }
 
+bool pet_trace_enabled(void) { return trace_enabled(); }
+
 void pet_trace_shake(float x, float y) {
     const float m = fmaxf(fabsf(x), fabsf(y));
     if (m > s_trace_shake) {
@@ -250,17 +259,60 @@ void pet_trace_shake(float x, float y) {
     }
 }
 
-void pet_trace_frame(void) {
-    if (!trace_enabled() || !pet_match_active() || ++s_trace_frames < 60) {
+/* ---- Pause and hide -------------------------------------------------------- */
+
+static bool s_hidden = false;
+static int s_pause_port = 0;
+static bool s_pause_request = false;
+static volatile sig_atomic_t s_usr1 = 0;
+
+bool pet_hidden(void) { return s_hidden; }
+
+void pet_set_pause_port(int port) { s_pause_port = port >= 0 && port < 4 ? port : 0; }
+
+int pet_take_pause_request(void) {
+    if (!s_pause_request) {
+        return -1;
+    }
+    s_pause_request = false;
+    return s_pause_port;
+}
+
+void pet_toggle_pause_and_hide(void) {
+    s_hidden = !s_hidden;
+    /* Hiding pauses a running match (Melee's own pause, as the first human
+     * player); showing again leaves it paused until that player's Start. */
+    s_pause_request = s_hidden && pet_match_active() && !pet_game_paused();
+#ifdef __APPLE__
+    pet_mac_overlay_set_faded(s_hidden);
+#endif
+    SDL_Log("pet: pause and hide %s (match %d)", s_hidden ? "on" : "off", pet_match_active() ? 1 : 0);
+}
+
+static void on_usr1(int sig) {
+    (void)sig;
+    s_usr1 = 1;
+}
+
+/* Once a second (overlay_mac.m), also while the game is paused. */
+void pet_trace_tick(void) {
+    if (!trace_enabled()) {
         return;
     }
-    s_trace_frames = 0;
+    if (s_usr1) {
+        s_usr1 = 0;
+        pet_toggle_pause_and_hide();
+    }
+    if (!pet_match_active()) {
+        return;
+    }
     float timer_scale = 1.0f;
     const bool timer_hidden = pet_timer_trace(&timer_scale);
     static const char* hud_names[] = {"island", "bottom", "hidden"};
     SDL_Log("pet: trace shake %.2f timer %s scale %.2f tags %d hud %s island %d paused %d hidden %d drawn %d",
             s_trace_shake, timer_hidden ? "hidden" : "top", timer_scale, pet_tags_trace(),
-            hud_names[s_hud], pet_island_wanted() ? 1 : 0, 0, 0, s_hud_drawn);
+            hud_names[s_hud], pet_island_wanted() ? 1 : 0, pet_game_paused() ? 1 : 0,
+            s_hidden ? 1 : 0, s_hud_drawn);
     s_hud_drawn = 0;
     s_trace_shake = 0.0f;
 }
@@ -303,7 +355,7 @@ void pet_hud_frame(bool visible) {
 }
 
 bool pet_island_wanted(void) {
-    return pet_overlay_enabled() && s_hud == PET_HUD_ISLAND && s_hud_visible &&
+    return pet_overlay_enabled() && s_hud == PET_HUD_ISLAND && s_hud_visible && !s_hidden &&
            SDL_GetTicks() - s_hud_last_ms < 250;
 }
 
@@ -485,6 +537,7 @@ bool pet_match_restart_wanted(void) {
 
 void pet_match_began(void) {
     s_match_requested = false;
+    s_pause_request = false;
     s_in_match = true;
     const float env = env_units();
     s_units = env > 0.0f ? env : s_units_next;
@@ -495,6 +548,7 @@ void pet_match_began(void) {
 
 void pet_match_ended(void) {
     s_in_match = false;
+    s_pause_request = false;
     if (s_screen_pending) {
         apply_screen();
     }

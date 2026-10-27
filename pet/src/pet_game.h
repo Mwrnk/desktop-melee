@@ -25,10 +25,23 @@ bool pet_shake_enabled(void);
 void pet_set_shake(bool on);
 
 /* MELEE_PET_TRACE=1 (tests): the overlay camera reports the shake it applied
- * each frame and calls pet_trace_frame, which logs a "pet: trace" line every
- * 60 frames during a match. */
+ * each frame; pet_trace_tick (once a second, from an AppKit timer, so also
+ * while paused) logs a "pet: trace" line during a match. */
 void pet_trace_shake(float x, float y);
-void pet_trace_frame(void);
+void pet_trace_tick(void);
+bool pet_trace_enabled(void);
+
+/* Pause and hide (menu bar button, global shortcut): hides the overlay and
+ * the island and pauses a running match with Melee's own pause, as
+ * pet_set_pause_port's port (the first human player's, else port 1);
+ * pressing it again shows them, still paused. */
+void pet_toggle_pause_and_hide(void);
+bool pet_hidden(void);
+void pet_set_pause_port(int port);
+/* The port to pause as, once, after a toggle asked for a pause (else -1). */
+int pet_take_pause_request(void);
+/* pet/game/gmpetmode.c: whether a VS pause is on. */
+bool pet_game_paused(void);
 
 /* Timer (Display tab): at the top at pet_timer_scale() of Melee's size, or
  * hidden (the last-seconds countdown too). Applies immediately. */

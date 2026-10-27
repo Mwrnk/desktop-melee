@@ -7,6 +7,8 @@
 #
 # Usage: pet/tests/tweaks_test.sh [case...]   (after pet/package.sh)
 set -uo pipefail
+# A key written after the app died must fail the case, not kill the script.
+trap '' PIPE
 cd "$(dirname "$0")/../.."
 EXE="/Applications/Desktop Melee.app/Contents/MacOS/melee"
 if pgrep -f "${EXE}" > /dev/null; then
@@ -58,7 +60,7 @@ restore() {
     done
     [[ ${ADDED_VERIFIED} -eq 1 ]] && defaults delete melee-pet disc.verified 2> /dev/null
     PID="$(pgrep -n -f "${EXE}")"
-    [[ -n "${PID}" ]] && kill -9 "${PID}"
+    [[ "${PID}" =~ ^[0-9]+$ ]] && kill -9 "${PID}"
     rm -rf "${DIR}"
 }
 trap restore EXIT
@@ -82,8 +84,11 @@ swiftc -O -o "${DIR}/window_list" pet/tools/window_list.swift 2> /dev/null || { 
 
 # run_match <log> [action...]: boot, press Start, then each action: a FIFO
 # key line ("Right 3500"), "sleep N", or "usr1" (SIGUSR1: Pause and hide).
-# "windows" saves the window list to <log>.windows. Ends by killing the app.
-run_match() {
+# "windows [name]" saves the window list to <log>.windows[.name]. Ends by
+# killing the app. run_idle is the same without starting a match.
+run_match() { START_MATCH=1 run_game "$@"; }
+run_idle() { START_MATCH=0 run_game "$@"; }
+run_game() {
     local log="$1" action pid
     shift
     rm -f "${DIR}/keys"
@@ -92,20 +97,23 @@ run_match() {
         pet/run-overlay.sh > /dev/null 2>&1 &
     exec 3> "${DIR}/keys"
     sleep 12
-    echo "Return 150" >&3
-    sleep 6
+    if [[ ${START_MATCH} -eq 1 ]]; then
+        echo "Return 150" >&3
+        sleep 6
+    fi
     for action in "$@"; do
         pid="$(pgrep -n -f "${EXE}")"
         case "${action}" in
             sleep\ *) sleep "${action#sleep }" ;;
-            usr1) kill -USR1 "${pid}" ;;
+            usr1) [[ "${pid}" =~ ^[0-9]+$ ]] && kill -USR1 "${pid}" ;;
             windows) "${DIR}/window_list" > "${log}.windows" ;;
+            windows\ *) "${DIR}/window_list" > "${log}.windows.${action#windows }" ;;
             *) echo "${action}" >&3 ;;
         esac
     done
     exec 3>&-
     pid="$(pgrep -n -f "${EXE}")"
-    [[ -n "${pid}" ]] && kill -9 "${pid}"
+    [[ "${pid}" =~ ^[0-9]+$ ]] && kill -9 "${pid}"
     sleep 1
 }
 
@@ -241,8 +249,68 @@ case_hud_migrate() {
     if [[ "${hud}" == bottom ]]; then ok "hud migrate: island off became bottom"; else bad "hud migrate: hud ${hud:-?} (want bottom)"; fi
 }
 
+# The full-screen overlay's alpha in a window list ("" when it isn't there).
+overlay_alpha() {
+    awk -F'\t' '$1 == "Desktop Melee" { split($3, b, " "); if (b[2] == 0 && b[3] > 1000) { print $4; exit } }' "$1"
+}
+
+# Line numbers of trace lines matching a pattern, in order.
+trace_lines() { traces "$1" | grep -n "$2" | cut -d: -f1; }
+
+# Pause and hide during a match: pauses and hides; again shows, still paused;
+# Start (Return, the keyboard on port 1) resumes. A hidden timer stays
+# hidden through it all.
+case_pause() {
+    with_setting display.timer string hidden
+    run_match "${DIR}/pause.log" "sleep 3" usr1 "sleep 3" "windows on" usr1 "sleep 3" "windows off" \
+        "Return 150" "sleep 3"
+    local on off resumed a_on a_off untimed
+    on="$(trace_lines "${DIR}/pause.log" "paused 1 hidden 1" | head -1)"
+    off="$(trace_lines "${DIR}/pause.log" "paused 1 hidden 0" | tail -1)"
+    resumed="$(traces "${DIR}/pause.log" | tail -1 | grep -c "paused 0 hidden 0")"
+    a_on="$(overlay_alpha "${DIR}/pause.log.windows.on")"
+    a_off="$(overlay_alpha "${DIR}/pause.log.windows.off")"
+    untimed="$(traces "${DIR}/pause.log" | grep -vc "timer hidden")"
+    if [[ -n "${on}" && -n "${off}" && ${off} -gt ${on} && ${resumed} -eq 1 &&
+        ( -z "${a_on}" || "${a_on}" == 0 || "${a_on}" == 0.0 ) && ( "${a_off}" == 1 || "${a_off}" == 1.0 ) &&
+        ${untimed} -eq 0 ]]; then
+        ok "pause: hid and paused, showed still paused, Start resumed; timer stayed hidden"
+    else
+        bad "pause: on line ${on:-none}, off line ${off:-none}, resumed ${resumed}, overlay alpha hidden '${a_on}' shown '${a_off}', lines with the timer showing ${untimed}"
+    fi
+}
+
+# With no match, Pause and hide only hides; it leaves no pause behind for
+# the next match.
+case_pause_idle() {
+    run_idle "${DIR}/pause_idle.log" usr1 "sleep 2" usr1 "sleep 2" "Return 150" "sleep 6"
+    local toggles last
+    toggles="$(grep -ac "pet: pause and hide \(on\|off\) (match 0)" "${DIR}/pause_idle.log")"
+    last="$(traces "${DIR}/pause_idle.log" | tail -1)"
+    if [[ ${toggles} -eq 2 && "${last}" == *"paused 0 hidden 0"* ]]; then
+        ok "pause idle: hid and showed with no match; the next match isn't paused"
+    else
+        bad "pause idle: ${toggles} toggles logged (want 2), last trace: ${last:-none}"
+    fi
+}
+
+# Both players CPUs: Pause and hide pauses as port 1, so the keyboard resumes.
+case_pause_cpus() {
+    with_setting players.p1.cpu bool true
+    with_setting players.p2.cpu bool true
+    run_match "${DIR}/pause_cpus.log" usr1 "sleep 3" usr1 "sleep 2" "Return 150" "sleep 3"
+    local paused last
+    paused="$(trace_lines "${DIR}/pause_cpus.log" "paused 1" | head -1)"
+    last="$(traces "${DIR}/pause_cpus.log" | tail -1)"
+    if [[ -n "${paused}" && "${last}" == *"paused 0"* ]]; then
+        ok "pause with two CPUs: paused, and the keyboard resumed"
+    else
+        bad "pause with two CPUs: first paused line ${paused:-none}, last trace: ${last:-none}"
+    fi
+}
+
 CASES=("$@")
-[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off timer_top timer_hidden tags_on tags_off hud_hidden hud_bottom hud_migrate)
+[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off timer_top timer_hidden tags_on tags_off hud_hidden hud_bottom hud_migrate pause pause_idle pause_cpus)
 for c in "${CASES[@]}"; do
     "case_${c}"
 done

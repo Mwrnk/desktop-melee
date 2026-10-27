@@ -1072,7 +1072,6 @@ void Camera_8002A4AC(HSD_GObj* gobj)
             const f32 sy = pet_shake_enabled() ? game_camera.translation.y : 0.0f;
             pet_trace_shake(sx, sy);
             pet_timer_frame();
-            pet_trace_frame();
             eye.x = ex + sx;
             eye.y = ey + sy;
             eye.z = ez;

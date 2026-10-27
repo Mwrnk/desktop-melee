@@ -8,6 +8,7 @@
 #include <melee/gm/gm_1A36.h>
 #include <melee/gm/gm_1A3F.h>
 #include <melee/gm/gmscene.h>
+#include <melee/gm/gmvs.h>
 #include <melee/gm/gmvsmelee.h>
 #include <melee/gm/types.h>
 #include <melee/lb/forward.h>
@@ -55,6 +56,18 @@ GameModeState gm_Mode_Pet_States[] = {
     { GM_GAMEMODESTATE_TERMINATE },
 };
 
+/* Pause and hide pauses as a chosen port; otherwise Melee's own check. */
+static int pet_pauser_override(void)
+{
+    int port = pet_take_pause_request();
+    return port >= 0 ? port : gm_DefaultVSGetPauser();
+}
+
+bool pet_game_paused(void)
+{
+    return gm_GetDbPauseFlag(1) || gm_GetDbPauseFlag(2);
+}
+
 /* The match as the menu bar set it up: Final Destination (stretched to the
  * Dock in overlay mode), items off. */
 static void onEnterVs(GameModeState* state)
@@ -72,6 +85,8 @@ static void onEnterVs(GameModeState* state)
     start->rules.is_stock = true;
     start->rules.timer_enabled = setup.time_seconds > 0;
     start->rules.time_limit = setup.time_seconds;
+    start->rules.disable_pausing = 0;
+    start->rules.check_for_pauser_override = pet_pauser_override;
 
     for (i = 0; i < Gm_Player_NumMax; i++) {
         gm_SetupPlayerDefaults(&start->players[i]);
@@ -95,6 +110,19 @@ static void onEnterVs(GameModeState* state)
                  setup.players[i].ckind, setup.players[i].costume,
                  setup.players[i].cpu ? "cpu" : "human", setup.players[i].cpu_level,
                  setup.players[i].port + 1);
+    }
+    /* Pause and hide pauses as the first human player's port (Start on it
+     * resumes), or port 1 when both are CPUs (the keyboard). */
+    {
+        int pause_port = 0;
+        for (i = 1; i >= 0; i--) {
+            if (!setup.players[i].cpu) {
+                pause_port = setup.players[i].port >= 0 && setup.players[i].port < 4
+                                 ? setup.players[i].port
+                                 : (int) i;
+            }
+        }
+        pet_set_pause_port(pause_port);
     }
     gm_LoadAnnouncer();
     pet_match_began();

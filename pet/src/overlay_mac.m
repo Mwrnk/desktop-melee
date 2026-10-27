@@ -40,6 +40,14 @@ static NSWindow* s_overlay;
 
 static PetClickThroughGuard* s_click_guard;
 
+/* Pause and hide: the overlay goes fully transparent but keeps drawing, so
+ * the game loop never stalls on a hidden window. */
+void pet_mac_overlay_set_faded(bool faded) {
+    if (s_overlay != nil) {
+        s_overlay.alphaValue = faded ? 0.0 : 1.0;
+    }
+}
+
 void pet_mac_overlay_set_hidden(bool hidden) {
     if (s_overlay == nil) {
         return;
@@ -67,6 +75,14 @@ void pet_overlay_mac_setup(SDL_Window* window) {
     /* Clicks, drags and scrolls go to the windows underneath, always. */
     nswindow.ignoresMouseEvents = YES;
     s_click_guard = [PetClickThroughGuard new];
+    if (pet_trace_enabled()) {
+        [NSTimer scheduledTimerWithTimeInterval:1.0
+                                        repeats:YES
+                                          block:^(NSTimer* timer) {
+                                              (void)timer;
+                                              pet_trace_tick();
+                                          }];
+    }
     [nswindow addObserver:s_click_guard
                forKeyPath:@"ignoresMouseEvents"
                   options:NSKeyValueObservingOptionNew
