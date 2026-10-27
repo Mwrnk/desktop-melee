@@ -41,36 +41,48 @@ enum PauseHotkey {
             pet_toggle_pause_and_hide()
             return noErr
         }, 1, &spec, nil, &handler)
-        register()
+        _ = register(keyCode: keyCode, mods: mods)
+        NSLog("pet: Pause and hide shortcut %@ %@", display, hotKey != nil ? "registered" : "taken")
     }
 
-    private static func register() {
+    /// Makes this the system hotkey; false (and none registered) when
+    /// another app has it.
+    private static func register(keyCode: UInt32, mods: UInt32) -> Bool {
         if let hotKey {
             UnregisterEventHotKey(hotKey)
             self.hotKey = nil
         }
         let id = EventHotKeyID(signature: OSType(0x444D_454C), id: 1) // "DMEL"
         let status = RegisterEventHotKey(keyCode, mods, id, GetApplicationEventTarget(), 0, &hotKey)
-        NSLog("pet: Pause and hide shortcut %@ %@", display, status == noErr ? "registered" : "taken (\(status))")
+        if status != noErr { hotKey = nil }
+        return status == noErr
     }
 
-    /// A new shortcut from the recorder: saved, and active right away.
-    static func set(keyCode: UInt32, mods: UInt32, label: String) {
+    /// A new shortcut from the recorder: active and saved right away, or
+    /// false when another app already has it (the old one stays).
+    static func set(keyCode: UInt32, mods: UInt32, label: String) -> Bool {
+        guard register(keyCode: keyCode, mods: mods) else {
+            _ = register(keyCode: self.keyCode, mods: self.mods)
+            NSLog("pet: Pause and hide shortcut not changed: taken by another app")
+            return false
+        }
         defaults.set(["key": keyCode, "mods": mods, "label": label], forKey: key)
-        register()
         NotificationCenter.default.post(name: changed, object: nil)
+        return true
     }
 
-    /// Carbon modifiers from a key event's; nil without Control, Option or
-    /// Command (a plain key would be taken from every app).
+    /// Carbon modifiers from a key event's; nil unless there are at least two
+    /// modifiers, one of them Control, Option or Command, so the shortcut
+    /// can't take an everyday combo (Command-C) from every app.
     static func carbonMods(_ flags: NSEvent.ModifierFlags) -> UInt32? {
         var m: UInt32 = 0
-        if flags.contains(.control) { m |= UInt32(controlKey) }
-        if flags.contains(.option) { m |= UInt32(optionKey) }
-        if flags.contains(.command) { m |= UInt32(cmdKey) }
+        var count = 0
+        if flags.contains(.control) { m |= UInt32(controlKey); count += 1 }
+        if flags.contains(.option) { m |= UInt32(optionKey); count += 1 }
+        if flags.contains(.command) { m |= UInt32(cmdKey); count += 1 }
         guard m != 0 else { return nil }
-        if flags.contains(.shift) { m |= UInt32(shiftKey) }
-        return m
+        if flags.contains(.shift) { m |= UInt32(shiftKey); count += 1 }
+        return count >= 2 ? m : nil
     }
 
     /// A short name for the key itself.

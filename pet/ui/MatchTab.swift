@@ -154,6 +154,7 @@ struct PauseAndHideRow: View {
     let hidden: Bool
     @State private var shortcut = PauseHotkey.display
     @State private var recording = false
+    @State private var taken = false
     @State private var monitor: Any?
 
     var body: some View {
@@ -177,7 +178,7 @@ struct PauseAndHideRow: View {
             Button {
                 recording ? stopRecording() : startRecording()
             } label: {
-                MText(recording ? "Press keys..." : shortcut, size: 18)
+                MText(recording ? "Press keys..." : taken ? "Taken" : shortcut, size: 18)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
                     .background(
@@ -187,10 +188,14 @@ struct PauseAndHideRow: View {
                     )
             }
             .buttonStyle(.plain)
-            .help("Click, then press a new shortcut (with Control, Option or Command)")
+            .help("Click, then press a new shortcut with two modifier keys (such as Control-Option)")
         }
         .onReceive(NotificationCenter.default.publisher(for: PauseHotkey.changed)) { _ in
             shortcut = PauseHotkey.display
+        }
+        // The popover closed mid-recording: stop listening for keys.
+        .onReceive(NotificationCenter.default.publisher(for: MenuBarController.popoverClosed)) { _ in
+            stopRecording()
         }
         .onDisappear { stopRecording() }
     }
@@ -206,9 +211,15 @@ struct PauseAndHideRow: View {
                 NSSound.beep()
                 return nil
             }
-            PauseHotkey.set(keyCode: UInt32(event.keyCode), mods: mods,
-                            label: PauseHotkey.label(for: event))
-            MenuSound.confirm.play()
+            if PauseHotkey.set(keyCode: UInt32(event.keyCode), mods: mods,
+                               label: PauseHotkey.label(for: event)) {
+                MenuSound.confirm.play()
+            } else {
+                // Another app has it: say so for a moment; the old one stays.
+                MenuSound.back.play()
+                taken = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { taken = false }
+            }
             stopRecording()
             return nil
         }

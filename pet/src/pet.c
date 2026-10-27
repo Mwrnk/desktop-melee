@@ -285,6 +285,11 @@ void pet_toggle_pause_and_hide(void) {
     s_pause_request = s_hidden && pet_match_active() && !pet_game_paused();
 #ifdef __APPLE__
     pet_mac_overlay_set_faded(s_hidden);
+    /* Back from another app: the game needs the keyboard again, or Start
+     * on the keyboard would type into whatever app is in front. */
+    if (!s_hidden && pet_match_active()) {
+        pet_ui_focus_game();
+    }
 #endif
     SDL_Log("pet: pause and hide %s (match %d)", s_hidden ? "on" : "off", pet_match_active() ? 1 : 0);
 }
@@ -538,6 +543,14 @@ bool pet_match_restart_wanted(void) {
 void pet_match_began(void) {
     s_match_requested = false;
     s_pause_request = false;
+    /* Starting a match shows the fighters: nobody means to play unseen. */
+    if (s_hidden) {
+        s_hidden = false;
+#ifdef __APPLE__
+        pet_mac_overlay_set_faded(false);
+#endif
+        SDL_Log("pet: pause and hide off (a match started)");
+    }
     s_in_match = true;
     const float env = env_units();
     s_units = env > 0.0f ? env : s_units_next;

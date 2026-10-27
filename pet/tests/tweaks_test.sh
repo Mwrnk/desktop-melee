@@ -261,6 +261,11 @@ trace_lines() { traces "$1" | grep -n "$2" | cut -d: -f1; }
 # Start (Return, the keyboard on port 1) resumes. A hidden timer stays
 # hidden through it all.
 case_pause() {
+    # A clock to keep hidden (Time "None" makes none), and P1 a human on
+    # port 1, the keyboard's, whose Start resumes.
+    with_setting match.minutes int 7
+    with_setting players.p1.cpu bool false
+    with_setting controls.p1.port int 0
     with_setting display.timer string hidden
     run_match "${DIR}/pause.log" "sleep 3" usr1 "sleep 3" "windows on" usr1 "sleep 3" "windows off" \
         "Return 150" "sleep 3"
@@ -309,8 +314,22 @@ case_pause_cpus() {
     fi
 }
 
+# Hidden with no match, then Start: the new match is visible, not played
+# unseen.
+case_hidden_into_match() {
+    run_idle "${DIR}/hidden_match.log" usr1 "sleep 2" "Return 150" "sleep 6" windows
+    local last alpha
+    last="$(traces "${DIR}/hidden_match.log" | tail -1)"
+    alpha="$(overlay_alpha "${DIR}/hidden_match.log.windows")"
+    if [[ "${last}" == *"hidden 0"* && ( "${alpha}" == 1 || "${alpha}" == 1.0 ) ]]; then
+        ok "hidden into a match: the new match shows"
+    else
+        bad "hidden into a match: last trace '${last:-none}', overlay alpha '${alpha}'"
+    fi
+}
+
 CASES=("$@")
-[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off timer_top timer_hidden tags_on tags_off hud_hidden hud_bottom hud_migrate pause pause_idle pause_cpus)
+[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off timer_top timer_hidden tags_on tags_off hud_hidden hud_bottom hud_migrate pause pause_idle pause_cpus hidden_into_match)
 for c in "${CASES[@]}"; do
     "case_${c}"
 done

@@ -83,10 +83,21 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         gameWindow?.makeKey()
     }
 
+    /// Posted when the popover closes (the shortcut recorder stops).
+    static let popoverClosed = Notification.Name("PetPopoverClosed")
+
     func popoverDidClose(_ notification: Notification) {
+        NotificationCenter.default.post(name: Self.popoverClosed, object: nil)
         // Hand keyboard focus back to the game so keyboard play keeps working.
         gameWindow?.makeKey()
     }
+}
+
+/// Called from C (Pause and hide's Show): the keyboard back to the game.
+@_cdecl("pet_ui_focus_game")
+public func petUIFocusGame() {
+    NSApp.activate(ignoringOtherApps: true)
+    MenuBarController.shared?.focusGame()
 }
 
 /// Called from C once the game window exists (pet/src/overlay_mac.m).

@@ -3,8 +3,9 @@
 # for about 25 s) and checks that the notch island sits in the menu bar, flush
 # with the top of the screen, not pushed down below it. Needs the disc from
 # launcher.cfg. It only adds the settings it needs (the disc remembered as
-# checked, the welcome done, the island on) when they're missing, and takes
-# back only what it added, so it never undoes the player's own progress.
+# checked, the welcome done, stocks and percents in the island) when they're
+# missing or different, and puts back only what it changed, so it never
+# undoes the player's own progress.
 #
 # Usage: pet/tests/island_test.sh   (after pet/package.sh)
 set -uo pipefail
@@ -22,14 +23,14 @@ if [[ ! -f "${DISC}" ]]; then
 fi
 DIR="$(mktemp -d)"
 ADDED=()
-ISLAND_WAS=""
+HUD_WAS=""
 restore() {
     exec 3>&- 2> /dev/null
     for key in ${ADDED[@]+"${ADDED[@]}"}; do
         defaults delete melee-pet "${key}" 2> /dev/null
     done
-    if [[ "${ISLAND_WAS}" == "0" ]]; then
-        defaults write melee-pet display.island -bool false
+    if [[ -n "${HUD_WAS}" ]]; then
+        defaults write melee-pet display.hud -string "${HUD_WAS}"
     fi
     rm -rf "${DIR}"
 }
@@ -52,9 +53,15 @@ if [[ "$(defaults read melee-pet onboarding.done 2> /dev/null)" != "1" ]]; then
     defaults write melee-pet onboarding.done -bool true
     ADDED+=(onboarding.done)
 fi
-ISLAND_WAS="$(defaults read melee-pet display.island 2> /dev/null)"
-if [[ "${ISLAND_WAS}" == "0" ]]; then
-    defaults write melee-pet display.island -bool true
+# Stocks and percents in the island (display.hud; the old display.island
+# switch only matters before the app has migrated it).
+HUD_NOW="$(defaults read melee-pet display.hud 2> /dev/null)"
+if [[ -z "${HUD_NOW}" ]]; then
+    defaults write melee-pet display.hud -string island
+    ADDED+=(display.hud)
+elif [[ "${HUD_NOW}" != island ]]; then
+    HUD_WAS="${HUD_NOW}"
+    defaults write melee-pet display.hud -string island
 fi
 
 mkfifo "${DIR}/keys"

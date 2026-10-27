@@ -21,6 +21,9 @@ void pet_overlay_mac_setup(SDL_Window* window);
 void pet_mac_overlay_set_hidden(bool hidden);
 /* Pause and hide: fully transparent while hidden, still drawing. */
 void pet_mac_overlay_set_faded(bool faded);
+/* pet/ui/MenuBar.swift: bring Desktop Melee forward with the game window
+ * key, so keyboard play works. */
+void pet_ui_focus_game(void);
 /* The Swift menu bar app (pet/ui/MenuBar.swift); takes the game's NSWindow. */
 void pet_ui_install(void* game_window);
 #endif
