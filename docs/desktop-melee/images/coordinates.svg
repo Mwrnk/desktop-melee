@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" font-family="Helvetica, Arial, sans-serif">
+  <title>From screen points to Melee units</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2B2F3A"/>
+    </marker>
+    <marker id="red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#B42323"/>
+    </marker>
+  </defs>
+  <rect width="960" height="600" rx="18" fill="#FAFAFC"/>
+  <text x="40" y="44" font-size="22" font-weight="bold" fill="#2B2F3A">From screen points to Melee units</text>
+
+  <!-- screen -->
+  <rect x="40" y="70" width="560" height="350" rx="10" fill="#E6ECF8" stroke="#2B2F3A" stroke-width="2.5"/>
+  <rect x="180" y="378" width="280" height="38" rx="12" fill="#FFFFFF" stroke="#9AA3B5" stroke-width="1.5"/>
+  <text x="320" y="402" font-size="13" fill="#6B7385" text-anchor="middle">Dock</text>
+  <line x1="180" y1="378" x2="460" y2="378" stroke="#16A34A" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- axes through the origin: x = 0 at the middle, y = 0 on the Dock's top -->
+  <line x1="50" y1="378" x2="590" y2="378" stroke="#2B2F3A" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <line x1="320" y1="410" x2="320" y2="82" stroke="#2B2F3A" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="320" y1="378" x2="586" y2="378" stroke="#2B2F3A" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <circle cx="320" cy="378" r="6" fill="#D63A3A"/>
+  <text x="330" y="370" font-size="14" fill="#B42323" font-weight="bold">(0, 0)</text>
+  <text x="566" y="368" font-size="15" fill="#2B2F3A">+x</text>
+  <text x="330" y="98" font-size="15" fill="#2B2F3A">+y</text>
+
+  <!-- width and floor measures -->
+  <line x1="44" y1="446" x2="596" y2="446" stroke="#B42323" stroke-width="1.6" marker-start="url(#red)" marker-end="url(#red)"/>
+  <text x="320" y="470" font-size="15" fill="#B42323" text-anchor="middle" font-weight="bold">screen width W points = U Melee units (U = 490 at 100% fighter size)</text>
+  <line x1="618" y1="378" x2="618" y2="420" stroke="#14803D" stroke-width="1.6" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="626" y="404" font-size="14" fill="#14803D">floor</text>
+  <line x1="618" y1="72" x2="618" y2="372" stroke="#2B2F3A" stroke-width="1.2" stroke-dasharray="3 4"/>
+  <text x="628" y="230" font-size="14" fill="#2B2F3A">H − floor</text>
+
+  <!-- formulas -->
+  <rect x="40" y="494" width="880" height="90" rx="10" fill="#FFFFFF" stroke="#D5DAE5"/>
+  <g font-size="15" fill="#2B2F3A" font-family="Menlo, Consolas, monospace">
+    <text x="60" y="522">u = U / W</text>
+    <text x="420" y="522" font-family="Helvetica, Arial, sans-serif" fill="#6B7385">Melee units per point</text>
+    <text x="60" y="546">melee_x = (point_x − W/2) · u</text>
+    <text x="60" y="570">melee_y = (point_y − floor) · u</text>
+    <text x="420" y="570" font-family="Helvetica, Arial, sans-serif" fill="#6B7385">point_y is measured up from the screen's bottom edge</text>
+  </g>
+
+  <!-- camera, seen from the side -->
+  <text x="680" y="100" font-size="17" font-weight="bold" fill="#2B2F3A">The camera, from the side</text>
+  <line x1="700" y1="150" x2="700" y2="420" stroke="#2B2F3A" stroke-width="4"/>
+  <text x="690" y="440" font-size="13" fill="#6B7385" text-anchor="middle">z = 0 plane</text>
+  <text x="690" y="456" font-size="13" fill="#6B7385" text-anchor="middle">(fighters, floor)</text>
+  <circle cx="900" cy="285" r="10" fill="#2B2F3A"/>
+  <text x="900" y="315" font-size="13" fill="#2B2F3A" text-anchor="middle">eye</text>
+  <line x1="900" y1="285" x2="700" y2="150" stroke="#3D7BEA" stroke-width="1.8"/>
+  <line x1="900" y1="285" x2="700" y2="420" stroke="#3D7BEA" stroke-width="1.8"/>
+  <line x1="900" y1="285" x2="700" y2="285" stroke="#2B2F3A" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="800" y="278" font-size="13" fill="#2B2F3A" text-anchor="middle">distance d</text>
+  <text x="852" y="250" font-size="14" fill="#3D7BEA" font-weight="bold">30°</text>
+  <text x="680" y="140" font-size="13" fill="#2B2F3A">top of screen</text>
+  <text x="704" y="476" font-size="13" fill="#2B2F3A" font-family="Menlo, Consolas, monospace">d = (H·u / 2) / tan 15°</text>
+</svg>

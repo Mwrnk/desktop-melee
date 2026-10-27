@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" width="960" height="520" font-family="Helvetica, Arial, sans-serif">
+  <title>Stretching Final Destination's floor to the Dock</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2B2F3A"/>
+    </marker>
+  </defs>
+  <rect width="960" height="520" rx="18" fill="#FAFAFC"/>
+  <text x="40" y="44" font-size="22" font-weight="bold" fill="#2B2F3A">Stretching the stage's floor to the Dock</text>
+
+  <!-- before: Final Destination's own collision -->
+  <text x="40" y="92" font-size="16" fill="#6B7385">1. Final Destination's collision as it comes off the disc (Melee units)</text>
+  <line x1="480" y1="110" x2="480" y2="215" stroke="#9AA3B5" stroke-dasharray="4 4"/>
+  <text x="486" y="124" font-size="13" fill="#6B7385">x = 0</text>
+  <path d="M330,150 H630 L600,190 H360 Z" fill="#C9C3F2" stroke="#5B4BC4" stroke-width="2"/>
+  <line x1="330" y1="150" x2="630" y2="150" stroke="#5B4BC4" stroke-width="4"/>
+  <circle cx="330" cy="150" r="5" fill="#D63A3A"/><circle cx="630" cy="150" r="5" fill="#D63A3A"/>
+  <text x="330" y="140" font-size="13" fill="#B42323" text-anchor="middle">ledge</text>
+  <text x="630" y="140" font-size="13" fill="#B42323" text-anchor="middle">ledge</text>
+  <line x1="330" y1="208" x2="630" y2="208" stroke="#2B2F3A" stroke-width="1.4" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="480" y="228" font-size="14" fill="#2B2F3A" text-anchor="middle">2 · half   (half = widest |x| of any collision point)</text>
+
+  <!-- arrow down -->
+  <line x1="480" y1="244" x2="480" y2="282" stroke="#2B2F3A" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="496" y="270" font-size="15" fill="#2B2F3A" font-family="Menlo, Consolas, monospace">x' = c + k · x</text>
+
+  <!-- after: matched to the Dock -->
+  <text x="40" y="312" font-size="16" fill="#6B7385">2. Every x is moved and scaled; y stays as it is</text>
+  <rect x="200" y="350" width="560" height="56" rx="16" fill="#FFFFFF" stroke="#9AA3B5" stroke-width="2"/>
+  <text x="480" y="384" font-size="13" fill="#6B7385" text-anchor="middle">Dock</text>
+  <path d="M200,350 H760 L705,346 H255 Z" fill="none"/>
+  <line x1="200" y1="350" x2="760" y2="350" stroke="#16A34A" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="200" cy="350" r="5" fill="#D63A3A"/><circle cx="760" cy="350" r="5" fill="#D63A3A"/>
+  <text x="200" y="340" font-size="13" fill="#B42323" text-anchor="middle">ledge</text>
+  <text x="760" y="340" font-size="13" fill="#B42323" text-anchor="middle">ledge</text>
+  <line x1="200" y1="420" x2="760" y2="420" stroke="#14803D" stroke-width="1.4" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="200" y="440" font-size="13" fill="#14803D" text-anchor="middle">dock_left</text>
+  <text x="760" y="440" font-size="13" fill="#14803D" text-anchor="middle">dock_right</text>
+
+  <rect x="40" y="456" width="880" height="50" rx="10" fill="#FFFFFF" stroke="#D5DAE5"/>
+  <text x="60" y="487" font-size="15" fill="#2B2F3A" font-family="Menlo, Consolas, monospace">k = (dock_right − dock_left) / (2 · half)</text>
+  <text x="560" y="487" font-size="15" fill="#2B2F3A" font-family="Menlo, Consolas, monospace">c = (dock_left + dock_right) / 2</text>
+</svg>
