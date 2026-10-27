@@ -26,10 +26,18 @@ file can go, and in which order.
 | Disc check (`src/pc/launcher_data.cpp`) | Yes: `verify_disc`, `inspect_disc`, `launcher.cfg` | Keep as is |
 | `tools/` (173 files) | 4 to 7 files used by the build | Keep those, delete the rest |
 
-The minimal build that does all of the above was configured, built and linked
-(section 1.3). Its stripped binary is **23.9 MB instead of 26.8 MB**, has no
-RmlUi and no libcurl, and the repository loses roughly 25,000 lines of melee-pc
-code plus 60 platform files and about 160 tools.
+A build without netplay, the snapshot sections, the launcher, the updater,
+RmlUi and libcurl was configured, built and linked (section 1.3). Its stripped
+binary is **23.9 MB instead of 26.8 MB**. Deleting the files outside the build
+(platforms, docs, tools) was checked by configuring only (section 1.3,
+experiments 10 and 11). Together the repository loses roughly 25,000 lines of
+melee-pc code plus 60 platform files and about 160 tools.
+
+**One thing a link can't show:** the netplay stub must return what the real
+code returns when no session is running, not just zeros. One stubbed
+function, `pc_net_audio_record`, sits on the path of every sound effect and
+must return its argument. A plain zero stub would hand the game voice 0 for
+every sound (section 2.3).
 
 ## 1. How this was checked
 
@@ -88,9 +96,8 @@ window) → `pc_launcher_run` (the launcher's RmlUi document, never shown) →
 ### 1.3 Experiments
 
 All in a scratch build directory with `build.sh`'s exact flags; the
-repository was restored after each one and is unchanged. Raw outputs (the
-undefined-symbol lists, the stub, the prototype, the CMake diff) are in the
-shared session notes, `standalone-audit/`.
+repository was restored after each one and is unchanged. The lists that
+matter for the work are in the appendix.
 
 | # | Change | Result |
 |---|---|---|
@@ -104,6 +111,9 @@ shared session notes, `standalone-audit/`.
 | 7 | 4 + 6 + `AURORA_ENABLE_RMLUI OFF` + no libcurl (full rebuild) | Builds and links. 0 RmlUi symbols (5,503 before), no `libcurl.4.dylib`, 0 updater symbols. 26.3 MB, **23.9 MB stripped**. |
 | 8 | Build `desktop_melee_disc_check` | Builds from `launcher_data.cpp` + `disc_open.c` alone. |
 | 9 | Drop `android_compat.cpp`, `windows_arm64_softfp.c`, `touch.c` | 7 undefined symbols (section 2.6). |
+| 10 | Copy of the tree without the files of section 6, step 2 (other platforms, `docs/site`, `ROADMAP.md`, `Containerfile`, `mods/`, `tests/browser/`, non-Apple `cmake/` files, other platforms' tools), configure only | Fails at `CMakeLists.txt:391-392` (`include(cmake/WindowsSnapshot.cmake)` and its call). With those two lines removed, configures. |
+| 11 | 10 + delete all of `tools/` except the files section 2.7 keeps, configure only | Fails: `version_test`, `endian_test`, `thp_test` and `updater_test` (`CMakeLists.txt:476-492` and `642-652`; `launcher_data_test` was kept with its source) need their `tools/test_*.cpp` sources even though they are `EXCLUDE_FROM_ALL`. |
+| 12 | 3 with `net` removed from `--excluded` in `cmake/AppleSnapshot.cmake` | Builds, links, rollback check passes (section 6, step 4 as written). |
 
 Not done: packaging an app from these builds, running it, or running
 `run_all.sh`. A successful link proves nothing calls the removed code from
@@ -165,16 +175,35 @@ undefined symbols [build, experiment 2], referenced from:
 - port code: `vi.c` (15), `launcher.cpp` (4), `slp.c` (3), `main.c` (3),
   `os.c` (2).
 
-**Plan: one stub file instead of editing those call sites.** A file of no-op
-functions (94 of them: "not active", "not deterministic", no rules, no peers,
-nothing to send) replaces all netplay code [build, experiments 3, 4 and 7].
+**Plan: one stub file instead of editing those call sites.** A file of 95
+small functions replaces all netplay code [build, experiments 3, 4 and 7].
 The game files keep calling `pc_net_*`, so melee-pc's game-code fixes keep
 merging cleanly. The game includes 9 of the netplay headers, so the headers
-stay. The stub in the experiment was generated from those headers; the real
-one should be written by hand and reviewed.
+stay. The stub in the experiments was generated from those headers and
+returns zero, false or NULL everywhere. **That is good enough to link, not to
+ship.** The real stub has to return what the real function returns when
+there is no session (`net.active` false, `MELEE_NET` unset). From the real
+code [code, `src/pc/net*.c`]:
 
-Deleted: `src/pc/net*.c` (13,466 lines with headers, before keeping the
-headers), `extern/dht/` (MIT), `extern/monocypher/` (BSD-2-Clause or CC0),
+| Function | Offline value | Why it matters |
+|---|---|---|
+| `pc_net_audio_record(v)` | `v` | **Every sound effect:** `HSD_AudioSFXStartParam` returns it as the voice id (`axdriver.c:650`). Zero would give every sound voice 0. |
+| `pc_net_recv_reliable` | `-1` | `mnstagesel.c:190` loops `while (... >= 0)`: zero would spin forever. Guarded today by `pc_net_active()`. |
+| `pc_rank_session_stage_port` | `-1` | Read as a port number in `mnstagesel.c`. |
+| `pc_net_sync` and `pc_net_sim_frame` | `pc_net_sync` counts frames even offline (`net.c:3274-3276`, called every tick from `gmscene.c:433`); `pc_net_sim_frame` returns that count minus 1 | The frame numbers in Slippi recordings (`slp.c:345`). A constant would stamp every frame -1. The stub needs the counter. |
+| `pc_net_frame` | `-1` (`net.tick_frame` is only set online) | Log lines in `vi.c`. |
+| `net_sfx_resolve`, `net_sfx_keyoff`, `net_sfx_set` | `-1` | Only reached for netplay handles, which never exist offline. |
+| `pc_net_match_local_code`, `pc_net_match_profile_directory`, `pc_net_chat_prompt`, `pc_lan_local_name`, `pc_net_match_opponent_code`, `pc_net_chat_line` | `""`, not NULL | Strings; a NULL would crash a caller that prints them. |
+| `pc_rank_session_seconds`, `pc_rank_session_stocks` | `480`, `4` | Ranked-set rules. |
+| Everything else | `0`, `false`, or nothing | Already what the real code returns offline. |
+
+Of these, `pc_net_audio_record` is on a path Desktop Melee runs all the time,
+and `pc_net_sync`/`pc_net_sim_frame` when `MELEE_SLP_DIR` is set; the others
+sit behind `pc_net_active()` or online-only screens [code]. The stub should
+still match all of them, so a melee-pc game change that drops one of those
+guards can't turn into a hang or a crash here.
+
+Deleted: `src/pc/net*.c` (12,123 lines; the headers stay), `extern/dht/` (MIT), `extern/monocypher/` (BSD-2-Clause or CC0),
 `src/pc/mdns/` (only `net_lan.c` includes it), `src/pc/libm/pc_rank_*.c`,
 `resources/dht-nodes-v1`, and the netplay tests and harnesses in `tools/`
 (`net_*.py`, `test_net_*`).
@@ -205,10 +234,18 @@ and `GM_ONLINE` in the scene tables). The stub covers them, and removing them
 means editing the game's scene tables, which conflicts with every melee-pc
 change there.
 
-What changes for players: nothing, since nothing in Desktop Melee reaches
-online play. `pc_is_ucf_enabled` and `pc_is_free_camera_enabled` ask
-`pc_net_deterministic()`, which the stub answers "no", the same as offline
-today.
+What changes for players: nothing, if the stub follows the table above.
+Nothing in Desktop Melee reaches online play. `pc_is_ucf_enabled` and
+`pc_is_free_camera_enabled` ask `pc_net_deterministic()`, which the stub
+answers "no", the same as offline today [code]. Not yet shown by a run
+[runtime].
+
+What changes for developers: melee-pc's determinism tools live in the
+netplay code and go with it: `MELEE_NET_RECORD` / `MELEE_NET_REPLAY` (record
+inputs and replay them with state checksums), `MELEE_NET_SYNCTEST`,
+`MELEE_NET_STATE_LOG`, and the other `MELEE_NET_*` variables. Desktop Melee's
+tests use none of them. `MELEE_SEED`, `MELEE_KEY_FIFO`, `MELEE_BOOT_SCENE`
+and `MELEE_DEBUG_VS*` are in the game code and `keyboard.c`, and stay.
 
 ### 2.4 The launcher and the F1 menu (`src/pc/launcher.cpp`, RmlUi)
 
@@ -252,7 +289,7 @@ getters listed in point 1, and the six `pc_prefs_*` functions our Swift and C
 code call. A 150-line replacement that implements them over
 `launcher_data.cpp`, with the five points above and no RmlUi, links and passes
 the rollback check [build, experiment 6], and builds with RmlUi switched off
-[build, experiment 7]. The prototype is in the session notes.
+[build, experiment 7]. Appendix A lists what it has to provide.
 
 **Extract into:**
 
@@ -285,9 +322,27 @@ the rollback check [build, experiment 6], and builds with RmlUi switched off
 **Removed with it:** `resources/launcher.rml`, `launcher.rcss`,
 `port-menu.rml`, `port-menu.rcss`, `fps.rml`, `resources/launcher/` (art), the
 five fonts and `FONT-LICENSE.txt` (Liberation Sans and Noto Sans, used only by
-RmlUi [code: `launcher.cpp:136-150`]), `tools/launcher_art/`, the
-`resourcesPath` setup for RmlUi in `main.c`, and the `AURORA_ENABLE_RMLUI ON`
-line. Only `resources/gamecontrollerdb.txt` stays [code: `main.c:644-649`].
+RmlUi [code: `launcher.cpp:136-150`]), `tools/launcher_art/`, and the
+`AURORA_ENABLE_RMLUI ON` line. Only `resources/gamecontrollerdb.txt` stays
+[code: `main.c:644-649`].
+
+**Careful with `resourcesPath`.** `main.c:537-560` points aurora's
+`resourcesPath` at `<app>/Contents/Resources/resources/` for RmlUi, but aurora
+also looks for the shader seed `initial_pipeline_cache.db` there, then falls
+back to the directory beside the executable, which for the app is
+`Contents/Resources/`, where packaging puts it [code:
+`extern/aurora/lib/gfx/pipeline_cache.cpp:778-807`]. Dropping the setting is
+fine (aurora then defaults to `SDL_GetBasePath()`, the same directory), but
+the seed has to stay in `Contents/Resources/`, or every pipeline compiles on
+first use. Check the loading window's pipeline count after the change
+[runtime].
+
+**RmlUi off and the shader cache.** With RmlUi off, aurora stops loading and
+pruning the cache's RmlUi rows (`ShaderType::Rml`); the file format, the GX
+rows and players' existing caches in the `melee-pc` folder are unaffected
+[code: `pipeline_cache.cpp:1171-1180`, `1442-1444`]. The seed holds 20 RmlUi
+rows next to 11,881 GX rows and 4 clear rows, so the startup count drops by
+about 20.
 
 **Must not change:** where settings live. `launcher.cfg`, the memory card and
 the shader cache are in `~/Library/Application Support/melee-pc/`
@@ -314,8 +369,8 @@ should report `desktop-melee/VERSION`, and the root `VERSION` can then go
 
 | File | On macOS | Plan |
 |---|---|---|
-| `android_compat.cpp` | Builds no-op fallbacks for 4 Android hooks [build, experiment 9] | Delete once netplay and the launcher are gone; then only `main.c`'s `pc_android_set_launcher_active` calls remain, which go too |
-| `android_hooks.h`, `ios_dialog.h/.m`, `melee_state_pe.c`, `windows_arm64_softfp.c` | Not built, or build to nothing | Delete |
+| `android_compat.cpp` | Builds no-op fallbacks for 5 Android hooks [build, experiment 9] | Delete once netplay and the launcher are gone; then only `main.c`'s `pc_android_set_launcher_active` calls remain, which go too |
+| `android_hooks.h`, `ios_dialog.h/.m`, `melee_state_pe.c`, `windows_arm64_softfp.c` | Not built, or build to nothing | Delete (with `main.c`'s and `launcher.cpp`'s includes of `android_hooks.h`) |
 | `touch.c` | Builds on macOS (`__APPLE__` guard); `vi.c` and `keyboard.c` call it | Keep for now; stubbing it is a later cleanup |
 | `slp.c`, `slp_format.c` | Slippi replay recording (`MELEE_SLP_DIR`); the game calls it | Keep (it calls 3 netplay functions, which the stub answers) |
 | `gcadapter.c` | Our code calls `pc_gcadapter_raw` | Keep |
@@ -325,7 +380,9 @@ should report `desktop-melee/VERSION`, and the root `VERSION` can then go
 ### 2.7 `tools/`, `tests/`, `cmake/`
 
 - **`tools/` keeps** `gcc_launcher.py`, `initial_pipeline_cache.db.gz`, and
-  `gen_pipeline_cache.py` (to regenerate that seed). `package_macos.sh` stays
+  `gen_pipeline_cache.py` (to regenerate that seed; its merge mode stands
+  alone, its `--run` mode needs `devctl.py` and X11, so it goes or gets
+  rewritten). `package_macos.sh` stays
   until it is forked into `desktop-melee/`. The four snapshot scripts
   (`macho_snapshot_compile.py`, `macho_snapshot.py`, `macho_snapshot_verify.py`,
   `pe_snapshot_compile.py`; the Apple wrapper imports the last one) stay until
@@ -340,7 +397,12 @@ should report `desktop-melee/VERSION`, and the root `VERSION` can then go
   four unit tests that build on macOS (`test_launcher_data.cpp`,
   `test_version.cpp`, `test_endian.cpp`, `test_thp.cpp`) can be kept if we
   want a `ctest` for the code we keep; `test_launcher_data.cpp` covers the
-  disc check, so it is the one worth keeping.
+  disc check, so it is the one worth keeping. **The test targets must go in
+  the same commit as their sources:** CMake refuses to configure when a
+  target's source file is missing, even for `EXCLUDE_FROM_ALL` targets
+  [build, experiment 11]. Those are `CMakeLists.txt:468-492` (launcher_data,
+  version, endian, thp), `496-640` (Linux only, not evaluated on macOS, but
+  dead) and `642-652` (updater).
 - **`tests/browser/`**: the browser port's tests. Delete.
 - **`cmake/` keeps** `GameSources.cmake`, `game_sources.manifest`,
   `MeleeToolchainCheck.cmake`; **deletes** `WindowsSnapshot.cmake`,
@@ -483,27 +545,40 @@ shader count, a match, volume and UCF from the menu bar surviving a restart.
    cheap moment.
 2. **Files outside the build** (no binary change): `docs/site/`, `ROADMAP.md`,
    `Containerfile`, `mods/`, `tests/browser/`; `platforms/android`, `ios`,
-   `windows`, `linux`, `browser`; the non-Apple `cmake/` toolchains; the
-   other platforms' scripts in `tools/`. Fix `.gitignore` and the links in
-   `README.md`. Check: configure and build still pass.
+   `windows`, `linux`, `browser`; the non-Apple `cmake/` files; the other
+   platforms' scripts in `tools/`. In the same commit, remove
+   `include(cmake/WindowsSnapshot.cmake)` and
+   `melee_enable_windows_snapshots(melee melee_game)` (`CMakeLists.txt:391-392`),
+   or configure fails [build, experiment 10]. Fix `.gitignore` and the links
+   in `README.md`. Check: configure passes (verified on a copy); the `melee`
+   sources don't change, so the binary doesn't either.
 3. **Packaging**: fork `tools/package_macos.sh` into `desktop-melee/`, drop
    `platforms/macos`. Check: the packaged app matches the old one (same
    bundle contents minus `melee.icns`, same `otool -L`).
-4. **Netplay**: add the hand-written stub, delete the netplay sources,
+4. **Netplay**: add the hand-written stub (offline values from the table in
+   section 2.3, including the frame counter), delete the netplay sources,
    `extern/dht`, `extern/monocypher`, `src/pc/mdns`, `pc_rank_*`,
-   `dht-nodes-v1`, the netplay tools and docs. Keep the headers. Keep the
-   snapshot sections for now, but drop `net` from the post-link check's
-   `--excluded` list so it passes. Small, link-only change.
+   `dht-nodes-v1`, the netplay tools and docs, and the
+   `target_include_directories(melee PRIVATE extern/monocypher)` line. Keep
+   the headers. Keep the snapshot sections for now, but drop `net` from the
+   post-link check's `--excluded` list in `cmake/AppleSnapshot.cmake`; with
+   that, the build links and the check passes [build, experiment 12]. Beyond
+   `run_all.sh`, check that match sounds play and stop normally, and that a
+   Slippi recording (`MELEE_SLP_DIR`) has increasing frame numbers.
 5. **Snapshot sections**: remove them (full rebuild of the game code). The
    biggest behaviour risk in this plan; run `run_all.sh` and play a few
    matches.
 6. **Launcher, F1 menu and updater**: after the F1 decision (section 2.4),
    add `src/pc/prefs.cpp` and `desktop-melee/src/startup.cpp`, update
    `main.c`, `vi.c` and `keyboard.c`, delete `launcher.cpp`, `updater.cpp`,
-   the RmlUi resources and fonts, turn RmlUi off, drop libcurl. Check
-   `launcher.cfg` compatibility both ways with an existing file.
-7. **Clean-up**: the rest of `tools/` and `cmake/`, the dead platform
-   branches in `CMakeLists.txt`, `android_compat.cpp` and friends, the
+   the RmlUi resources and fonts, turn RmlUi off, drop libcurl, and remove
+   the `updater_test` target with `tools/test_updater.cpp`. Check
+   `launcher.cfg` compatibility both ways with an existing file, and that the
+   loading window still starts from about 11,900 pipelines (the seed was
+   found).
+7. **Clean-up**: the rest of `tools/` and `cmake/` together with the test
+   targets that name them (section 2.7), the dead platform branches in
+   `CMakeLists.txt`, `android_compat.cpp` and friends, the
    version files, `.github/workflows/build.yml`, `MELEE-PC.md`,
    `docs/building.md`, `docs/testing.md`, `CMakePresets.json`.
 8. **Docs and licenses**: `licenses/LICENSE.md` (section 5), `README.md`,
@@ -515,3 +590,58 @@ shader count, a match, volume and UCF from the menu bar surviving a restart.
 Steps 2 and 3 can happen any time. Steps 4 and 6 don't depend on each other
 (the stub answers `launcher.cpp`'s netplay calls), so either can go first;
 step 5 needs step 4.
+
+## Appendix A. What replaces `launcher.cpp` must provide
+
+The symbols left undefined without `launcher.cpp` and `updater.cpp` [build,
+experiment 5], and who calls them. `pc_get_net_name`, `pc_get_net_port`,
+`pc_install_id` and `pc_app_rev` are only called from netplay files, so once
+the stub is in they can go. `pc_set_net_target` is called from game code
+(`gmonlinemode.c`), so it stays, in `prefs.cpp` or in the stub.
+`pc_is_frozen_stadium_enabled` and `pc_is_ucf_enabled` keep their
+`pc_net_rules` / `pc_net_deterministic` checks, answered by the stub.
+
+| Symbol | Called from |
+|---|---|
+| `pc_app_rev` | net_lan.c net_match.c |
+| `pc_get_hud_mode` | ifall.c widescreen.c |
+| `pc_get_key_binding` | keyboard.c |
+| `pc_get_net_name` | net_match.c |
+| `pc_get_net_port` | net_match.c |
+| `pc_install_id` | net_lan.c |
+| `pc_is_custom_textures_enabled` | textures.cpp |
+| `pc_is_free_camera_enabled` | camera.c |
+| `pc_is_frozen_stadium_enabled` | grpstadium.c net_handshake.c slp.c |
+| `pc_is_ucf_enabled` | ftCo_Escape.c ftCo_Turn.c slp.c |
+| `pc_is_unlock_all_enabled` | gm_1601.c |
+| `pc_launcher_configure` | main.c |
+| `pc_launcher_run` | main.c |
+| `pc_menu_event` | vi.c |
+| `pc_menu_init` | main.c |
+| `pc_menu_is_open` | keyboard.c vi.c |
+| `pc_menu_toggle` | vi.c |
+| `pc_menu_update` | vi.c |
+| `pc_prefs_get_audio` | Panel.swift |
+| `pc_prefs_get_disc` | desktop_melee.c |
+| `pc_prefs_get_ucf` | ControlsTab.swift |
+| `pc_prefs_save` | ControlsTab.swift Panel.swift |
+| `pc_prefs_set_audio` | Panel.swift |
+| `pc_prefs_set_ucf` | ControlsTab.swift |
+| `pc_set_net_target` | gmonlinemode.c |
+
+## Appendix B. Netplay functions the stub must provide
+
+The 95 symbols left undefined without the netplay sources [build,
+experiment 2], grouped by a header that declares them. Offline values for the ones that aren't
+zero, false or empty are in section 2.3.
+
+- `src/pc/net_sfx.h`: `net_sfx_is_handle`, `net_sfx_is_private`, `net_sfx_keyoff`, `net_sfx_keyoff_track`, `net_sfx_private`, `net_sfx_resolve`, `net_sfx_set`, `net_sfx_shielded`, `net_sfx_start`.
+- `src/pc/net_lan.h`: `pc_lan_connect_direct`, `pc_lan_discovery_unavailable`, `pc_lan_full`, `pc_lan_is_host`, `pc_lan_local_name`, `pc_lan_peers`, `pc_lan_poll`, `pc_lan_seed`, `pc_lan_start`, `pc_lan_start_frame`, `pc_lan_start_match`, `pc_lan_state`, `pc_lan_stop`, `pc_net_recv_reliable`, `pc_net_send_reliable`.
+- `src/pc/net.h`: `pc_net_active`, `pc_net_after_tick`, `pc_net_audio_deaf`, `pc_net_audio_deaf_note`, `pc_net_audio_record`, `pc_net_audio_replay`, `pc_net_catch_up_ns`, `pc_net_chat_available`, `pc_net_desync`, `pc_net_deterministic`, `pc_net_frame`, `pc_net_init`, `pc_net_local_player`, `pc_net_note_io`, `pc_net_pace_adjust_ns`, `pc_net_peer_status`, `pc_net_peer_status_clear`, `pc_net_poll`, `pc_net_pure_load`, `pc_net_quality`, `pc_net_render_audit`, `pc_net_resim`, `pc_net_rules`, `pc_net_rumble_command`, `pc_net_scene_hold`, `pc_net_seed`, `pc_net_set_input_delay`, `pc_net_sfx_on`, `pc_net_stats`, `pc_net_sync`.
+- `src/pc/net_chat.h`: `pc_net_chat_line`, `pc_net_chat_poll`, `pc_net_chat_prompt`.
+- `src/pc/slp.h`: `pc_net_confirmed_frame`, `pc_net_sim_frame`.
+- `src/pc/net_internal.h`: `pc_net_disconnect`.
+- `src/pc/net_match.h`: `pc_net_match_clipboard_code`, `pc_net_match_contacts`, `pc_net_match_copy_code`, `pc_net_match_identity`, `pc_net_match_local_code`, `pc_net_match_opponent_code`, `pc_net_match_poll`, `pc_net_match_poll_publication`, `pc_net_match_profile_directory`, `pc_net_match_progress`, `pc_net_match_publication`, `pc_net_match_publish_rank`, `pc_net_match_seed`, `pc_net_match_start`, `pc_net_match_start_frame`, `pc_net_match_state`, `pc_net_match_stop`.
+- `src/pc/net_rank.h`: `pc_rank_display`.
+- `src/pc/net_rank_session.h`: `pc_rank_session_abort`, `pc_rank_session_active`, `pc_rank_session_choose_stage`, `pc_rank_session_game`, `pc_rank_session_poll`, `pc_rank_session_seconds`, `pc_rank_session_set_complete`, `pc_rank_session_stage`, `pc_rank_session_stage_available`, `pc_rank_session_stage_begin`, `pc_rank_session_stage_port`, `pc_rank_session_stage_prompt`, `pc_rank_session_state`, `pc_rank_session_stocks`.
+- `src/pc/net_rank_store.h`: `pc_rank_store_close`, `pc_rank_store_current`, `pc_rank_store_open`.
