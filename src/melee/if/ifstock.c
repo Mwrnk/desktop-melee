@@ -490,6 +490,9 @@ void fn_802F94E0(HSD_GObj* gobj, intptr_t renderpass)
     struct IfStockUserData* p = HSD_GObjGetUserData(gobj);
     struct HudIndex* x = ifStatus_GetHUDInfo();
 #ifdef TARGET_PC
+    if (pet_hide_stage() && pet_hud_mode() == PET_HUD_HIDDEN) {
+        return; /* melee-pet: stocks and percents hidden */
+    }
     {
         /* melee-pet: stocks live in the notch island. Set every frame here,
          * after any animation has rewritten the group's root. */
@@ -507,6 +510,9 @@ void fn_802F94E0(HSD_GObj* gobj, intptr_t renderpass)
     }
 #endif
     if (!x->players[p->player].flags.hide_all_digits) {
+#ifdef TARGET_PC
+        pet_trace_hud_drawn();
+#endif
         HSD_GObj_JObjCallback(gobj, renderpass);
     }
 }
@@ -514,6 +520,11 @@ void fn_802F94E0(HSD_GObj* gobj, intptr_t renderpass)
 void fn_802F9548(HSD_GObj* gobj, intptr_t renderpass)
 {
     struct HudIndex* x = ifStatus_GetHUDInfo();
+#ifdef TARGET_PC
+    if (pet_hide_stage() && pet_hud_mode() == PET_HUD_HIDDEN) {
+        return;
+    }
+#endif
     if (!x->players[0].flags.hide_all_digits) {
         HSD_GObj_JObjCallback(gobj, renderpass);
     }

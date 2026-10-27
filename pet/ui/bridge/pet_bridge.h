@@ -54,7 +54,6 @@ const char* pet_port_device(int port);
  * right away, or when the running match ends. */
 void pet_set_fighter_size(float percent);
 bool pet_fighter_size_locked(void);
-void pet_set_island_enabled(bool on);
 void pet_set_screen(const char* name);
 /* Effects (pet/src/pet.c): screen shake on or off, immediately; the timer
  * mode (PET_TIMER_*, pet_game.h) too. */

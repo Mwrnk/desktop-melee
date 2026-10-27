@@ -47,6 +47,15 @@ void pet_set_tags(bool on);
 /* src/melee/if/ifnametag.c: tags showing now (trace). */
 int pet_tags_trace(void);
 
+/* Where stocks and percents go (Display tab): Melee's own HUD in the notch
+ * island, at the bottom of the screen, or hidden. Set any time; a match
+ * uses the mode it started with (pet_hud_mode). */
+enum { PET_HUD_ISLAND = 0, PET_HUD_BOTTOM = 1, PET_HUD_HIDDEN = 2 };
+void pet_set_hud_mode(int mode);
+int pet_hud_mode(void);
+/* Trace: a stock or percent group was drawn. */
+void pet_trace_hud_drawn(void);
+
 /* The Dock's left and right edges in Melee units (x), for stretching the main
  * stage floor across it. False when not in overlay mode. */
 bool pet_dock_span(float* left, float* right);

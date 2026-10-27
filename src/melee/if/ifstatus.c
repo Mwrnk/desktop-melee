@@ -588,6 +588,9 @@ static inline IfDamageState* getPlayerByHUDParent(HSD_GObj* parent)
 void ifStatus_802F5DE0(HSD_GObj* player, intptr_t arg1)
 {
 #ifdef TARGET_PC
+    if (pet_hide_stage() && pet_hud_mode() == PET_HUD_HIDDEN) {
+        return; /* melee-pet: stocks and percents hidden */
+    }
     {
         /* melee-pet: the percent lives in the notch island. Set every frame
          * here, after the group's animation has rewritten its root. */
@@ -609,6 +612,9 @@ void ifStatus_802F5DE0(HSD_GObj* player, intptr_t arg1)
     }
 #endif
     if (!getPlayerByHUDParent(player)->flags.hide_all_digits) {
+#ifdef TARGET_PC
+        pet_trace_hud_drawn();
+#endif
         HSD_GObj_JObjCallback(player, arg1);
     }
 }
@@ -628,6 +634,9 @@ void ifStatus_802F5E50(HSD_GObj* gobj, intptr_t arg1)
 {
     IfDamageState* player = getPlayerByNext(gobj);
 #ifdef TARGET_PC
+    if (pet_hide_stage() && pet_hud_mode() == PET_HUD_HIDDEN) {
+        return;
+    }
     /* melee-pet: no series emblem behind a percent that lives in the notch
      * island; it would not fit. */
     if (pet_hud_in_island((int) (player - &ifStatus_GetHUDInfo()->players[0]))) {

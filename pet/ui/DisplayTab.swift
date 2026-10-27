@@ -18,7 +18,9 @@ final class DisplaySettings: ObservableObject {
     private static let defaults = UserDefaults(suiteName: "melee-pet") ?? .standard
 
     @Published private(set) var size: Double
-    @Published private(set) var island: Bool
+    /// Where stocks and percents go: "island", "bottom" or "hidden".
+    @Published private(set) var hud: String
+    var island: Bool { hud == "island" }
     /// Screen shake (Effects): Melee's quake offset on the overlay camera.
     @Published private(set) var shake: Bool
     /// Timer (Effects): "top" (half size) or "hidden".
@@ -37,14 +39,22 @@ final class DisplaySettings: ObservableObject {
         let d = Self.defaults
         let stored = d.object(forKey: "display.size") as? Double ?? 100
         size = min(max(stored, Self.sizes.lowerBound), Self.sizes.upperBound)
-        island = d.object(forKey: "display.island") as? Bool ?? true
+        // display.hud replaced the display.island switch: island off means
+        // Melee's own HUD at the bottom.
+        if let stored = d.string(forKey: "display.hud"), ["island", "bottom", "hidden"].contains(stored) {
+            hud = stored
+        } else {
+            let migrated = (d.object(forKey: "display.island") as? Bool ?? true) ? "island" : "bottom"
+            d.set(migrated, forKey: "display.hud")
+            hud = migrated
+        }
         shake = d.object(forKey: "display.shake") as? Bool ?? true
         timer = d.string(forKey: "display.timer") == "hidden" ? "hidden" : "top"
         tags = d.object(forKey: "display.tags") as? Bool ?? true
         screen = d.string(forKey: "display.screen") ?? ""
         refreshScreens()
         pet_set_fighter_size(Float(size))
-        pet_set_island_enabled(island)
+        pet_set_hud_mode(Self.hudMode(hud))
         pet_set_shake(shake)
         pet_set_tags(tags)
         pet_set_timer_mode(timer == "hidden" ? Int32(PET_TIMER_HIDDEN) : Int32(PET_TIMER_TOP))
@@ -98,10 +108,23 @@ final class DisplaySettings: ObservableObject {
     }
 
     func setIsland(_ on: Bool) {
-        island = on
-        Self.defaults.set(on, forKey: "display.island")
-        pet_set_island_enabled(on)
+        setHud(on ? "island" : "bottom")
+    }
+
+    func setHud(_ value: String) {
+        guard value != hud else { return }
+        hud = value
+        Self.defaults.set(value, forKey: "display.hud")
+        pet_set_hud_mode(Self.hudMode(value))
         MenuSound.confirm.play()
+    }
+
+    static func hudMode(_ value: String) -> Int32 {
+        switch value {
+        case "bottom": return Int32(PET_HUD_BOTTOM)
+        case "hidden": return Int32(PET_HUD_HIDDEN)
+        default: return Int32(PET_HUD_ISLAND)
+        }
     }
 
     func setScreen(_ name: String) {

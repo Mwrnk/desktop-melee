@@ -175,7 +175,7 @@ case_timer_hidden() {
 
 # The last trace line's tag count, about 10 s into the match (after Melee's
 # start-of-match flash of the tags).
-last_tags() { traces "$1" | tail -1 | awk '{ for (i = 1; i < NF; i++) if ($i == "tags") print $(i + 1) }'; }
+last_tags() { traces "$1" | tail -1 | awk '{ for (i = 1; i < NF; i += 2) if ($i == "tags") print $(i + 1) }'; }
 
 case_tags_on() {
     with_setting display.tags bool true
@@ -193,8 +193,56 @@ case_tags_off() {
     if [[ "${t}" == 0 ]]; then ok "tags off: none shown"; else bad "tags off: ${t:-none} shown (want 0)"; fi
 }
 
+# A trace field's value on the last trace line.
+last_field() { traces "$1" | tail -1 | awk -v f="$2" '{ for (i = 1; i < NF; i += 2) if ($i == f) print $(i + 1) }'; }
+
+# The island: Desktop Melee's window one level below the full-screen overlay.
+island_window() {
+    awk -F'\t' '$1 == "Desktop Melee" { split($3, b, " "); if (b[2] == 0 && b[3] > 1000) l = $2; else w[$2] = $3 }
+        END { if (l != "" && ((l - 1) in w)) print w[l - 1] }' "$1"
+}
+
+case_hud_hidden() {
+    with_setting display.hud string hidden
+    run_match "${DIR}/hud_hidden.log" "sleep 4" windows
+    local hud island drawn win
+    hud="$(last_field "${DIR}/hud_hidden.log" hud)"
+    island="$(last_field "${DIR}/hud_hidden.log" island)"
+    drawn="$(last_field "${DIR}/hud_hidden.log" drawn)"
+    win="$(island_window "${DIR}/hud_hidden.log.windows")"
+    if [[ "${hud}" == hidden && "${island}" == 0 && "${drawn}" == 0 && -z "${win}" ]]; then
+        ok "hud hidden: no stocks, percents or island"
+    else
+        bad "hud hidden: hud ${hud:-?} island ${island:-?} drawn ${drawn:-?} island window '${win}'"
+    fi
+}
+
+case_hud_bottom() {
+    with_setting display.hud string bottom
+    run_match "${DIR}/hud_bottom.log" "sleep 4"
+    local hud island drawn
+    hud="$(last_field "${DIR}/hud_bottom.log" hud)"
+    island="$(last_field "${DIR}/hud_bottom.log" island)"
+    drawn="$(last_field "${DIR}/hud_bottom.log" drawn)"
+    if [[ "${hud}" == bottom && "${island}" == 0 && "${drawn:-0}" -gt 0 ]]; then
+        ok "hud bottom: Melee's own HUD, no island"
+    else
+        bad "hud bottom: hud ${hud:-?} island ${island:-?} drawn ${drawn:-?}"
+    fi
+}
+
+# A player who had turned the island off gets "bottom" after the upgrade.
+case_hud_migrate() {
+    with_setting display.hud absent
+    with_setting display.island bool false
+    run_match "${DIR}/hud_migrate.log" "sleep 4"
+    local hud
+    hud="$(last_field "${DIR}/hud_migrate.log" hud)"
+    if [[ "${hud}" == bottom ]]; then ok "hud migrate: island off became bottom"; else bad "hud migrate: hud ${hud:-?} (want bottom)"; fi
+}
+
 CASES=("$@")
-[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off timer_top timer_hidden tags_on tags_off)
+[[ ${#CASES[@]} -eq 0 ]] && CASES=(shake_on shake_off timer_top timer_hidden tags_on tags_off hud_hidden hud_bottom hud_migrate)
 for c in "${CASES[@]}"; do
     "case_${c}"
 done

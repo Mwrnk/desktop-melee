@@ -101,8 +101,10 @@ static SDL_Window* s_window;
 #define DEFAULT_UNITS 490.0f
 static float s_units_next = DEFAULT_UNITS;
 static float s_units = DEFAULT_UNITS; /* the running (or last) match's */
-static bool s_island_next = true;
-static bool s_island = true;
+/* Where stocks and percents go (PET_HUD_*): the menu's choice, and the
+ * running match's (latched when it starts). */
+static int s_hud_next = PET_HUD_ISLAND;
+static int s_hud = PET_HUD_ISLAND;
 static char s_screen_name[128];
 static bool s_screen_pending = false;
 
@@ -231,6 +233,7 @@ bool pet_tags_enabled(void) { return s_tags; }
 static int s_trace = -1;
 static float s_trace_shake;
 static int s_trace_frames;
+static int s_hud_drawn;
 
 static bool trace_enabled(void) {
     if (s_trace < 0) {
@@ -254,9 +257,11 @@ void pet_trace_frame(void) {
     s_trace_frames = 0;
     float timer_scale = 1.0f;
     const bool timer_hidden = pet_timer_trace(&timer_scale);
-    SDL_Log("pet: trace shake %.2f timer %s scale %.2f tags %d hud %s island %d paused %d hidden %d",
-            s_trace_shake, timer_hidden ? "hidden" : "top", timer_scale, pet_tags_trace(), "island",
-            pet_island_wanted() ? 1 : 0, 0, 0);
+    static const char* hud_names[] = {"island", "bottom", "hidden"};
+    SDL_Log("pet: trace shake %.2f timer %s scale %.2f tags %d hud %s island %d paused %d hidden %d drawn %d",
+            s_trace_shake, timer_hidden ? "hidden" : "top", timer_scale, pet_tags_trace(),
+            hud_names[s_hud], pet_island_wanted() ? 1 : 0, 0, 0, s_hud_drawn);
+    s_hud_drawn = 0;
     s_trace_shake = 0.0f;
 }
 
@@ -268,7 +273,12 @@ void pet_set_fighter_size(float percent) {
 
 bool pet_fighter_size_locked(void) { return env_units() > 0.0f; }
 
-void pet_set_island_enabled(bool on) { s_island_next = on; }
+void pet_set_hud_mode(int mode) {
+    s_hud_next = mode >= PET_HUD_ISLAND && mode <= PET_HUD_HIDDEN ? mode : PET_HUD_ISLAND;
+}
+int pet_hud_mode(void) { return s_hud; }
+
+void pet_trace_hud_drawn(void) { s_hud_drawn++; }
 
 void pet_set_screen(const char* name) {
     snprintf(s_screen_name, sizeof s_screen_name, "%s", name != NULL ? name : "");
@@ -293,14 +303,14 @@ void pet_hud_frame(bool visible) {
 }
 
 bool pet_island_wanted(void) {
-    return pet_overlay_enabled() && s_island && s_hud_visible &&
+    return pet_overlay_enabled() && s_hud == PET_HUD_ISLAND && s_hud_visible &&
            SDL_GetTicks() - s_hud_last_ms < 250;
 }
 
 /* Points per HUD unit on the HUD plane. The projection is widened to the
  * window's aspect, so the scale is the same horizontally. 0 when unknown. */
 static float hud_ppu(int player) {
-    if (!pet_overlay_enabled() || !s_island || (player != 0 && player != 1) || s_island_h <= 0.0f ||
+    if (!pet_overlay_enabled() || s_hud != PET_HUD_ISLAND || (player != 0 && player != 1) || s_island_h <= 0.0f ||
         s_hud_distance <= 0.0f || s_hud_fov <= 0.0f || s_screen_h <= 0.0f) {
         return 0.0f;
     }
@@ -478,9 +488,9 @@ void pet_match_began(void) {
     s_in_match = true;
     const float env = env_units();
     s_units = env > 0.0f ? env : s_units_next;
-    s_island = s_island_next;
+    s_hud = s_hud_next;
     SDL_Log("pet: match display: %.0f units across (size %.0f%%), island %s", s_units,
-            100.0f * DEFAULT_UNITS / s_units, s_island ? "on" : "off");
+            100.0f * DEFAULT_UNITS / s_units, s_hud == PET_HUD_ISLAND ? "island" : s_hud == PET_HUD_BOTTOM ? "bottom" : "hidden");
 }
 
 void pet_match_ended(void) {
