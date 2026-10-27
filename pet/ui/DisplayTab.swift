@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The Display tab: fighter size, the notch island and which screen to play
-// on. Size and island apply at the next match (the floor is stretched to the
-// Dock when a stage loads); the screen changes right away, or when the
-// running match ends.
+// The Display tab: fighter size, effects (screen shake, timer, player tags),
+// where stocks and percents go, and which screen to play on. Size and the HUD
+// choice apply at the next match (the floor is stretched to the Dock when a
+// stage loads); effects apply right away; the screen changes right away, or
+// when the running match ends.
 import AppKit
 import Combine
 import PetBridge
@@ -107,6 +108,28 @@ final class DisplaySettings: ObservableObject {
         MenuSound.move.play()
     }
 
+    func setShake(_ on: Bool) {
+        shake = on
+        Self.defaults.set(on, forKey: "display.shake")
+        pet_set_shake(on)
+        MenuSound.confirm.play()
+    }
+
+    func setTimer(_ value: String) {
+        guard value != timer else { return }
+        timer = value
+        Self.defaults.set(value, forKey: "display.timer")
+        pet_set_timer_mode(value == "hidden" ? Int32(PET_TIMER_HIDDEN) : Int32(PET_TIMER_TOP))
+        MenuSound.confirm.play()
+    }
+
+    func setTags(_ on: Bool) {
+        tags = on
+        Self.defaults.set(on, forKey: "display.tags")
+        pet_set_tags(on)
+        MenuSound.confirm.play()
+    }
+
     func setIsland(_ on: Bool) {
         setHud(on ? "island" : "bottom")
     }
@@ -179,15 +202,34 @@ struct DisplayTab: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Section(title: "Notch island") {
-                Toggle(isOn: Binding(get: { display.island }, set: { display.setIsland($0) })) {
-                    OptionLabel(symbol: "rectangle.topthird.inset.filled", text: "Stocks in the notch")
+            Section(title: "Effects") {
+                Toggle(isOn: Binding(get: { display.shake }, set: { display.setShake($0) })) {
+                    OptionLabel(symbol: "waveform.path", text: "Screen shake")
                 }
                 .toggleStyle(.switch)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                MParagraph(display.island
-                           ? "Stocks and percents sit beside the notch, in a black island."
-                           : "Melee's own stocks and percents, at the bottom of the screen.",
+                HStack(spacing: 10) {
+                    OptionLabel(symbol: "timer", text: "Timer")
+                    Spacer()
+                    SegmentPicker(options: [("top", "Top"), ("hidden", "Hidden")],
+                                  selected: display.timer) { display.setTimer($0) }
+                        .frame(width: 160)
+                }
+                Toggle(isOn: Binding(get: { display.tags }, set: { display.setTags($0) })) {
+                    OptionLabel(symbol: "tag", text: "Player tags")
+                }
+                .toggleStyle(.switch)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Section(title: "Stocks and percents") {
+                SegmentPicker(options: [("island", "Island"), ("bottom", "Bottom"), ("hidden", "Hidden")],
+                              selected: display.hud) { display.setHud($0) }
+                MParagraph(display.hud == "island"
+                           ? "Beside the notch, in a black island."
+                           : display.hud == "bottom"
+                           ? "Melee's own, at the bottom of the screen."
+                           : "No stocks or percents on screen.",
                            size: 15, width: 300)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -211,8 +253,8 @@ struct DisplayTab: View {
             }
 
             MParagraph(match.active
-                       ? "Size and island apply at the next match, and so does a new screen."
-                       : "Size and island apply when the match starts.",
+                       ? "Fighter size, stocks and percents apply at the next match, and so does a new screen."
+                       : "Fighter size, stocks and percents apply when the match starts.",
                        size: 15, width: 330)
                 .foregroundStyle(.tertiary)
         }
@@ -293,5 +335,35 @@ struct DockSizeRow: View {
                 }
             }
         }
+    }
+}
+
+/// A row of choices drawn with shapes (like the Controls tab's P1 / P2
+/// switch), so offscreen renders can draw it.
+struct SegmentPicker: View {
+    let options: [(value: String, label: String)]
+    let selected: String
+    let select: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(options, id: \.value) { option in
+                Button {
+                    if selected != option.value {
+                        select(option.value)
+                    }
+                } label: {
+                    MText(option.label, size: 18)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(selected == option.value ? Color.accentColor : Color.clear))
+                        .foregroundStyle(selected == option.value ? Color.white : Color.secondary)
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(2)
+        .background(Capsule().fill(Color.primary.opacity(0.08)))
     }
 }
