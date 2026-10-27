@@ -19,8 +19,9 @@ one person, so keeping changes focused helps a lot.
 
 - Never attach, link or commit game data: disc images, extracted files,
   textures, sounds, or `DESKTOP_MELEE_DUMP` output.
-- Never share a built `Desktop Melee.app`. It contains Melee's font, copied
-  from your own disc.
+- Never share an app built by a plain `desktop-melee/package.sh`. It contains
+  Melee's font, copied from your own disc. Only release builds
+  (`DESKTOP_MELEE_RELEASE=1`) are made to be shared.
 - Don't ask for or offer ROMs or ISOs in issues.
 
 ## Building and testing

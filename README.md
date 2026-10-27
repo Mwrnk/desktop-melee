@@ -42,11 +42,30 @@ works](docs/desktop-melee/how-it-works.md)**. It covers decompilation versus
 emulation, how the window becomes see-through, the math that maps your screen
 into Melee's world, the menu bar app, and every file.
 
+## Download
+
+Each [release](https://github.com/Mwrnk/desktop-melee/releases) has a
+`Desktop-Melee-<version>-macOS-arm64.zip`: a Mac with Apple silicon and
+**macOS 27 or later**. It contains no game data; you still need your own disc
+(see [Requirements](#requirements)).
+
+The app isn't notarized by Apple, so macOS stops it the first time:
+
+1. Unzip it and move **Desktop Melee** to `/Applications`.
+2. Open it. macOS says it can't check the app for malware; click **Done**.
+3. Open **System Settings → Privacy & Security**, scroll down to "Desktop
+   Melee was blocked", and click **Open Anyway**. Confirm with your password.
+
+You only do this once per version. If you granted Accessibility (see
+[Permissions](#permissions)), macOS forgets it with each new version: remove
+Desktop Melee from the Accessibility list and add it again.
+
 ## Requirements
 
-- A Mac with Apple silicon. Tested on macOS 27 only. You build the app on
-  your own Mac and it runs on that macOS; older versions and Intel Macs are
-  untested. Building needs Xcode 26 or later, for the Icon Composer app icon.
+- A Mac with Apple silicon. Tested on macOS 27 only. If you build the app
+  yourself, it runs on the macOS of the Mac that built it; older versions and
+  Intel Macs are untested. Building needs Xcode 26 or later, for the Icon
+  Composer app icon.
 - Xcode (for Swift, `actool` and the macOS SDK) and these
   [Homebrew](https://brew.sh) packages:
   `brew install gcc cmake ninja sdl3 zstd libpng freetype`. GCC is required:
@@ -106,10 +125,12 @@ desktop-melee/run-overlay.sh path/to/melee.iso
 
 ## Before you share anything
 
-- **Never share a built app.** `desktop-melee/package.sh` copies Melee's font from your
-  disc into the app so the welcome window can use it. A built
-  `Desktop Melee.app` (or a zip of it) therefore contains Nintendo's data. Share
-  the source; everyone builds their own.
+- **Never share an app from a plain `desktop-melee/package.sh`.** It copies
+  Melee's font from your disc into the app so the welcome window can use it,
+  so that app (or a zip of it) contains Nintendo's data. To make an app you
+  can hand out, run `DESKTOP_MELEE_RELEASE=1 desktop-melee/package.sh`: it
+  leaves the font out, stops if any other game file is inside, signs ad hoc
+  and writes the zip to `dist/`.
 - **Never commit game data:** no disc images, no extracted textures, no
   `DESKTOP_MELEE_DUMP` output.
 - **Bug reports:** don't attach or link disc images.

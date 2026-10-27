@@ -677,6 +677,12 @@ flowchart LR
   signature stays the same between builds, so the Accessibility permission
   survives rebuilds. Ad-hoc signing works too, but macOS asks again after
   every build.
+- **Release builds:** `DESKTOP_MELEE_RELEASE=1 desktop-melee/package.sh` makes
+  the app for the releases page: no font from your disc, a check that fails
+  if any game file is inside, the license texts in `Contents/Resources/licenses`,
+  ad-hoc signing (it isn't notarized, so players use "Open Anyway" once), no
+  install, and a zip in `dist/`. It opens on the macOS it was built on and
+  later.
 
 ---
 
