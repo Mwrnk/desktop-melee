@@ -7,7 +7,9 @@
     <key>CFBundleExecutable</key>
     <string>melee</string>
     <key>CFBundleIconFile</key>
-    <string>melee</string>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.mwerneck.desktop-melee</string>
     <key>CFBundleInfoDictionaryVersion</key>

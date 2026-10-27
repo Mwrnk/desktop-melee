@@ -37,6 +37,19 @@ else
     echo "warning: no ${FONT} yet; boot the game once and package again to bundle Melee's font" >&2
 fi
 
+# App icon: a beige Mac in Light Mode, an indigo one in Dark Mode. actool
+# writes Assets.car for macOS 26+ and AppIcon.icns for older systems.
+echo "=== Compiling the app icon ==="
+ICON_PLIST="$(mktemp)"
+xcrun actool pet/macos/AppIcon.icon --compile "${APP}/Contents/Resources" \
+    --platform macosx --minimum-deployment-target 13.0 --app-icon AppIcon \
+    --output-partial-info-plist "${ICON_PLIST}" > /dev/null
+rm -f "${ICON_PLIST}"
+if [[ ! -f "${APP}/Contents/Resources/Assets.car" || ! -f "${APP}/Contents/Resources/AppIcon.icns" ]]; then
+    echo "error: actool did not write the app icon" >&2
+    exit 1
+fi
+
 IDENTITY="${DESKTOP_MELEE_SIGN:-$(security find-identity -v -p codesigning |
     awk -F'"' '/"Apple Development/ { print $2; exit }')}"
 if [[ -z "${IDENTITY}" ]]; then
