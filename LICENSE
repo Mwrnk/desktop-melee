@@ -1,0 +1,15 @@
+Desktop Melee is not under a single license. In short:
+
+- Desktop Melee (desktop-melee/), the port code (src/pc/), tools and build
+  files: GPL-3.0-or-later. The full text is in licenses/COPYING.
+- Melee's decompiled game code (src/melee/, src/sysdolphin/): not licensed.
+  It is a decompilation of a Nintendo game (from doldecomp/melee), and no one
+  here can grant a license to it.
+- Third-party components keep their own licenses (MIT, zlib, BSD, OFL).
+
+The details, including every melee-pc file Desktop Melee changed, are in
+licenses/LICENSE.md.
+
+"Super Smash Bros." and "Melee" are trademarks of Nintendo. Desktop Melee is
+an unofficial fan project, not affiliated with or endorsed by Nintendo or HAL
+Laboratory.

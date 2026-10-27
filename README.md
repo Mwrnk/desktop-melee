@@ -1,4 +1,4 @@
-# Desktop Melee
+<h1 align="center"><img src="docs/desktop-melee/images/header.png" alt="Desktop Melee" width="760"></h1>
 
 Super Smash Bros. Melee on your Mac's desktop. The fighters stand on top of
 the Dock, the screen edges are the blastzones, and your apps keep working
@@ -148,10 +148,34 @@ Desktop Melee stands on the work of:
 
 ## Status
 
+Version 0.1.0, an early release for people happy to build from source.
+
 Works: two-player VS matches (human or CPU) on the Dock, every character and
 costume, the menu bar app, the welcome window, the notch island and
-Pause and hide. You can pick which screen it plays on, but that has only been
-tested with one screen.
+Pause and hide.
 
-Not yet: window tops as platforms you can drop through, more than two
-players, other stages, operating systems other than macOS.
+### Known issues
+
+- **The first launch takes about 5 minutes** while the game builds its
+  graphics shaders. Later launches take a few seconds.
+- **Tested on one Mac** (Apple silicon, macOS 27) **with one screen.** You can
+  pick another screen in the Display tab, but that is untested.
+- **Timer details:** with the timer at the top, the clock shows during a
+  pause (Melee hides it). With the timer hidden, Melee's last-5-seconds
+  countdown sound is silent too.
+- **Player tags** switched on or off during a pause change only when the
+  match resumes.
+- **The Pause and hide shortcut** can fire while the welcome window is open.
+
+They are tracked in the [issues](https://github.com/Mwrnk/desktop-melee/issues).
+
+### Roadmap
+
+- Windows and Linux. melee-pc already runs there; the desktop layer (the
+  transparent window, a floor on the taskbar, a tray app) is the work.
+- Window tops as platforms you can drop through.
+- More than two players.
+- Other stages.
+
+Bug reports and pull requests are welcome: see
+[CONTRIBUTING.md](CONTRIBUTING.md) for the scope and how to test.
