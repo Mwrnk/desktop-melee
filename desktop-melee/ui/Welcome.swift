@@ -419,6 +419,9 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     }
 
     func showDebugWindow() {
+        // Pressing Start to test "Press any button" must not start a match
+        // underneath; back on when the window closes.
+        desktop_melee_set_start_starts_match(false)
         let window = makeWindow()
         NSApp.activate(ignoringOtherApps: true)
         if !window.isVisible { window.center() }
@@ -522,6 +525,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         stopCheck()
         endPhaseTwo()
+        if debug { desktop_melee_set_start_starts_match(true) }
         if !modal {
             MenuBarController.shared?.focusGame()
         }
