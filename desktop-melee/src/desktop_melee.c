@@ -63,7 +63,7 @@ static volatile bool s_hud_visible = false;
 #define ISLAND_DIGIT_H (0.60f) /* percent digit height */
 #define ISLAND_END (0.40f)     /* black margin past the percent */
 #define ISLAND_PCT_W (ISLAND_DIGIT_H * (PCT_RIGHT - PCT_LEFT) / PCT_DIGIT_H)
-#define ISLAND_SIDE                                                                   \
+#define ISLAND_SIDE                                                                                \
     (ISLAND_PAD + ISLAND_PITCH * ISLAND_STOCKS + ISLAND_GAP + ISLAND_PCT_W + ISLAND_END)
 
 /* Dock bar edges in points; equal when unknown. */
@@ -126,7 +126,9 @@ static float env_units(void) {
 }
 
 static bool s_dock_exact = false;
-bool desktop_melee_dock_exact(void) { return s_dock_exact; }
+bool desktop_melee_dock_exact(void) {
+    return s_dock_exact;
+}
 
 /* Screen size, floor, Dock and notch island for the screen the overlay is
  * on. Run at startup and whenever the overlay changes screens. */
@@ -147,7 +149,7 @@ static void layout(void) {
     s_dock_right = dock ? dock_right : 0.0f;
     if (dock) {
         SDL_Log("desktop-melee: Dock %.0f..%.0f pt (%s)", dock_left, dock_right,
-                exact ? "exact" : "estimated; grant Accessibility for the exact size");
+            exact ? "exact" : "estimated; grant Accessibility for the exact size");
     } else {
         SDL_Log("desktop-melee: no Dock on this screen: Final Destination's own floor");
     }
@@ -156,7 +158,7 @@ static void layout(void) {
     const float side = s_island_h * ISLAND_SIDE;
     desktop_melee_mac_island_place(s_notch_left - side, s_notch_right + side, s_island_h);
     SDL_Log("desktop-melee: notch %.0f..%.0f pt, island %.0f..%.0f x %.0f pt", s_notch_left,
-            s_notch_right, s_notch_left - side, s_notch_right + side, s_island_h);
+        s_notch_right, s_notch_left - side, s_notch_right + side, s_island_h);
 #endif
 }
 
@@ -190,7 +192,7 @@ static void apply_screen(void) {
         SDL_SetWindowSize(s_window, bounds.w, bounds.h);
         SDL_SyncWindow(s_window);
         SDL_Log("desktop-melee: overlay moved to \"%s\" (%dx%d at %d,%d)",
-                SDL_GetDisplayName(target), bounds.w, bounds.h, bounds.x, bounds.y);
+            SDL_GetDisplayName(target), bounds.w, bounds.h, bounds.x, bounds.y);
     }
     layout();
 }
@@ -207,7 +209,7 @@ void desktop_melee_window_created(SDL_Window* window) {
     SDL_DisplayID* displays = SDL_GetDisplays(&count);
     for (int i = 0; displays != NULL && i < count; i++) {
         SDL_Log("desktop-melee: screen %d: \"%s\"%s", i + 1, SDL_GetDisplayName(displays[i]),
-                displays[i] == SDL_GetPrimaryDisplay() ? " (primary)" : "");
+            displays[i] == SDL_GetPrimaryDisplay() ? " (primary)" : "");
     }
     SDL_free(displays);
     apply_screen();
@@ -229,19 +231,31 @@ void desktop_melee_relayout(void) {
 /* ---- tweaks (Display tab) ------------------------------------------------ */
 
 static bool s_shake = true;
-void desktop_melee_set_shake(bool on) { s_shake = on; }
-bool desktop_melee_shake_enabled(void) { return s_shake; }
+void desktop_melee_set_shake(bool on) {
+    s_shake = on;
+}
+bool desktop_melee_shake_enabled(void) {
+    return s_shake;
+}
 
 static int s_timer_mode = DESKTOP_MELEE_TIMER_TOP;
 void desktop_melee_set_timer_mode(int mode) {
     s_timer_mode = mode == DESKTOP_MELEE_TIMER_HIDDEN ? mode : DESKTOP_MELEE_TIMER_TOP;
 }
-int desktop_melee_timer_mode(void) { return s_timer_mode; }
-float desktop_melee_timer_scale(void) { return desktop_melee_overlay_enabled() ? 0.5f : 1.0f; }
+int desktop_melee_timer_mode(void) {
+    return s_timer_mode;
+}
+float desktop_melee_timer_scale(void) {
+    return desktop_melee_overlay_enabled() ? 0.5f : 1.0f;
+}
 
 static bool s_tags = true;
-void desktop_melee_set_tags(bool on) { s_tags = on; }
-bool desktop_melee_tags_enabled(void) { return s_tags; }
+void desktop_melee_set_tags(bool on) {
+    s_tags = on;
+}
+bool desktop_melee_tags_enabled(void) {
+    return s_tags;
+}
 
 static int s_trace = -1;
 static float s_trace_shake;
@@ -255,7 +269,9 @@ static bool trace_enabled(void) {
     return s_trace != 0;
 }
 
-bool desktop_melee_trace_enabled(void) { return trace_enabled(); }
+bool desktop_melee_trace_enabled(void) {
+    return trace_enabled();
+}
 
 void desktop_melee_trace_shake(float x, float y) {
     const float m = fmaxf(fabsf(x), fabsf(y));
@@ -271,9 +287,13 @@ static int s_pause_port = 0;
 static bool s_pause_request = false;
 static volatile sig_atomic_t s_usr1 = 0;
 
-bool desktop_melee_hidden(void) { return s_hidden; }
+bool desktop_melee_hidden(void) {
+    return s_hidden;
+}
 
-void desktop_melee_set_pause_port(int port) { s_pause_port = port >= 0 && port < 4 ? port : 0; }
+void desktop_melee_set_pause_port(int port) {
+    s_pause_port = port >= 0 && port < 4 ? port : 0;
+}
 
 int desktop_melee_take_pause_request(void) {
     if (!s_pause_request) {
@@ -297,7 +317,7 @@ void desktop_melee_toggle_pause_and_hide(void) {
     }
 #endif
     SDL_Log("desktop-melee: pause and hide %s (match %d)", s_hidden ? "on" : "off",
-            desktop_melee_match_active() ? 1 : 0);
+        desktop_melee_match_active() ? 1 : 0);
 }
 
 static void on_usr1(int sig) {
@@ -322,9 +342,9 @@ void desktop_melee_trace_tick(void) {
     static const char* hud_names[] = {"island", "bottom", "hidden"};
     SDL_Log("desktop-melee: trace shake %.2f timer %s scale %.2f tags %d hud %s island %d "
             "paused %d hidden %d drawn %d",
-            s_trace_shake, timer_hidden ? "hidden" : "top", timer_scale, desktop_melee_tags_trace(),
-            hud_names[s_hud], desktop_melee_island_wanted() ? 1 : 0,
-            desktop_melee_game_paused() ? 1 : 0, s_hidden ? 1 : 0, s_hud_drawn);
+        s_trace_shake, timer_hidden ? "hidden" : "top", timer_scale, desktop_melee_tags_trace(),
+        hud_names[s_hud], desktop_melee_island_wanted() ? 1 : 0,
+        desktop_melee_game_paused() ? 1 : 0, s_hidden ? 1 : 0, s_hud_drawn);
     s_hud_drawn = 0;
     s_trace_shake = 0.0f;
 }
@@ -335,16 +355,22 @@ void desktop_melee_set_fighter_size(float percent) {
     }
 }
 
-bool desktop_melee_fighter_size_locked(void) { return env_units() > 0.0f; }
+bool desktop_melee_fighter_size_locked(void) {
+    return env_units() > 0.0f;
+}
 
 void desktop_melee_set_hud_mode(int mode) {
-    s_hud_next = mode >= DESKTOP_MELEE_HUD_ISLAND && mode <= DESKTOP_MELEE_HUD_HIDDEN
-                     ? mode
-                     : DESKTOP_MELEE_HUD_ISLAND;
+    s_hud_next = mode >= DESKTOP_MELEE_HUD_ISLAND && mode <= DESKTOP_MELEE_HUD_HIDDEN ?
+                     mode :
+                     DESKTOP_MELEE_HUD_ISLAND;
 }
-int desktop_melee_hud_mode(void) { return s_hud; }
+int desktop_melee_hud_mode(void) {
+    return s_hud;
+}
 
-void desktop_melee_trace_hud_drawn(void) { s_hud_drawn++; }
+void desktop_melee_trace_hud_drawn(void) {
+    s_hud_drawn++;
+}
 
 void desktop_melee_set_screen(const char* name) {
     snprintf(s_screen_name, sizeof s_screen_name, "%s", name != NULL ? name : "");
@@ -378,7 +404,8 @@ bool desktop_melee_island_wanted(void) {
 static float hud_ppu(int player) {
     if (!desktop_melee_overlay_enabled() || s_hud != DESKTOP_MELEE_HUD_ISLAND ||
         (player != 0 && player != 1) || s_island_h <= 0.0f || s_hud_distance <= 0.0f ||
-        s_hud_fov <= 0.0f || s_screen_h <= 0.0f) {
+        s_hud_fov <= 0.0f || s_screen_h <= 0.0f)
+    {
         return 0.0f;
     }
     const float half_h = s_hud_distance * tanf(0.5f * s_hud_fov * (float)M_PI / 180.0f);
@@ -386,8 +413,12 @@ static float hud_ppu(int player) {
 }
 
 /* Screen point (from the left/top edges) to HUD coordinates. */
-static float hud_x(float x_pt, float ppu) { return (x_pt - 0.5f * s_screen_w) / ppu; }
-static float hud_y(float y_pt, float ppu) { return (0.5f * s_screen_h - y_pt) / ppu; }
+static float hud_x(float x_pt, float ppu) {
+    return (x_pt - 0.5f * s_screen_w) / ppu;
+}
+static float hud_y(float y_pt, float ppu) {
+    return (0.5f * s_screen_h - y_pt) / ppu;
+}
 
 bool desktop_melee_hud_stock_anchor(int player, float* x, float* y, float* scale) {
     const float ppu = hud_ppu(player);
@@ -398,9 +429,9 @@ bool desktop_melee_hud_stock_anchor(int player, float* x, float* y, float* scale
     const float pitch_pt = h * ISLAND_PITCH;
     /* Centre of the first icon: P1's stocks run leftwards from the notch, so
      * its first stock is the outermost; P2's start right next to it. */
-    const float first_pt = player == 0
-                               ? s_notch_left - h * ISLAND_PAD - pitch_pt * (ISLAND_STOCKS - 0.5f)
-                               : s_notch_right + h * ISLAND_PAD + 0.5f * pitch_pt;
+    const float first_pt = player == 0 ?
+                               s_notch_left - h * ISLAND_PAD - pitch_pt * (ISLAND_STOCKS - 0.5f) :
+                               s_notch_right + h * ISLAND_PAD + 0.5f * pitch_pt;
     const float s = pitch_pt / (STOCK_PITCH * ppu);
     *scale = s;
     *x = hud_x(first_pt, ppu) - STOCK_X0 * s;
@@ -431,22 +462,26 @@ bool desktop_melee_hud_percent_anchor(int player, float* x, float* y, float* sca
     return true;
 }
 
-bool desktop_melee_hud_in_island(int player) { return hud_ppu(player) > 0.0f; }
+bool desktop_melee_hud_in_island(int player) {
+    return hud_ppu(player) > 0.0f;
+}
 
 void desktop_melee_set_screen_geometry(float width_pt, float height_pt, float floor_pt) {
     s_screen_w = width_pt;
     s_screen_h = height_pt;
     s_floor = floor_pt;
     SDL_Log("desktop-melee: screen %.0fx%.0f pt, floor (Dock top) at %.0f pt", width_pt, height_pt,
-            floor_pt);
+        floor_pt);
 }
 
 /* Melee units across the whole screen width (fighter size: fewer units,
  * bigger fighters), as the current match started with. */
-static float screen_units(void) { return s_units; }
+static float screen_units(void) {
+    return s_units;
+}
 
 bool desktop_melee_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
-                float* interest_y, float* interest_z, float* fov) {
+    float* interest_y, float* interest_z, float* fov) {
     if (!desktop_melee_overlay_enabled() || s_screen_w <= 0.0f || s_screen_h <= 0.0f) {
         return false;
     }
@@ -490,7 +525,7 @@ bool desktop_melee_blastzones(float* left, float* right, float* top, float* bott
     *top = (s_screen_h - s_floor) * units_per_pt;
     *bottom = -s_floor * units_per_pt;
     SDL_Log("desktop-melee: blastzones x %.0f..%.0f, y %.0f..%.0f units (screen edges)", *left,
-            *right, *bottom, *top);
+        *right, *bottom, *top);
     return true;
 }
 
@@ -543,23 +578,34 @@ void desktop_melee_request_quit(void) {
 static DesktopMeleeMatchSetup s_setup = {
     .stocks = 4,
     .time_seconds = 7 * 60,
-    .players = {
-        { .ckind = 2, .costume = 0, .cpu = 0, .cpu_level = 9, .port = 0 }, /* Fox */
-        { .ckind = 2, .costume = 1, .cpu = 0, .cpu_level = 9, .port = 1 }, /* alt costume */
-    },
+    .players =
+        {
+            {.ckind = 2, .costume = 0, .cpu = 0, .cpu_level = 9, .port = 0}, /* Fox */
+            {.ckind = 2, .costume = 1, .cpu = 0, .cpu_level = 9, .port = 1}, /* alt costume */
+        },
 };
 static bool s_match_requested = false;
 static bool s_in_match = false;
 
-void desktop_melee_match_setup(DesktopMeleeMatchSetup* out) { *out = s_setup; }
+void desktop_melee_match_setup(DesktopMeleeMatchSetup* out) {
+    *out = s_setup;
+}
 
-void desktop_melee_set_match_setup(const DesktopMeleeMatchSetup* setup) { s_setup = *setup; }
+void desktop_melee_set_match_setup(const DesktopMeleeMatchSetup* setup) {
+    s_setup = *setup;
+}
 
-void desktop_melee_request_match(void) { s_match_requested = true; }
+void desktop_melee_request_match(void) {
+    s_match_requested = true;
+}
 
 static bool s_start_starts_match = true;
-bool desktop_melee_start_starts_match(void) { return s_start_starts_match; }
-void desktop_melee_set_start_starts_match(bool on) { s_start_starts_match = on; }
+bool desktop_melee_start_starts_match(void) {
+    return s_start_starts_match;
+}
+void desktop_melee_set_start_starts_match(bool on) {
+    s_start_starts_match = on;
+}
 
 /* A keyboard binding's key name ("X", "Up", "Tab"), slot as in
  * pc_get_key_binding: A B X Y Start Z L R, D-pad up down left right, stick
@@ -572,7 +618,9 @@ const char* desktop_melee_key_name(int slot) {
     return name != NULL ? name : "";
 }
 
-bool desktop_melee_match_wanted(void) { return s_match_requested && !s_in_match; }
+bool desktop_melee_match_wanted(void) {
+    return s_match_requested && !s_in_match;
+}
 
 bool desktop_melee_match_restart_wanted(void) {
     return desktop_melee_overlay_enabled() && s_in_match && s_match_requested;
@@ -594,10 +642,10 @@ void desktop_melee_match_began(void) {
     s_units = env > 0.0f ? env : s_units_next;
     s_hud = s_hud_next;
     SDL_Log("desktop-melee: match display: %.0f units across (size %.0f%%), island %s", s_units,
-            100.0f * DEFAULT_UNITS / s_units,
-            s_hud == DESKTOP_MELEE_HUD_ISLAND   ? "island"
-            : s_hud == DESKTOP_MELEE_HUD_BOTTOM ? "bottom"
-                                                : "hidden");
+        100.0f * DEFAULT_UNITS / s_units,
+        s_hud == DESKTOP_MELEE_HUD_ISLAND ? "island" :
+        s_hud == DESKTOP_MELEE_HUD_BOTTOM ? "bottom" :
+                                            "hidden");
 }
 
 void desktop_melee_match_ended(void) {
@@ -608,7 +656,9 @@ void desktop_melee_match_ended(void) {
     }
 }
 
-bool desktop_melee_match_active(void) { return s_in_match; }
+bool desktop_melee_match_active(void) {
+    return s_in_match;
+}
 
 /* ---- per-player controls --------------------------------------------------- */
 
@@ -624,8 +674,8 @@ static struct {
     bool tap_jump;
     unsigned char map[DESKTOP_MELEE_BTN_COUNT]; /* physical button -> DESKTOP_MELEE_BTN_* or NONE */
 } s_controls[DESKTOP_MELEE_PLAYERS] = {
-    { true, { 0, 1, 2, 3, 4, 5, 6 } },
-    { true, { 0, 1, 2, 3, 4, 5, 6 } },
+    {true, {0, 1, 2, 3, 4, 5, 6}},
+    {true, {0, 1, 2, 3, 4, 5, 6}},
 };
 
 /* DESKTOP_MELEE_INPUT_TRACE=1: log blocked tap jumps and remapped presses. */
@@ -646,7 +696,8 @@ void desktop_melee_set_tap_jump(int player, bool on) {
 
 void desktop_melee_set_button_map(int player, int button, int target) {
     if (player >= 0 && player < DESKTOP_MELEE_PLAYERS && button >= 0 &&
-        button < DESKTOP_MELEE_BTN_COUNT && target >= 0 && target <= DESKTOP_MELEE_BTN_NONE) {
+        button < DESKTOP_MELEE_BTN_COUNT && target >= 0 && target <= DESKTOP_MELEE_BTN_NONE)
+    {
         s_controls[player].map[button] = (unsigned char)target;
     }
 }
@@ -698,7 +749,8 @@ const char* desktop_melee_port_device(int port) {
     bool wireless = false;
     const char* pad = PADGetName((u32)port);
     if (pc_gcadapter_raw(port, raw, &wireless)) {
-        snprintf(name[port], sizeof name[port], "%s", wireless ? "WaveBird" : "GameCube controller");
+        snprintf(
+            name[port], sizeof name[port], "%s", wireless ? "WaveBird" : "GameCube controller");
     } else if (pad != NULL && pad[0] != '\0') {
         snprintf(name[port], sizeof name[port], "%s", pad);
     } else {
@@ -716,8 +768,8 @@ const char* desktop_melee_choose_disc(const char* command_line_disc) {
         return command_line_disc;
     }
 #ifdef __APPLE__
-    return desktop_melee_ui_choose_disc(command_line_disc != NULL ? command_line_disc
-                                                        : pc_prefs_get_disc());
+    return desktop_melee_ui_choose_disc(
+        command_line_disc != NULL ? command_line_disc : pc_prefs_get_disc());
 #else
     return NULL;
 #endif

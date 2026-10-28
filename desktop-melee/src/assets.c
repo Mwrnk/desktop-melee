@@ -54,7 +54,7 @@ void desktop_melee_asset_found(const char* tag, int index, const struct GcTextur
     char path[1024];
     mkdir(dir, 0755);
     snprintf(path, sizeof path, "%s/%s_%03d_%dx%d_f%d.png", dir, tag, index, tex->width,
-             tex->height, tex->format);
+        tex->height, tex->format);
 #ifdef __APPLE__
     desktop_melee_mac_write_png(path, rgba, tex->width, tex->height);
 #endif
@@ -110,7 +110,8 @@ int desktop_melee_costume_count(int ckind) {
 
 void desktop_melee_asset_portrait(int ckind, int costume, const struct GcTexture* portrait) {
     if (ckind < 0 || ckind >= DESKTOP_MELEE_CKIND_MAX || costume < 0 ||
-        costume >= DESKTOP_MELEE_MAX_COSTUMES || portrait->data == NULL) {
+        costume >= DESKTOP_MELEE_MAX_COSTUMES || portrait->data == NULL)
+    {
         return;
     }
     free(s_portraits[ckind][costume].rgba);
@@ -122,7 +123,9 @@ void desktop_melee_asset_portrait(int ckind, int costume, const struct GcTexture
     dump_named(name, s_portraits[ckind][costume].rgba, portrait->width, portrait->height);
 }
 
-int desktop_melee_roster_count(void) { return s_roster_n; }
+int desktop_melee_roster_count(void) {
+    return s_roster_n;
+}
 
 bool desktop_melee_roster_entry(int i, int* ckind, int* costumes) {
     if (i < 0 || i >= s_roster_n) {
@@ -144,7 +147,8 @@ const uint8_t* desktop_melee_roster_icon(int i, int* w, int* h) {
 
 const uint8_t* desktop_melee_portrait(int ckind, int costume, int* w, int* h) {
     if (ckind < 0 || ckind >= DESKTOP_MELEE_CKIND_MAX || costume < 0 ||
-        costume >= DESKTOP_MELEE_MAX_COSTUMES || s_portraits[ckind][costume].rgba == NULL) {
+        costume >= DESKTOP_MELEE_MAX_COSTUMES || s_portraits[ckind][costume].rgba == NULL)
+    {
         return NULL;
     }
     *w = s_portraits[ckind][costume].w;
@@ -166,12 +170,14 @@ extern const unsigned char HSD_SisLib_8040CB00[][2]; /* left, right margin per g
 
 static uint8_t* s_glyph_alpha[SIS_GLYPHS];
 
-int desktop_melee_font_glyph_count(void) { return SIS_CHARS; }
+int desktop_melee_font_glyph_count(void) {
+    return SIS_CHARS;
+}
 
 /* Character entry i: its Shift-JIS bytes, the atlas glyph that draws it
  * (glyph code - 0x2000, as sislib does) and that glyph's margins. */
-bool desktop_melee_font_glyph_info(int i, uint8_t* sjis_hi, uint8_t* sjis_lo, int* atlas, int* left,
-                         int* right) {
+bool desktop_melee_font_glyph_info(
+    int i, uint8_t* sjis_hi, uint8_t* sjis_lo, int* atlas, int* left, int* right) {
     if (i < 0 || i >= SIS_CHARS) {
         return false;
     }

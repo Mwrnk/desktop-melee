@@ -53,25 +53,22 @@ GameModeState gm_Mode_DesktopMelee_States[] = {
             &gmVsMelee_VsExitInfo,
         },
     },
-    { GM_GAMEMODESTATE_TERMINATE },
+    {GM_GAMEMODESTATE_TERMINATE},
 };
 
 /* Pause and hide pauses as a chosen port; otherwise Melee's own check. */
-static int desktop_melee_pauser_override(void)
-{
+static int desktop_melee_pauser_override(void) {
     int port = desktop_melee_take_pause_request();
     return port >= 0 ? port : gm_DefaultVSGetPauser();
 }
 
-bool desktop_melee_game_paused(void)
-{
+bool desktop_melee_game_paused(void) {
     return gm_GetDbPauseFlag(1) || gm_GetDbPauseFlag(2);
 }
 
 /* The match as the menu bar set it up: Final Destination (stretched to the
  * Dock in overlay mode), items off. */
-static void onEnterVs(GameModeState* state)
-{
+static void onEnterVs(GameModeState* state) {
     StartMeleeData* start = gm_GetGameModeStateEnterData(state);
     DesktopMeleeMatchSetup setup;
     ssize_t i;
@@ -94,22 +91,19 @@ static void onEnterVs(GameModeState* state)
         start->players[i].rumble_enabled = false;
     }
     for (i = 0; i < 2; i++) {
-        start->players[i].ckind = (CharacterKind) setup.players[i].ckind;
+        start->players[i].ckind = (CharacterKind)setup.players[i].ckind;
         start->players[i].color = setup.players[i].costume;
         start->players[i].stocks = setup.stocks;
-        start->players[i].slot_type =
-            setup.players[i].cpu ? Gm_PKind_Cpu : Gm_PKind_Human;
+        start->players[i].slot_type = setup.players[i].cpu ? Gm_PKind_Cpu : Gm_PKind_Human;
         start->players[i].cpu_level = setup.players[i].cpu_level;
         /* The controller port that plays a human (0 = the slot's own). */
-        if (!setup.players[i].cpu && setup.players[i].port >= 0 &&
-            setup.players[i].port < 4)
-        {
-            start->players[i].slot = (u8) (setup.players[i].port + 1);
+        if (!setup.players[i].cpu && setup.players[i].port >= 0 && setup.players[i].port < 4) {
+            start->players[i].slot = (u8)(setup.players[i].port + 1);
         }
-        OSReport("desktop-melee: match P%d ckind %d costume %d %s level %d port %d\n", (int) i + 1,
-                 setup.players[i].ckind, setup.players[i].costume,
-                 setup.players[i].cpu ? "cpu" : "human", setup.players[i].cpu_level,
-                 setup.players[i].port + 1);
+        OSReport("desktop-melee: match P%d ckind %d costume %d %s level %d port %d\n", (int)i + 1,
+            setup.players[i].ckind, setup.players[i].costume,
+            setup.players[i].cpu ? "cpu" : "human", setup.players[i].cpu_level,
+            setup.players[i].port + 1);
     }
     /* Pause and hide pauses as the first human player's port (Start on it
      * resumes), or port 1 when both are CPUs (the keyboard). */
@@ -117,9 +111,9 @@ static void onEnterVs(GameModeState* state)
         int pause_port = 0;
         for (i = 1; i >= 0; i--) {
             if (!setup.players[i].cpu) {
-                pause_port = setup.players[i].port >= 0 && setup.players[i].port < 4
-                                 ? setup.players[i].port
-                                 : (int) i;
+                pause_port = setup.players[i].port >= 0 && setup.players[i].port < 4 ?
+                                 setup.players[i].port :
+                                 (int)i;
             }
         }
         desktop_melee_set_pause_port(pause_port);
@@ -129,14 +123,12 @@ static void onEnterVs(GameModeState* state)
 }
 
 /* Straight back to idle: no results screen on the desktop. */
-static void onExitVs(GameModeState* state)
-{
+static void onExitVs(GameModeState* state) {
     gmVsMelee_ExitVs(state, state_desktop_melee_idle, state_desktop_melee_idle);
     desktop_melee_match_ended();
 }
 
-void gm_Scene_DesktopMeleeIdle_OnEnter(void* unused)
-{
+void gm_Scene_DesktopMeleeIdle_OnEnter(void* unused) {
     static bool loaded;
     desktop_melee_assets_load_menu_sounds();
     if (!loaded) {
@@ -157,8 +149,7 @@ void gm_Scene_DesktopMeleeIdle_OnExit(void* unused) {}
 
 /* Nothing is drawn (the overlay stays transparent) until a match is asked
  * for, from the menu bar or with Start on any controller. */
-void gm_Scene_DesktopMeleeIdle_OnFrame(void)
-{
+void gm_Scene_DesktopMeleeIdle_OnFrame(void) {
     if ((gm_GetButtonsTriggered(PAD_MAX_CONTROLLERS) & HSD_PAD_START) != 0 &&
         desktop_melee_start_starts_match())
     {
@@ -171,8 +162,7 @@ void gm_Scene_DesktopMeleeIdle_OnFrame(void)
 
 /* The buttons held on controller port 0..3 (HSD_PAD_* bits), for the welcome
  * window's "press any button". */
-u32 desktop_melee_pad_buttons(int port)
-{
+u32 desktop_melee_pad_buttons(int port) {
     if (port < 0 || port >= PAD_MAX_CONTROLLERS) {
         return 0;
     }

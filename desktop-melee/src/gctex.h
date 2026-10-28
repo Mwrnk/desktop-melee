@@ -28,9 +28,9 @@ typedef struct GcTexture {
     const uint8_t* data;
     int width;
     int height;
-    int format;       /* GCTEX_* */
+    int format;          /* GCTEX_* */
     const uint8_t* tlut; /* palette (big-endian 16-bit entries), or NULL */
-    int tlut_format;  /* GCTEX_TL_* */
+    int tlut_format;     /* GCTEX_TL_* */
     int tlut_entries;
 } GcTexture;
 
