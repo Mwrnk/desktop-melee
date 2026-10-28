@@ -52,8 +52,10 @@ private func choose(_ path: String) -> UnsafePointer<CChar>? {
 @_cdecl("desktop_melee_ui_choose_disc")
 public func desktopMeleeUIChooseDisc(_ candidate: UnsafePointer<CChar>?) -> UnsafePointer<CChar>? {
     let path = candidate.map { String(cString: $0) } ?? ""
-    let firstRun = !DiscMemory.onboardingDone
-        || ProcessInfo.processInfo.environment["DESKTOP_MELEE_WELCOME"] != nil
+    // DESKTOP_MELEE_WELCOME=1 or =disc: the whole welcome again (testing).
+    // =debug boots as usual and opens the debug window once the game is up.
+    let welcome = ProcessInfo.processInfo.environment["DESKTOP_MELEE_WELCOME"]
+    let firstRun = !DiscMemory.onboardingDone || (welcome != nil && welcome != "debug")
     if !firstRun, !path.isEmpty, DiscMemory.isVerified(path) {
         NSLog("desktop-melee: disc %@ (remembered)", path)
         return choose(path)

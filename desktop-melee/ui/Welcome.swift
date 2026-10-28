@@ -29,6 +29,17 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     @Published var oldPath: String?
     /// An offscreen sample for DESKTOP_MELEE_DUMP renders, not the live window.
     var isSample = false
+    /// The debug window (DESKTOP_MELEE_WELCOME=debug): live, but nothing it
+    /// does reaches the game or the saved settings.
+    var debug = false
+    /// Which way the last step change went, for the slide.
+    @Published var forward = true
+    /// Bumped to play the current step's entrance again (debug).
+    @Published var replay = 0
+    /// Bumped on each refused disc: the status row shakes.
+    @Published var failures = 0
+    /// The graphics build the loading screen shows.
+    var progress: ShaderProgress = .shared
     /// Phase 2: the disc is in and the game is booting ("Getting Melee ready").
     @Published var loading = false
     /// Step 3: who pressed a button, by controller port.
@@ -41,7 +52,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         var id: Int { port }
     }
 
-    private var firstRun = false
+    var firstRun = false
     private var assetsReady: AnyCancellable?
     private var padTimer: Timer?
     private var lastButtons = [UInt32](repeating: 0, count: 4)
@@ -93,17 +104,43 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     func goTo(_ next: WelcomeStep) {
         // Accessibility already granted: nothing to ask.
-        if next == .permission, desktop_melee_ax_trusted() {
+        if next == .permission, !debug, desktop_melee_ax_trusted() {
             goTo(.ready)
             return
         }
+        forward = next.rawValue >= step.rawValue
         step = next
         if next == .disc, disc == .empty { startCandidateCheck() }
+        if next == .controls {
+            if !debug { desktop_melee_set_start_starts_match(false) }
+            if padTimer == nil { startPadPolling() }
+        }
         if next == .permission { watchAccessibility() }
-        if next == .ready {
+        if next == .ready, !debug {
             DiscMemory.onboardingDone = true
             // "Or press Start on your controller."
             desktop_melee_set_start_starts_match(true)
+        }
+    }
+
+    /// Back: not to the disc once it is in (the game has booted with it), and
+    /// not past where the window opened.
+    var canGoBack: Bool {
+        switch step {
+        case .disc: return firstRun && !findAgain && !loading
+        case .permission, .ready: return true
+        default: return false
+        }
+    }
+
+    func goBack() {
+        MenuSound.back.play()
+        switch step {
+        case .disc: goTo(.welcome)
+        case .permission: goTo(.controls)
+        // Accessibility granted: its step is skipped going forward, so too back.
+        case .ready: goTo(!debug && desktop_melee_ax_trusted() ? .controls : .permission)
+        default: break
         }
     }
 
@@ -111,6 +148,11 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     /// Start a match (the Match tab's Start) and close the window.
     func startMatch() {
+        if debug {
+            MenuSound.confirm.play()
+            NSLog("desktop-melee: welcome debug: Start a match (not started)")
+            return
+        }
         DiscMemory.onboardingDone = true
         desktop_melee_request_match()
         window?.close()
@@ -143,12 +185,20 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     /// Open System Settings: the system dialog, then watch for the switch.
     func requestAccessibility() {
+        if debug {
+            // No system dialog: the switch is turned on a moment later.
+            let delay = 1.2 / WelcomeMotion.shared.speed
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                if self?.step == .permission { self?.accessibilityGranted() }
+            }
+            return
+        }
         desktop_melee_ax_request()
         watchAccessibility()
     }
 
     private func watchAccessibility() {
-        guard axTimer == nil else { return }
+        guard !debug, axTimer == nil else { return }
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.checkAccessibility() }
         RunLoop.main.add(timer, forMode: .common)
         axTimer = timer
@@ -156,13 +206,18 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     private func checkAccessibility() {
         guard step == .permission, desktop_melee_ax_trusted() else { return }
+        accessibilityGranted()
+    }
+
+    func accessibilityGranted() {
         axTimer?.invalidate()
         axTimer = nil
         axGranted = true
         // The Dock's exact size, right away: no relaunch.
-        desktop_melee_relayout()
+        if !debug { desktop_melee_relayout() }
         MenuSound.confirm.play()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+        let delay = 0.8 / WelcomeMotion.shared.speed
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             if self?.step == .permission { self?.goTo(.ready) }
         }
     }
@@ -235,6 +290,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
             NSLog("desktop-melee: disc %@ (refused: %@)", path, text)
             stopCheck()
             disc = .failed(path: path, message: text)
+            failures += 1
         }
     }
 
@@ -250,6 +306,10 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     /// Continue on the disc step: boot this disc.
     func acceptDisc() {
         guard case .verified(let path) = disc else { return }
+        if debug {
+            simulateLoading()
+            return
+        }
         DiscMemory.remember(path)
         // Anything after the disc counts as done: closing, quitting or a
         // crash later on must not bring the whole welcome back.
@@ -281,7 +341,10 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     private func reveal() {
         guard loading else { return }
         assetsReady = nil
+        // Debug: the disc's look arrives now, as it does for real.
+        if debug { GameAssets.shared.debugBeforeDisc = false }
         loading = false
+        forward = true
         step = .controls
         MenuSound.confirm.play()
         startPadPolling()
@@ -330,7 +393,93 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         axTimer?.invalidate()
         axTimer = nil
         assetsReady = nil
-        desktop_melee_set_start_starts_match(true)
+        if !debug { desktop_melee_set_start_starts_match(true) }
+    }
+
+    // MARK: Debug (DESKTOP_MELEE_WELCOME=debug)
+
+    /// The debug window's own controller, kept while the panel is up.
+    static var debugController: WelcomeController?
+
+    /// Opens a live welcome window that touches nothing (see `debug`), next to
+    /// a panel that jumps between steps and states and tunes the motion.
+    static func openDebug() {
+        let controller = debugController ?? WelcomeController()
+        controller.debug = true
+        controller.firstRun = true
+        debugController = controller
+        controller.showDebugWindow()
+        WelcomeDebugPanel.show(for: controller)
+    }
+
+    func showDebugWindow() {
+        let window = makeWindow()
+        NSApp.activate(ignoringOtherApps: true)
+        if !window.isVisible { window.center() }
+        window.orderFrontRegardless()
+    }
+
+    var debugWindowFrame: NSRect? { window?.frame }
+
+    /// The loading screen, with a made-up graphics build, then the reveal.
+    func simulateLoading(seconds: Double = 6) {
+        let speed = WelcomeMotion.shared.speed
+        let progress = ShaderProgress()
+        progress.simulate(seconds: seconds / speed)
+        self.progress = progress
+        forward = true
+        loading = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + (seconds + 0.8) / speed) {
+            [weak self] in self?.reveal()
+        }
+    }
+
+    /// A step, as if reached by Continue.
+    func jump(to next: WelcomeStep) {
+        loading = false
+        if next == step { replay += 1 }
+        goTo(next)
+    }
+
+    /// Checking, then verified: a made-up hash of a made-up disc.
+    func simulateCheck() {
+        stopCheck()
+        let path = "/Users/you/Downloads/Melee.iso"
+        disc = .checking(path: path, percent: 0)
+        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
+            guard let self, case .checking(_, let percent) = disc else { return }
+            let next = min(100, percent + max(1, Int(2 * WelcomeMotion.shared.speed)))
+            if next >= 100 {
+                stopCheck()
+                disc = .verified(path: path)
+            } else {
+                disc = .checking(path: path, percent: next)
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    func simulateRefusal() {
+        stopCheck()
+        disc = .failed(path: "/Users/you/Downloads/Melee PAL.iso",
+                       message: "This is the European (PAL) disc. Desktop Melee needs the USA "
+                           + "version, 1.02.")
+        failures += 1
+    }
+
+    func setDisc(_ state: DiscStatus) {
+        stopCheck()
+        disc = state
+    }
+
+    /// A press from a made-up device on the next free port.
+    func simulatePress(_ name: String) {
+        guard let port = (0..<4).first(where: { p in !pressed.contains { $0.port == p } })
+        else { return }
+        pressed.append(PortPress(port: port, name: name))
+        pressed.sort { $0.port < $1.port }
+        MenuSound.move.play()
     }
 
     // MARK: Window
@@ -354,7 +503,12 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         window.level = .popUpMenu
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.delegate = self
-        window.contentView = NSHostingView(rootView: WelcomeView(controller: self))
+        // A fixed size: without this, every animation frame re-measures the
+        // window with the window server, which stalls the game loop sharing
+        // the main thread.
+        let hosting = NSHostingView(rootView: WelcomeView(controller: self))
+        hosting.sizingOptions = []
+        window.contentView = hosting
         self.window = window
         return window
     }
@@ -393,6 +547,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
             sample.step = step
             sample.disc = disc
             sample.findAgain = again
+            sample.firstRun = !again
             sample.oldPath = again ? "/Users/you/Downloads/Melee.iso" : nil
             WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/\(name).png")
         }
@@ -436,7 +591,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     @MainActor
     static func dump<V: View>(_ view: V, to path: String) {
-        let renderer = ImageRenderer(content: view.environment(\.colorScheme, .dark))
+        let renderer = ImageRenderer(content: view.environment(\.colorScheme, .dark)
+            .environment(\.welcomeStill, true))
         renderer.scale = 2
         guard let image = renderer.nsImage, let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff),

@@ -78,7 +78,7 @@ enum MenuSound: Int32 {
     }
 
     func play() {
-        guard MenuSound.enabled, GameAssets.shared.ready else { return }
+        guard MenuSound.enabled, GameAssets.shared.shown else { return }
         desktop_melee_sound_menu(rawValue)
     }
 
@@ -202,12 +202,13 @@ enum MeleeFont {
 
     static var available: Bool {
         load()
-        return loaded
+        return loaded && !GameAssets.shared.debugBeforeDisc
     }
 
     /// The width of `text` set at `size`, in points.
     static func width(_ text: String, size: CGFloat, tracking: CGFloat = 0) -> CGFloat {
         load()
+        let glyphs = GameAssets.shared.debugBeforeDisc ? [:] : self.glyphs
         let unit = size / 32
         let fallback = NSFont.systemFont(ofSize: size * 0.62, weight: .bold)
         var w: CGFloat = 0
@@ -228,7 +229,7 @@ enum MeleeFont {
     /// font. Nil until the game has loaded its font.
     static func image(_ text: String, size: CGFloat, tracking: CGFloat = 0) -> NSImage? {
         load()
-        guard loaded else { return nil }
+        guard loaded, !GameAssets.shared.debugBeforeDisc else { return nil }
         let key = "\(size)|\(tracking)|\(text)"
         if let cached = cache[key] { return cached }
 
@@ -285,12 +286,16 @@ struct MText: View {
     var body: some View {
         // The bundled font draws before the game is up; `assets` re-renders
         // this once the game's own has loaded.
+        // The transitions only play inside an animation: the welcome window's
+        // reveal, when Melee's font replaces the system one.
         if let image = MeleeFont.image(text, size: size, tracking: tracking) {
             Image(nsImage: image)
                 .renderingMode(.template)
                 .accessibilityLabel(text)
+                .transition(.blurFade)
         } else {
             Text(text).font(.system(size: size * 0.6, weight: .bold))
+                .transition(.blurFade)
         }
     }
 }
@@ -348,6 +353,11 @@ struct MParagraph: View {
 final class GameAssets: ObservableObject {
     static let shared = GameAssets()
     @Published private(set) var ready = false
+    /// Debug (the welcome debug panel): act as before the disc, as a release
+    /// build without Melee's font is: the system font, no emblem, no sounds.
+    @Published var debugBeforeDisc = false
+    /// Whether the disc's look (font, emblem, sounds) shows.
+    var shown: Bool { ready && !debugBeforeDisc }
 
     fileprivate func markReady() {
         ready = true
@@ -359,6 +369,9 @@ final class GameAssets: ObservableObject {
 public func desktopMeleeUIAssetsReady() {
     MeleeFont.saveCache()
     GameAssets.shared.markReady()
+    if ProcessInfo.processInfo.environment["DESKTOP_MELEE_WELCOME"] == "debug" {
+        DispatchQueue.main.async { WelcomeController.openDebug() }
+    }
     if let dir = ProcessInfo.processInfo.environment["DESKTOP_MELEE_DUMP"] {
         // The game calls this on the main thread.
         MainActor.assumeIsolated {

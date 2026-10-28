@@ -35,6 +35,25 @@ final class ShaderProgress: ObservableObject {
         return p
     }
 
+    /// Debug (the welcome debug panel): a made-up build of `total` pipelines
+    /// that takes `seconds`.
+    func simulate(seconds: Double, total: Int = 6625) {
+        timer?.invalidate()
+        self.total = total
+        pending = total
+        secondsLeft = nil
+        let start = Date()
+        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] timer in
+            guard let self else { return timer.invalidate() }
+            let f = min(1, Date().timeIntervalSince(start) / seconds)
+            pending = Int(Double(total) * (1 - f))
+            secondsLeft = f > 0.15 ? Int(seconds * (1 - f)) * 20 : nil
+            if f >= 1 { timer.invalidate() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
     func begin() {
         total = 0
         pending = 0
@@ -93,7 +112,9 @@ final class ShaderProgress: ObservableObject {
         panel.appearance = NSAppearance(named: .darkAqua)
         panel.level = .popUpMenu
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.contentView = NSHostingView(rootView: LoadingWindowView(progress: self))
+        let hosting = NSHostingView(rootView: LoadingWindowView(progress: self))
+        hosting.sizingOptions = [] // see WelcomeController.makeWindow
+        panel.contentView = hosting
         panel.center()
         panel.orderFrontRegardless()
         window = panel
