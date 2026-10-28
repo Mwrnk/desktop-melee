@@ -75,14 +75,14 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         MainActor.assumeIsolated { dumpPhaseOne() }
         // Until a disc is in, the overlay has nothing to show: hide it, so
         // the whole desktop stays the player's.
-        desktop_melee_mac_overlay_set_hidden(true)
+        desktop_melee_platform_overlay_set_hidden(true)
         NSApp.activate(ignoringOtherApps: true)
         window.center()
         window.makeKeyAndOrderFront(nil)
         modal = true
         NSApp.runModal(for: window)
         modal = false
-        desktop_melee_mac_overlay_set_hidden(false)
+        desktop_melee_platform_overlay_set_hidden(false)
         if result != nil, loading {
             beginPhaseTwo(window)
         } else {

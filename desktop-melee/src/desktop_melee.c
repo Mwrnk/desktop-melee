@@ -83,25 +83,31 @@ bool desktop_melee_hide_stage(void) {
 }
 
 static bool trace_enabled(void);
+#ifdef SIGUSR1
 static void on_usr1(int sig);
+#endif
 
 void desktop_melee_configure(AuroraConfig* config) {
     if (!desktop_melee_overlay_enabled()) {
         return;
     }
     config->overlayWindow = true;
+#ifdef SIGUSR1
     if (trace_enabled()) {
         /* Tests: SIGUSR1 presses Pause and hide (desktop_melee_trace_tick). */
         signal(SIGUSR1, on_usr1);
     }
+#endif
     /* A menu bar app: SDL must not turn the process into a regular app with a
-     * Dock icon (desktop_melee_ui_install makes it an accessory app). */
+     * Dock icon (desktop_melee_platform_ui_install makes it an accessory
+     * app). */
     SDL_SetHint(SDL_HINT_MAC_BACKGROUND_APP, "1");
     config->startFullscreen = false;
     /* The overlay never asks for focus, so losing it must not pause the game,
      * and controllers must keep working while other apps are in front. */
     config->pauseOnFocusLost = false;
     config->allowJoystickBackgroundEvents = true;
+    desktop_melee_platform_configure(config);
 }
 
 static SDL_Window* s_window;
@@ -133,13 +139,12 @@ bool desktop_melee_dock_exact(void) {
 /* Screen size, floor, Dock and notch island for the screen the overlay is
  * on. Run at startup and whenever the overlay changes screens. */
 static void layout(void) {
-#ifdef __APPLE__
     float w, h, floor_pt;
-    desktop_melee_mac_screen_geometry(s_window, &w, &h, &floor_pt);
+    desktop_melee_platform_screen_geometry(s_window, &w, &h, &floor_pt);
     float dock_left = 0.0f, dock_right = 0.0f, dock_top = floor_pt;
     bool exact = false;
     const bool dock =
-        desktop_melee_mac_dock_frame(w, h, &dock_left, &dock_right, &dock_top, &exact);
+        desktop_melee_platform_dock_frame(w, h, &dock_left, &dock_right, &dock_top, &exact);
     if (dock && exact) {
         floor_pt = dock_top;
     }
@@ -154,12 +159,15 @@ static void layout(void) {
         SDL_Log("desktop-melee: no Dock on this screen: Final Destination's own floor");
     }
 
-    desktop_melee_mac_notch(&s_notch_left, &s_notch_right, &s_island_h);
+    desktop_melee_platform_notch(&s_notch_left, &s_notch_right, &s_island_h);
+    if (s_island_h <= 0.0f) {
+        SDL_Log("desktop-melee: no notch island: stocks and percents stay in Melee's HUD");
+        return;
+    }
     const float side = s_island_h * ISLAND_SIDE;
-    desktop_melee_mac_island_place(s_notch_left - side, s_notch_right + side, s_island_h);
+    desktop_melee_platform_island_place(s_notch_left - side, s_notch_right + side, s_island_h);
     SDL_Log("desktop-melee: notch %.0f..%.0f pt, island %.0f..%.0f x %.0f pt", s_notch_left,
         s_notch_right, s_notch_left - side, s_notch_right + side, s_island_h);
-#endif
 }
 
 /* Moves the overlay onto the chosen screen (by name; the primary when it is
@@ -169,6 +177,10 @@ static void apply_screen(void) {
         return;
     }
     s_screen_pending = false;
+    if (!desktop_melee_platform_window_covers_screen()) {
+        layout(); /* a normal window: the player sizes it */
+        return;
+    }
     SDL_DisplayID target = SDL_GetPrimaryDisplay();
     int count = 0;
     SDL_DisplayID* displays = SDL_GetDisplays(&count);
@@ -201,9 +213,8 @@ void desktop_melee_window_created(SDL_Window* window) {
     if (!desktop_melee_overlay_enabled() || window == NULL) {
         return;
     }
-#ifdef __APPLE__
-    desktop_melee_overlay_mac_setup(window);
-#endif
+    desktop_melee_platform_overlay_setup(window);
+    desktop_melee_platform_ui_install(window);
     s_window = window;
     int count = 0;
     SDL_DisplayID* displays = SDL_GetDisplays(&count);
@@ -308,24 +319,25 @@ void desktop_melee_toggle_pause_and_hide(void) {
     /* Hiding pauses a running match (Melee's own pause, as the first human
      * player); showing again leaves it paused until that player's Start. */
     s_pause_request = s_hidden && desktop_melee_match_active() && !desktop_melee_game_paused();
-#ifdef __APPLE__
-    desktop_melee_mac_overlay_set_faded(s_hidden);
+    desktop_melee_platform_overlay_set_faded(s_hidden);
     /* Back from another app: the game needs the keyboard again, or Start
      * on the keyboard would type into whatever app is in front. */
     if (!s_hidden && desktop_melee_match_active()) {
-        desktop_melee_ui_focus_game();
+        desktop_melee_platform_ui_focus_game();
     }
-#endif
     SDL_Log("desktop-melee: pause and hide %s (match %d)", s_hidden ? "on" : "off",
         desktop_melee_match_active() ? 1 : 0);
 }
 
+#ifdef SIGUSR1
 static void on_usr1(int sig) {
     (void)sig;
     s_usr1 = 1;
 }
+#endif
 
-/* Once a second (overlay_mac.m), also while the game is paused. */
+/* Once a second (desktop_melee_platform_overlay_setup starts the timer), also
+ * while the game is paused. */
 void desktop_melee_trace_tick(void) {
     if (!trace_enabled()) {
         return;
@@ -533,23 +545,19 @@ void desktop_melee_launcher_wait_begin(void) {
     if (!desktop_melee_overlay_enabled()) {
         return;
     }
-#ifdef __APPLE__
-    desktop_melee_mac_overlay_set_faded(true);
-    desktop_melee_ui_loading_begin();
-#endif
+    desktop_melee_platform_overlay_set_faded(true);
+    desktop_melee_platform_ui_loading_begin();
 }
 
 void desktop_melee_launcher_wait_end(void) {
     if (!desktop_melee_overlay_enabled()) {
         return;
     }
-#ifdef __APPLE__
-    desktop_melee_ui_loading_end();
+    desktop_melee_platform_ui_loading_end();
     /* Pause and hide may have been pressed meanwhile: it stays hidden. */
     if (!s_hidden) {
-        desktop_melee_mac_overlay_set_faded(false);
+        desktop_melee_platform_overlay_set_faded(false);
     }
-#endif
 }
 
 /* Graphics pipelines still being built (the menu bar's loading progress). */
@@ -632,9 +640,7 @@ void desktop_melee_match_began(void) {
     /* Starting a match shows the fighters: nobody means to play unseen. */
     if (s_hidden) {
         s_hidden = false;
-#ifdef __APPLE__
-        desktop_melee_mac_overlay_set_faded(false);
-#endif
+        desktop_melee_platform_overlay_set_faded(false);
         SDL_Log("desktop-melee: pause and hide off (a match started)");
     }
     s_in_match = true;
@@ -767,10 +773,6 @@ const char* desktop_melee_choose_disc(const char* command_line_disc) {
     if (!desktop_melee_overlay_enabled()) {
         return command_line_disc;
     }
-#ifdef __APPLE__
-    return desktop_melee_ui_choose_disc(
+    return desktop_melee_platform_ui_choose_disc(
         command_line_disc != NULL ? command_line_disc : pc_prefs_get_disc());
-#else
-    return NULL;
-#endif
 }

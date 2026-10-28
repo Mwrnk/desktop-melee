@@ -16,7 +16,20 @@ target_include_directories(melee_game PRIVATE desktop-melee/src desktop-melee/ga
 target_sources(melee_game PRIVATE desktop-melee/game/gmdesktopmelee.c
         desktop-melee/game/desktop_melee_assets.c)
 
+# One implementation of desktop-melee/src/platform.h per system
+# (docs/desktop-melee/porting.md). Windows and Linux are skeletons that run
+# the game in a normal window; the Linux one is plain SDL, so every other
+# system (Android, iOS) builds it too.
+set(DESKTOP_MELEE_MACOS OFF)
 if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
+    set(DESKTOP_MELEE_MACOS ON)
+elseif (WIN32)
+    target_sources(melee PRIVATE desktop-melee/src/platform_windows.c)
+else ()
+    target_sources(melee PRIVATE desktop-melee/src/platform_linux.c)
+endif ()
+
+if (DESKTOP_MELEE_MACOS)
     target_sources(melee PRIVATE desktop-melee/src/overlay_mac.m)
     target_link_libraries(melee PRIVATE "-framework AppKit" "-framework ImageIO")
 

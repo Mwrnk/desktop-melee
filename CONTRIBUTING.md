@@ -3,12 +3,22 @@
 Bug reports and pull requests are welcome. Desktop Melee is small and run by
 one person, so keeping changes focused helps a lot.
 
+Working with a coding agent? [AGENTS.md](AGENTS.md) is the short version of
+these rules for it (Claude Code reads it through `CLAUDE.md`).
+
 ## Scope
 
-- **macOS only, for now.** Windows and Linux are planned: melee-pc already
-  runs there, and the work is the desktop layer (the transparent window, a
-  floor on the taskbar, a tray app instead of the menu bar app). If you want
-  to help with that, open an issue first so we can agree on the approach.
+- **macOS only, for now; Windows and Linux are open for help.** melee-pc
+  already runs there, and the work is the desktop layer: the transparent
+  window, a floor on the taskbar, the hotkey and a tray app instead of the
+  menu bar app. Skeletons for both build today
+  (`desktop-melee/src/platform_windows.c`, `platform_linux.c`).
+  [docs/desktop-melee/porting.md](docs/desktop-melee/porting.md) goes through
+  each piece and the system APIs it needs, and
+  [docs/desktop-melee/ui-guide.md](docs/desktop-melee/ui-guide.md) describes
+  the settings UI a port should match. Say what you're taking on in issue #11
+  (Windows) or #12 (Linux) first, and agree on the UI approach there before
+  building it.
 - **Melee USA 1.02 only.** The disc check accepts only a clean USA revision 2
   image. Requests for PAL, other revisions or modded images will be closed.
 - **The game's behaviour stays Melee's.** Desktop Melee changes the camera,
@@ -19,6 +29,9 @@ one person, so keeping changes focused helps a lot.
 
 - Never attach, link or commit game data: disc images, extracted files,
   textures, sounds, or `DESKTOP_MELEE_DUMP` output.
+- Clips and screenshots of the game running are fine, and welcome, in pull
+  requests and issues. Attach them there; don't commit them to the
+  repository.
 - Never share a built `Desktop Melee.app`. It contains Melee's font, copied
   from your own disc.
 - Don't ask for or offer ROMs or ISOs in issues.
@@ -33,9 +46,10 @@ desktop-melee/tests/check_style.sh   # style; --fix reformats (needs clang-forma
 desktop-melee/tests/run_all.sh       # every test, about 9 minutes
 ```
 
-Every pull request runs the style check and a macOS build on GitHub
-(`.github/workflows/checks.yml`). The tests need a disc and a screen, so
-they don't run there: run the ones your change touches yourself.
+Every pull request runs the style check and builds the game on macOS, Linux
+and Windows on GitHub (`.github/workflows/checks.yml`). The tests need a disc
+and a screen, so they don't run there: run the ones your change touches
+yourself.
 
 - `disc_check_test.sh` and `font_bundle_test.sh` run in the background and
   need your disc image.
@@ -68,9 +82,15 @@ still applies to its code under `src/` and `extern/`.
 
 ## Pull requests
 
+- **One branch, `main`.** Branch from `main` and open your pull request
+  against it. Releases are tags on `main` (`v0.1.0`). There are no `dev` or
+  per-system branches: what differs between systems lives in the code
+  (`desktop-melee/src/platform.h` and one file per system), and every pull
+  request builds all three.
 - Keep changes outside `desktop-melee/` small and tagged (see Code style).
   Add any newly changed melee-pc file to the list in `licenses/LICENSE.md`.
-- Say how you tested it, and on which macOS version and Mac.
+- Say how you tested it, and on which system and version (for macOS, which
+  Mac).
 
 By contributing, you agree that your changes are licensed under
 GPL-3.0-or-later, like the rest of Desktop Melee's code.

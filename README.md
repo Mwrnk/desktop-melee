@@ -172,8 +172,12 @@ They are tracked in the [issues](https://github.com/Mwrnk/desktop-melee/issues).
 
 ### Roadmap
 
-- Windows and Linux. melee-pc already runs there; the desktop layer (the
-  transparent window, a floor on the taskbar, a tray app) is the work.
+- Windows and Linux (issues #11 and #12, help wanted). melee-pc already runs
+  there; the desktop layer (the transparent window, a floor on the taskbar, a
+  tray app) is the work. Skeletons build today:
+  [docs/desktop-melee/porting.md](docs/desktop-melee/porting.md) is the guide,
+  and [docs/desktop-melee/ui-guide.md](docs/desktop-melee/ui-guide.md)
+  describes the UI to match.
 - Window tops as platforms you can drop through.
 - More than two players.
 - Other stages.

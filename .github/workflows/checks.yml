@@ -1,9 +1,12 @@
 name: Checks
 
-# What every pull request must pass: the style check and a macOS build of the
-# game with Desktop Melee in it. Neither needs a disc image or a signing
-# certificate. Packaging (desktop-melee/package.sh) and the tests stay local:
-# they need your disc and take over the screen.
+# What every pull request must pass: the style check and a build of the game
+# with Desktop Melee in it on macOS, Linux and Windows. None of it needs a disc
+# image or a signing certificate. Packaging (desktop-melee/package.sh) and the
+# tests stay local: they need your disc and take over the screen.
+#
+# Linux and Windows build the platform skeletons (desktop-melee/src/platform_*.c;
+# docs/desktop-melee/porting.md). Their setup is melee-pc's, from build.yml.
 on:
   pull_request:
   push:
@@ -45,3 +48,60 @@ jobs:
 
       - name: Build
         run: desktop-melee/build.sh
+
+  linux:
+    name: Build (Linux, x86_64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        # SDL3 is not in Ubuntu 24.04, so aurora builds it from source
+        # (AURORA_SDL3_PROVIDER=vendor); these are its X11/Wayland/audio deps.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential ninja-build cmake pkg-config \
+            libssl-dev libcurl4-openssl-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxfixes-dev libxss-dev libxkbcommon-dev libxtst-dev \
+            libwayland-dev wayland-protocols libdecor-0-dev \
+            libasound2-dev libpulse-dev libdbus-1-dev libudev-dev \
+            libgl1-mesa-dev libegl1-mesa-dev libgbm-dev \
+            libusb-1.0-0-dev
+
+      - name: Build
+        # tools/package_linux.sh's configure, without the AppImage.
+        run: |
+          cmake -B build/linux -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DAURORA_SDL3_PROVIDER=vendor \
+            -DAURORA_SDL3_LINKAGE=shared \
+            -DAURORA_DAWN_PROVIDER=package \
+            -DAURORA_NOD_PROVIDER=package
+          ninja -C build/linux melee
+
+  windows:
+    name: Build (Windows, x86_64)
+    # Cross-compiled with MinGW-w64, as melee-pc's release builds are.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build cmake zip cabextract curl mingw-w64
+          # aurora's C++20 code needs std::thread, which only the POSIX
+          # threading model provides; Ubuntu defaults some links to win32.
+          sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
+          sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+
+      - name: Build
+        # Builds libusb, then the game, then the zip (which nothing uploads).
+        env:
+          TARGET_ARCH: x86_64
+        run: tools/package_windows.sh

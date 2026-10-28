@@ -527,7 +527,7 @@ The tabs:
 | Match | Stocks, time, Start/Restart, Pause and hide and its shortcut (default ⌃⌥M). |
 | Players | Character, costume, human/CPU, CPU level, for P1 and P2. Real portraits and announcer callouts from your disc. |
 | Controls | Controller port per player, tap jump, button map (A B X Y Z L R), shared UCF setting. |
-| Display | Screen, fighter size (100–200%), stocks/percents placement, timer, tags, screen shake. |
+| Display | Screen, fighter size (50–200%), stocks/percents placement, timer, tags, screen shake. |
 | Sound | Master, music and effects volume (shared with melee-pc), menu sounds. |
 
 **Pause and hide's shortcut** is a Carbon system hotkey (`RegisterEventHotKey`
@@ -732,7 +732,10 @@ desktop-melee/
 │   ├── desktop_melee.h               hooks main.c calls
 │   ├── desktop_melee_game.h          hooks the game code calls
 │   ├── desktop_melee.c               camera, floor, blastzones, island math, controls
-│   ├── overlay_mac.m                 window, click-through, Dock/notch, island window
+│   ├── platform.h                    what each system implements (porting.md)
+│   ├── overlay_mac.m                 macOS: window, click-through, Dock/notch, island window
+│   ├── platform_windows.c            Windows skeleton: a normal window
+│   ├── platform_linux.c              Linux skeleton (plain SDL): a normal window
 │   ├── assets.c, gctex.c             texture decoding for the menu bar
 │   └── disc_check.cpp                USA 1.02 check (background thread)
 ├── game/

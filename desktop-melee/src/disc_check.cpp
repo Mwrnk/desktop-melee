@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -101,4 +102,17 @@ extern "C" void desktop_melee_disc_check_free(DesktopMeleeDiscCheck* check) {
         check->worker.join();
     }
     delete check;
+}
+
+extern "C" DesktopMeleeDiscState desktop_melee_disc_check_wait(
+    const char* path, char* message, int message_size) {
+    DesktopMeleeDiscCheck* check = desktop_melee_disc_check_start(path);
+    DesktopMeleeDiscState state;
+    while ((state = desktop_melee_disc_check_poll(check, nullptr, message, message_size)) ==
+           DESKTOP_MELEE_DISC_CHECKING)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    desktop_melee_disc_check_free(check);
+    return state;
 }
