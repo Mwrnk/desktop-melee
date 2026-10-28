@@ -408,6 +408,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         controller.debug = true
         controller.firstRun = true
         debugController = controller
+        NSLog("desktop-melee: welcome debug window open")
         controller.showDebugWindow()
         WelcomeDebugPanel.show(for: controller)
     }
