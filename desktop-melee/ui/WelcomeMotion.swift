@@ -139,35 +139,205 @@ extension View {
     func entrance(_ index: Int) -> some View { modifier(Entrance(index: index)) }
 }
 
-/// A clock for looping drawings: seconds, scaled by the debug speed. Stands
-/// at 0 under Reduce Motion and in offscreen renders.
-struct LoopClock<Content: View>: View {
+/// A motion that repeats for as long as its view is up.
+enum Loop: Equatable {
+    /// A full clockwise turn every `period` seconds.
+    case spin(period: Double)
+    /// Up `height` points and down again in the first half of each period,
+    /// then a rest; `phase` (0-1) staggers several.
+    case hop(height: Double, period: Double, phase: Double)
+    /// Up and down by `distance`, smoothly.
+    case bob(distance: Double, period: Double)
+    /// Grows to `scale` while fading out, again and again: a ripple.
+    case ripple(scale: Double, period: Double)
+    /// Fades down to `low` and back.
+    case breathe(low: Double, period: Double)
+    /// Stretches sideways between `from` and `to` times its width.
+    case stretch(from: Double, to: Double, period: Double)
+
+    /// `up`: +1 where positive y is up in the layer, else -1.
+    func animation(up: Double) -> CAAnimation {
+        let animation: CAAnimation
+        switch self {
+        case .spin(let period):
+            let a = CABasicAnimation(keyPath: "transform.rotation.z")
+            a.fromValue = 0
+            a.toValue = -2 * Double.pi * up
+            a.duration = period
+            animation = a
+        case .hop(let height, let period, let phase):
+            let a = CAKeyframeAnimation(keyPath: "transform.translation.y")
+            a.values = [0, height * up, 0, 0]
+            a.keyTimes = [0, 0.25, 0.5, 1]
+            a.timingFunctions = [CAMediaTimingFunction(name: .easeOut),
+                                 CAMediaTimingFunction(name: .easeIn),
+                                 CAMediaTimingFunction(name: .linear)]
+            a.duration = period
+            a.timeOffset = phase * period
+            animation = a
+        case .bob(let distance, let period):
+            let a = CABasicAnimation(keyPath: "transform.translation.y")
+            a.fromValue = -distance * up
+            a.toValue = distance * up
+            a.autoreverses = true
+            a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            a.duration = period / 2
+            animation = a
+        case .ripple(let scale, let period):
+            let grow = CABasicAnimation(keyPath: "transform.scale")
+            grow.fromValue = 1
+            grow.toValue = scale
+            let fade = CABasicAnimation(keyPath: "opacity")
+            fade.fromValue = 0.8
+            fade.toValue = 0
+            let group = CAAnimationGroup()
+            group.animations = [grow, fade]
+            group.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            group.duration = period
+            animation = group
+        case .breathe(let low, let period):
+            let a = CABasicAnimation(keyPath: "opacity")
+            a.fromValue = 1
+            a.toValue = low
+            a.autoreverses = true
+            a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            a.duration = period / 2
+            animation = a
+        case .stretch(let from, let to, let period):
+            let a = CABasicAnimation(keyPath: "transform.scale.x")
+            a.fromValue = from
+            a.toValue = to
+            a.autoreverses = true
+            a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            a.duration = period / 2
+            animation = a
+        }
+        animation.repeatCount = .infinity
+        animation.isRemovedOnCompletion = false
+        return animation
+    }
+}
+
+/// `content`, looping. Core Animation plays the loop in the window server, so
+/// it costs nothing per frame on the main thread, which is the game's: a
+/// SwiftUI loop (a TimelineView, a repeating animation) lays the window out
+/// and commits it every frame, and stalled the game. The content is drawn
+/// once into a layer, so it must not change while it loops. Still, as plain
+/// SwiftUI, under Reduce Motion and in offscreen renders.
+struct Looping<Content: View>: View {
+    let loop: Loop
+    let content: Content
     @ObservedObject private var motion = WelcomeMotion.shared
     @Environment(\.welcomeStill) private var still
-    @ViewBuilder let content: (Double) -> Content
+    @Environment(\.font) private var font
+
+    init(_ loop: Loop, @ViewBuilder content: () -> Content) {
+        self.loop = loop
+        self.content = content()
+    }
 
     var body: some View {
         if still || motion.reduce {
-            content(0)
+            content
         } else {
-            TimelineView(.animation) { context in
-                content(context.date.timeIntervalSinceReferenceDate * motion.speed)
+            // The content keeps its place in the layout, unseen; the layer
+            // over it draws it.
+            content.hidden().overlay {
+                LoopLayer(loop: loop, speed: motion.speed,
+                          content: AnyView(content.font(font)
+                              .environment(\.colorScheme, .dark)))
             }
         }
     }
 }
 
-/// A view that spins once every `period` seconds while `active`.
+private struct LoopLayer: NSViewRepresentable {
+    let loop: Loop
+    let speed: Double
+    let content: AnyView
+
+    func makeNSView(context: Context) -> LoopLayerView { LoopLayerView() }
+
+    func updateNSView(_ view: LoopLayerView, context: Context) {
+        view.update(loop: loop, speed: speed, content: content)
+    }
+}
+
+/// Holds the looping layer: one it owns (AppKit resets a view's own layer on
+/// layout), centered so it turns and scales about its middle. Lets clicks
+/// through.
+final class LoopLayerView: NSView {
+    private let looped = CALayer()
+    private var loop: Loop?
+    private var content: AnyView?
+    private var drawnSize = CGSize.zero
+    private var drawnScale: CGFloat = 0
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        clipsToBounds = false
+        layer?.addSublayer(looped)
+    }
+
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    func update(loop: Loop, speed: Double, content: AnyView) {
+        // Drawn again only when the size changes (layout): drawing on every
+        // update fed back into SwiftUI and laid the window out every frame.
+        self.content = content
+        if looped.speed != Float(speed) { looped.speed = Float(speed) }
+        if loop != self.loop {
+            self.loop = loop
+            restart()
+        }
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        drawnSize = .zero
+        needsLayout = true
+        restart()
+    }
+
+    private func restart() {
+        looped.removeAllAnimations()
+        guard let loop, window != nil else { return }
+        // Which way is up in this layer.
+        let up: Double = looped.contentsAreFlipped() ? -1 : 1
+        looped.add(loop.animation(up: up), forKey: "loop")
+    }
+
+    override func layout() {
+        super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        looped.bounds = CGRect(origin: .zero, size: bounds.size)
+        looped.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        let scale = window?.backingScaleFactor ?? 2
+        if let content, bounds.size != drawnSize || scale != drawnScale,
+           bounds.width > 0, bounds.height > 0 {
+            drawnSize = bounds.size
+            drawnScale = scale
+            let renderer = ImageRenderer(content: content
+                .frame(width: bounds.width, height: bounds.height))
+            renderer.scale = scale
+            looped.contents = renderer.cgImage
+            looped.contentsScale = scale
+        }
+        CATransaction.commit()
+    }
+}
+
+/// A view that spins once every `period` seconds.
 struct Spinning<Content: View>: View {
-    var active = true
     var period = 1.4
     @ViewBuilder let content: Content
 
     var body: some View {
-        LoopClock { t in
-            content.rotationEffect(.degrees(active ? (t / period).truncatingRemainder(
-                dividingBy: 1) * 360 : 0))
-        }
+        Looping(.spin(period: period)) { content }
     }
 }
 

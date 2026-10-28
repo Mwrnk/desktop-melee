@@ -409,6 +409,11 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         controller.firstRun = true
         debugController = controller
         NSLog("desktop-melee: welcome debug window open")
+        // DESKTOP_MELEE_WELCOME_STEP=3: open at that step.
+        if let raw = ProcessInfo.processInfo.environment["DESKTOP_MELEE_WELCOME_STEP"],
+           let number = Int(raw), let step = WelcomeStep(rawValue: number) {
+            controller.jump(to: step)
+        }
         controller.showDebugWindow()
         WelcomeDebugPanel.show(for: controller)
     }
