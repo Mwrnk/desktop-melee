@@ -21,8 +21,11 @@ struct WelcomeView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             ZStack(alignment: .topLeading) {
+                // Pinned to the content width: something too wide overflows on
+                // the right instead of pushing the whole step sideways.
                 screen
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .frame(width: 392, alignment: .topLeading)
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .id(screenKey)
                     .transition(.welcomeStep(forward: controller.forward, motion: motion))
             }
@@ -886,53 +889,58 @@ struct WelcomePermissionStep: View {
 
     var body: some View {
         let motion = WelcomeMotion.shared
-        VStack(alignment: .leading, spacing: 14) {
+        let granted = controller.axGranted
+        VStack(alignment: .leading, spacing: 16) {
             MText(Self.title, size: fittedSize(Self.title, size: 31, width: 392))
-            MParagraph("With Accessibility turned on, the stage matches your Dock to the pixel. "
-                       + "Desktop Melee only reads where the Dock is.", size: 19, width: 392)
+            MParagraph("Accessibility lets the stage match your Dock to the pixel. Desktop "
+                       + "Melee only reads where the Dock is.", size: 19, width: 392)
                 .foregroundStyle(.secondary)
-            DockMeasureSketch(exact: controller.axGranted)
+            DockMeasureSketch(exact: granted)
                 .frame(height: 104)
-            VStack(alignment: .leading, spacing: 8) {
-                WelcomeLabel("Accessibility")
-                WelcomeBox {
-                    HStack(spacing: 10) {
-                        ZStack {
-                            if controller.axGranted {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
-                                    .transition(.pop(0.3))
-                            } else {
-                                Spinning(period: 4) {
-                                    Image(systemName: "circle.dashed")
-                                        .foregroundStyle(.orange)
-                                }
-                                .transition(.fade)
-                            }
+            HStack(spacing: 10) {
+                ZStack {
+                    if granted {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .transition(.pop(0.3))
+                    } else {
+                        Spinning(period: 4) {
+                            Image(systemName: "circle.dashed")
+                                .foregroundStyle(.orange)
                         }
-                        .frame(width: 18, height: 18)
-                        ZStack(alignment: .leading) {
-                            MText(controller.axGranted ? "Turned on: the Dock is measured exactly"
-                                                       : "Waiting for permission...", size: 18)
-                                .id(controller.axGranted)
-                                .transition(.fade)
-                        }
+                        .transition(.fade)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .animation(motion.pop, value: controller.axGranted)
+                }
+                .frame(width: 18, height: 18)
+                ZStack(alignment: .leading) {
+                    let status = granted ? "Turned on: measured exactly"
+                                         : "Waiting for permission..."
+                    MText(status, size: fittedSize(status, size: 18, width: 350))
+                        .id(granted)
+                        .transition(.fade)
                 }
             }
+            .padding(.horizontal, 4)
+            .animation(motion.pop, value: granted)
             Spacer(minLength: 0)
-            WelcomeNav(controller: controller, title: "Open System Settings") {
-                controller.requestAccessibility()
+            // Once it is on, the step is done: on to the last one.
+            WelcomeNav(controller: controller,
+                       title: granted ? "Continue" : "Open System Settings") {
+                if granted {
+                    controller.goTo(.ready)
+                } else {
+                    controller.requestAccessibility()
+                }
             }
-            Button { controller.goTo(.ready) } label: {
-                MText("Not now: the Dock size will be estimated", size: 16)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+            if !granted {
+                Button { controller.goTo(.ready) } label: {
+                    MText("Not now: the Dock size will be estimated", size: 16)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressStyle())
             }
-            .buttonStyle(PressStyle())
         }
     }
 }
