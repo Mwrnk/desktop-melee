@@ -577,11 +577,11 @@ assets. Never commit that output.
 flowchart TB
     S["App starts"] --> Q{"a disc that passed<br/>the check before?<br/>(same path, size, date)"}
     Q -->|yes| B["boot the game"]
-    Q -->|no, or first launch| W["welcome window, steps 1 and 2:<br/>what Desktop Melee is,<br/>choose your disc"]
+    Q -->|no, or first launch| W["welcome window, step 1:<br/>choose your disc"]
     W --> C["disc_check.cpp on a background thread:<br/>header check, then full-image hash<br/>against the known-good USA 1.02 hash"]
     C -->|passes| R["remember it, boot"]
     C -->|PAL, modified, unknown| X["explain why, ask for another"]
-    R --> W2["welcome steps 3–5 while the game loads:<br/>press a button on each controller,<br/>Accessibility, how to play"]
+    R --> W2["Getting Melee ready, then steps 2–5<br/>in Melee's font: what Desktop Melee is,<br/>press a button on each controller,<br/>Accessibility, how to play"]
 ```
 
 - Only a clean USA 1.02 image passes. melee-pc can run the European (PAL)
@@ -589,6 +589,8 @@ flowchart TB
   version the decompilation matches.
 - The hash runs once per file. After that the file's path, size and
   modification date are enough (`desktop-melee/ui/DiscMemory.swift`).
+- The disc comes first so that everything after it can use Melee's own font,
+  read from that disc. Only step 1 is in the system font on a new Mac.
 - Until a disc is in, the overlay window is hidden, so the welcome window
   never sits under an invisible full-screen window.
 

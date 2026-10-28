@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The welcome window: what Desktop Melee is, the
-// player's own disc (checked, only a clean USA 1.02 passes), then how to
-// play. Steps 1-2 run modally before the game boots, from desktop_melee_choose_disc.
+// The welcome window: the player's own disc first (checked, only a clean USA
+// 1.02 passes), then what Desktop Melee is and how to play. Step 1 runs modally
+// before the game boots, from desktop_melee_choose_disc; the rest comes once the
+// game is up, so it is already in Melee's font.
 import AppKit
 import Combine
 import DesktopMeleeBridge
@@ -9,7 +10,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 enum WelcomeStep: Int, CaseIterable {
-    case welcome = 1, disc, controls, permission, ready
+    case disc = 1, welcome, controls, permission, ready
 }
 
 enum DiscStatus: Equatable {
@@ -22,7 +23,7 @@ enum DiscStatus: Equatable {
 final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     static let shared = WelcomeController()
 
-    @Published var step: WelcomeStep = .welcome
+    @Published var step: WelcomeStep = .disc
     @Published var disc: DiscStatus = .empty
     /// The disc step after the first run: the saved disc moved or changed.
     @Published var findAgain = false
@@ -63,14 +64,14 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     private var candidate: String?
     private var result: String?
     private var modal = false
-    /// Steps 1-2 are up, before any disc is in (the small loading window
+    /// Step 1 is up, before any disc is in (the small loading window
     /// stays away meanwhile).
     var waitingForDisc: Bool { modal }
 
     // MARK: Phase 1
 
-    /// Shows steps 1-2 (or only the disc step when !firstRun) and returns the
-    /// verified disc, or nil when the player closed the window.
+    /// Shows the disc step and returns the verified disc, or nil when the
+    /// player closed the window.
     func runDiscPhase(candidate: String?, firstRun: Bool) -> String? {
         self.candidate = candidate.flatMap { $0.isEmpty ? nil : $0 }
         self.firstRun = firstRun
@@ -78,10 +79,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         disc = .empty
         findAgain = !firstRun
         oldPath = firstRun ? nil : self.candidate
-        step = firstRun ? .welcome : .disc
-        // DESKTOP_MELEE_WELCOME=disc: open on the disc step (testing).
-        if ProcessInfo.processInfo.environment["DESKTOP_MELEE_WELCOME"] == "disc" { step = .disc }
-        if step == .disc { startCandidateCheck() }
+        step = .disc
+        startCandidateCheck()
         let window = makeWindow()
         MainActor.assumeIsolated { dumpPhaseOne() }
         // Until a disc is in, the overlay has nothing to show: hide it, so
@@ -123,11 +122,11 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         }
     }
 
-    /// Back: not to the disc once it is in (the game has booted with it), and
-    /// not past where the window opened.
+    /// Back: never to the disc once it is in (the game has booted with it),
+    /// and not past where the window opened (How to play opens at step 3).
     var canGoBack: Bool {
         switch step {
-        case .disc: return firstRun && !findAgain && !loading
+        case .controls: return firstRun
         case .permission, .ready: return true
         default: return false
         }
@@ -136,7 +135,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     func goBack() {
         MenuSound.back.play()
         switch step {
-        case .disc: goTo(.welcome)
+        case .controls: goTo(.welcome)
         case .permission: goTo(.controls)
         // Accessibility granted: its step is skipped going forward, so too back.
         case .ready: goTo(!debug && desktop_melee_ax_trusted() ? .controls : .permission)
@@ -324,8 +323,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     // MARK: Phase 2
 
-    /// The game boots under "Getting Melee ready"; once its assets (emblem,
-    /// sounds) are decoded, the window comes alive on step 3.
+    /// The game boots under "Getting Melee ready"; once its assets (font,
+    /// emblem, sounds) are decoded, the window comes alive on step 2.
     private func beginPhaseTwo(_ window: NSWindow) {
         // Not modal any more: stay above the game overlay.
         window.level = .popUpMenu
@@ -345,9 +344,10 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         if debug { GameAssets.shared.debugBeforeDisc = false }
         loading = false
         forward = true
-        step = .controls
+        // What Desktop Melee is, now in Melee's font; its Get started goes
+        // on to the controllers (goTo starts listening for them).
+        step = .welcome
         MenuSound.confirm.play()
-        startPadPolling()
         // Keys go to the game, so a keyboard player's presses show up too;
         // the welcome panel still takes clicks without being key.
         MenuBarController.shared?.focusGame()
@@ -547,13 +547,12 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         GameAssets.shared.debugBeforeDisc = env["DESKTOP_MELEE_DUMP_SYSTEM_FONT"] == "1"
         defer { GameAssets.shared.debugBeforeDisc = false }
         let samples: [(String, WelcomeStep, DiscStatus, Bool)] = [
-            ("welcome_1", .welcome, .empty, false),
-            ("welcome_2_empty", .disc, .empty, false),
-            ("welcome_2_checking", .disc, .checking(path: "/Users/you/Downloads/Melee.iso", percent: 62), false),
-            ("welcome_2_verified", .disc, .verified(path: "/Users/you/Downloads/Melee.iso"), false),
-            ("welcome_2_failed", .disc, .failed(path: "/Users/you/Downloads/Melee PAL.iso",
+            ("welcome_1_empty", .disc, .empty, false),
+            ("welcome_1_checking", .disc, .checking(path: "/Users/you/Downloads/Melee.iso", percent: 62), false),
+            ("welcome_1_verified", .disc, .verified(path: "/Users/you/Downloads/Melee.iso"), false),
+            ("welcome_1_failed", .disc, .failed(path: "/Users/you/Downloads/Melee PAL.iso",
                                                 message: "This is the European (PAL) disc. Desktop Melee needs the USA version, 1.02."), false),
-            ("welcome_2_again", .disc, .empty, true),
+            ("welcome_1_again", .disc, .empty, true),
         ]
         for (name, step, disc, again) in samples {
             let sample = WelcomeController()
@@ -573,6 +572,9 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     static func dumpPhaseTwo(to dir: String) {
         let sample = WelcomeController()
         sample.isSample = true
+        sample.firstRun = true
+        sample.step = .welcome
+        WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_2.png")
         sample.step = .controls
         sample.pressed = [PortPress(port: 0, name: "GameCube controller"),
                           PortPress(port: 1, name: "DualSense Wireless Controller")]

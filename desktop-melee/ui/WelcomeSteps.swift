@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The welcome window's steps, in the popover's dark section style and Melee's
-// font. A release build has no font of its own: steps 1-2 are in the system
-// font until the disc loads, and the reveal crossfades to Melee's font and
-// emblem. Motion comes from WelcomeMotion.swift.
+// font. A release build has no font of its own: step 1 (the disc) is in the
+// system font, and the reveal after "Getting Melee ready" crossfades to Melee's
+// font and emblem. Motion comes from WelcomeMotion.swift.
 import AppKit
 import DesktopMeleeBridge
 import SwiftUI
@@ -211,7 +211,7 @@ struct WelcomeIntroStep: View {
                 .foregroundStyle(.secondary)
                 .entrance(2)
             Spacer(minLength: 0)
-            WelcomeNav(controller: controller, title: "Get started") { controller.goTo(.disc) }
+            WelcomeNav(controller: controller, title: "Get started") { controller.goTo(.controls) }
                 .entrance(3)
         }
     }
