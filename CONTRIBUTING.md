@@ -28,9 +28,14 @@ one person, so keeping changes focused helps a lot.
 See the README for requirements, then:
 
 ```sh
-desktop-melee/package.sh          # build, sign and install the app
-desktop-melee/tests/run_all.sh    # every test, about 9 minutes
+desktop-melee/package.sh             # build, sign and install the app
+desktop-melee/tests/check_style.sh   # style; --fix reformats (needs clang-format 18)
+desktop-melee/tests/run_all.sh       # every test, about 9 minutes
 ```
+
+Every pull request runs the style check and a macOS build on GitHub
+(`.github/workflows/checks.yml`). The tests need a disc and a screen, so
+they don't run there: run the ones your change touches yourself.
 
 - `disc_check_test.sh` and `font_bundle_test.sh` run in the background and
   need your disc image.
@@ -44,8 +49,9 @@ explains the code layer by layer.
 
 ## Code style
 
-- **C, C++ and Objective-C:** format with the repository's `.clang-format`
-  (100 columns).
+- **C and C++:** clang-format 18 with the repository's `.clang-format`
+  (100 columns); `check_style.sh --fix` does it. **Objective-C:** the same
+  100 columns, by hand (`.clang-format` has no Objective-C section).
 - **Every new file** starts with `SPDX-License-Identifier: GPL-3.0-or-later`
   in a comment, like the existing ones.
 - **Hooks in melee-pc files** stay a few lines long and call into
