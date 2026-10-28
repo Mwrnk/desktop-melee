@@ -28,6 +28,10 @@ BUILD_DIR="${BUILD_DIR}" tools/package_macos.sh
 echo "=== Making ${APP} ==="
 rm -rf "${APP}"
 mv "${BUILD_DIR}/Melee.app" "${APP}"
+# melee-pc's icon comes along from upstream's script; Desktop Melee has its
+# own (AppIcon, below). Left in, macOS can show melee-pc's icon for the app
+# (Game Mode's notice did).
+rm -f "${APP}/Contents/Resources/melee.icns"
 # Desktop Melee's own version (desktop-melee/VERSION); the root VERSION file is
 # the melee-pc release this is built on.
 VERSION="$(cat desktop-melee/VERSION)"
