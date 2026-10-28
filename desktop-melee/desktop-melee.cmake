@@ -34,6 +34,8 @@ if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
             desktop-melee/ui/DiscMemory.swift
             desktop-melee/ui/Welcome.swift
             desktop-melee/ui/WelcomeSteps.swift
+            desktop-melee/ui/WelcomeMotion.swift
+            desktop-melee/ui/WelcomeDebug.swift
             desktop-melee/ui/Hotkey.swift
             desktop-melee/ui/Loading.swift
             desktop-melee/ui/Settings.swift)

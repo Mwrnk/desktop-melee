@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The welcome window's steps, in the popover's dark section style and Melee's
-// font (bundled with the app, so it is there before the disc). The emblem and
-// sounds still come from the disc.
+// font. A release build has no font of its own: steps 1-2 are in the system
+// font until the disc loads, and the reveal crossfades to Melee's font and
+// emblem. Motion comes from WelcomeMotion.swift.
 import AppKit
 import DesktopMeleeBridge
 import SwiftUI
@@ -9,51 +10,91 @@ import SwiftUI
 struct WelcomeView: View {
     @ObservedObject var controller: WelcomeController
     @ObservedObject private var assets = GameAssets.shared
+    @ObservedObject private var motion = WelcomeMotion.shared
+
+    /// Changes whenever another screen shows: it slides in.
+    private var screenKey: Int {
+        controller.loading ? 0 : controller.step.rawValue * 1000 + controller.replay
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            Group {
-                if controller.loading {
-                    WelcomeLoading()
-                } else {
-                    switch controller.step {
-                    case .welcome: WelcomeIntroStep(controller: controller)
-                    case .disc: WelcomeDiscStep(controller: controller)
-                    case .controls: WelcomeControlsStep(controller: controller)
-                    case .permission: WelcomePermissionStep(controller: controller)
-                    case .ready: WelcomeReadyStep(controller: controller)
-                    }
-                }
+            ZStack(alignment: .topLeading) {
+                screen
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .id(screenKey)
+                    .transition(.welcomeStep(forward: controller.forward, motion: motion))
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .animation(motion.step, value: screenKey)
         }
         .padding(.horizontal, 24)
         .padding(.top, 34)
         .padding(.bottom, 22)
-        .frame(width: 440, height: 560)
+        // Pinned to the top: a tall step never pushes the header down.
+        .frame(width: 440, height: 560, alignment: .top)
         .background(Color(white: 0.14))
         .foregroundStyle(.primary)
+        // The reveal: Melee's font and emblem arrive with the disc.
+        .animation(motion.step, value: assets.shown)
+    }
+
+    @ViewBuilder
+    private var screen: some View {
+        if controller.loading {
+            WelcomeLoading(progress: controller.progress)
+        } else {
+            switch controller.step {
+            case .welcome: WelcomeIntroStep(controller: controller)
+            case .disc: WelcomeDiscStep(controller: controller)
+            case .controls: WelcomeControlsStep(controller: controller)
+            case .permission: WelcomePermissionStep(controller: controller)
+            case .ready: WelcomeReadyStep(controller: controller)
+            }
+        }
     }
 
     private var header: some View {
         HStack(spacing: 10) {
-            // The Smash emblem once the game has decoded it from the disc.
-            if assets.ready, let emblem = GameImages.template("emblem", height: 28) {
-                Image(nsImage: emblem)
-                    .renderingMode(.template)
-                    .frame(width: 30, height: 30)
-            } else {
-                Image(nsImage: NSApp.applicationIconImage)
-                    .resizable()
-                    .frame(width: 30, height: 30)
+            // The app's icon, until the game has decoded the Smash emblem from
+            // the disc; then the emblem grows in its place.
+            ZStack {
+                if assets.shown, let emblem = GameImages.template("emblem", height: 28) {
+                    Image(nsImage: emblem)
+                        .renderingMode(.template)
+                        .transition(.blurPop(0.4))
+                } else {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .transition(.blurFade)
+                }
             }
+            .frame(width: 30, height: 30)
             MText("Desktop Melee", size: 24)
             Spacer()
-            MText("\(controller.step.rawValue) of \(WelcomeStep.allCases.count)", size: 17)
-                .foregroundStyle(.secondary)
+            StepDots(current: controller.step.rawValue, count: WelcomeStep.allCases.count)
         }
         .padding(.bottom, 18)
+    }
+}
+
+/// Where you are: one dot per step, the current one stretched into a pill.
+struct StepDots: View {
+    let current: Int
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(1...count, id: \.self) { i in
+                Capsule()
+                    .fill(i == current ? PlayerColor.p1
+                          : Color.white.opacity(i < current ? 0.55 : 0.18))
+                    .frame(width: i == current ? 18 : 6, height: 6)
+            }
+        }
+        .animation(WelcomeMotion.shared.pop, value: current)
+        .accessibilityElement()
+        .accessibilityLabel("Step \(current) of \(count)")
     }
 }
 
@@ -71,7 +112,8 @@ struct WelcomeButton: View {
 
     var body: some View {
         Button(action: action) {
-            MText(title, size: 24)
+            // Fits beside Back too.
+            MText(title, size: fittedSize(title, size: 24, width: 236))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
                 .background(
@@ -79,10 +121,73 @@ struct WelcomeButton: View {
                         .fill(enabled ? PlayerColor.p1 : Color.primary.opacity(0.12))
                 )
                 .foregroundStyle(enabled ? Color.white : Color.secondary)
+                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle())
         .disabled(!enabled)
         .keyboardShortcut(.defaultAction)
+        // Unlocking (a verified disc) fades it to red.
+        .animation(WelcomeMotion.shared.quick, value: enabled)
+    }
+}
+
+/// The bottom row: Back where there is somewhere to go back to, then the
+/// step's main button.
+struct WelcomeNav: View {
+    @ObservedObject var controller: WelcomeController
+    let title: String
+    var enabled = true
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if controller.canGoBack {
+                Button { controller.goBack() } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .bold))
+                        MText("Back", size: 22)
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(maxHeight: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.primary.opacity(0.1))
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressStyle())
+            }
+            WelcomeButton(title, enabled: enabled, action: action)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Section titles: small capitals, like the popover's.
+struct WelcomeLabel: View {
+    let text: String
+
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        MText(text.uppercased(), size: 15, tracking: 0.5)
+            .foregroundStyle(.secondary)
+    }
+}
+
+/// A rounded group, like the popover's sections.
+struct WelcomeBox<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) { content }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.primary.opacity(0.06))
+            )
     }
 }
 
@@ -94,54 +199,71 @@ struct WelcomeIntroStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             DesktopSketch()
-                .frame(height: 210)
+                .frame(height: 200)
+                .entrance(0)
             MText("Desktop Melee", size: 42)
-            MParagraph("Real Melee, played right on your desktop. Your Dock is the stage, and the edges of the screen are the blast zones.",
-                       size: 21, width: 392)
+                .entrance(1)
+            MParagraph("Real Melee, played right on your desktop. Your Dock is the stage, and "
+                       + "the edges of the screen are the blast zones.", size: 21, width: 392)
                 .foregroundStyle(.secondary)
+                .entrance(2)
             Spacer(minLength: 0)
-            WelcomeButton("Get started") { controller.goTo(.disc) }
+            WelcomeNav(controller: controller, title: "Get started") { controller.goTo(.disc) }
+                .entrance(3)
         }
     }
 }
 
 /// A desktop drawn with shapes (no Nintendo art): menu bar, two windows, the
-/// Dock as the stage with P1 and P2 on it, and the screen edge dashed as the
-/// blast zone.
+/// Dock as the stage with P1 and P2 hopping on it, and the screen edge dashed
+/// as the blast zone, slowly running.
 struct DesktopSketch: View {
+    /// How high a fighter is at `t`: hops for half of each period, then stands.
+    private static func hop(_ t: Double, period: Double, phase: Double) -> CGFloat {
+        let x = (t / period + phase).truncatingRemainder(dividingBy: 1)
+        return x < 0.5 ? CGFloat(sin(x * 2 * .pi)) * 16 : 0
+    }
+
     var body: some View {
         GeometryReader { g in
             let w = g.size.width, h = g.size.height
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(white: 0.09))
-                Rectangle()
-                    .fill(Color(white: 0.2))
-                    .frame(width: w, height: 14)
-                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12, topTrailingRadius: 12))
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(white: 0.22))
-                    .frame(width: w * 0.42, height: h * 0.42)
-                    .offset(x: w * 0.12, y: h * 0.22)
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(white: 0.18))
-                    .frame(width: w * 0.32, height: h * 0.34)
-                    .offset(x: w * 0.56, y: h * 0.14)
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(white: 0.32))
-                    .frame(width: w * 0.5, height: 16)
-                    .offset(x: w * 0.25, y: h - 26)
-                Circle().fill(PlayerColor.p1)
-                    .frame(width: 16, height: 16)
-                    .offset(x: w * 0.36, y: h - 43)
-                Circle().fill(PlayerColor.p2)
-                    .frame(width: 16, height: 16)
-                    .offset(x: w * 0.6, y: h - 43)
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(PlayerColor.p1.opacity(0.8), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
+            LoopClock { t in
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(white: 0.09))
+                    Rectangle()
+                        .fill(Color(white: 0.2))
+                        .frame(width: w, height: 14)
+                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12,
+                                                          topTrailingRadius: 12))
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(white: 0.22))
+                        .frame(width: w * 0.42, height: h * 0.42)
+                        .offset(x: w * 0.12, y: h * 0.22)
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(white: 0.18))
+                        .frame(width: w * 0.32, height: h * 0.34)
+                        .offset(x: w * 0.56, y: h * 0.14)
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(white: 0.32))
+                        .frame(width: w * 0.5, height: 16)
+                        .offset(x: w * 0.25, y: h - 26)
+                    Circle().fill(PlayerColor.p1)
+                        .frame(width: 16, height: 16)
+                        .offset(x: w * 0.36, y: h - 43 - Self.hop(t, period: 1.5, phase: 0))
+                    Circle().fill(PlayerColor.p2)
+                        .frame(width: 16, height: 16)
+                        .offset(x: w * 0.6, y: h - 43 - Self.hop(t, period: 1.8, phase: 0.4))
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(PlayerColor.p1.opacity(0.8),
+                                      style: StrokeStyle(lineWidth: 1.5, dash: [6, 5],
+                                                         dashPhase: CGFloat(-t * 8)))
+                }
             }
         }
-        .accessibilityLabel("Your desktop: the Dock is the stage, the screen edges are the blast zones")
+        .accessibilityElement()
+        .accessibilityLabel("Your desktop: the Dock is the stage, the screen edges are the "
+                            + "blast zones")
     }
 }
 
@@ -155,8 +277,10 @@ struct WelcomeDiscStep: View {
         VStack(alignment: .leading, spacing: 14) {
             MText(title, size: fittedSize(title, size: 31, width: 392))
             MParagraph(controller.findAgain
-                       ? "Desktop Melee can't use the disc it played last time. Choose your Melee disc image again."
-                       : "Desktop Melee includes the game's code but none of Nintendo's data. Characters, stages and sound come from your own copy of Melee.",
+                       ? "Desktop Melee can't use the disc it played last time. Choose your "
+                           + "Melee disc image again."
+                       : "Desktop Melee includes the game's code but none of Nintendo's data. "
+                           + "Characters, stages and sound come from your own copy of Melee.",
                        size: 19, width: 392)
                 .foregroundStyle(.secondary)
             if controller.findAgain, let old = controller.oldPath {
@@ -167,9 +291,16 @@ struct WelcomeDiscStep: View {
                     .truncationMode(.middle)
             }
             dropZone
-            status
+            ZStack(alignment: .topLeading) {
+                status
+                    .id(statusKey)
+                    .transition(.blurRise(8))
+            }
+            .animation(WelcomeMotion.shared.step, value: statusKey)
             Spacer(minLength: 0)
-            WelcomeButton("Continue", enabled: isVerified) { controller.acceptDisc() }
+            WelcomeNav(controller: controller, title: "Continue", enabled: isVerified) {
+                controller.acceptDisc()
+            }
         }
     }
 
@@ -182,12 +313,30 @@ struct WelcomeDiscStep: View {
         return false
     }
 
+    private var isFailed: Bool {
+        if case .failed = controller.disc { return true }
+        return false
+    }
+
+    /// Changes when the status row shows something else (not with progress);
+    /// each refusal is new, so it shakes again.
+    private var statusKey: Int {
+        switch controller.disc {
+        case .empty: return 0
+        case .checking: return 1
+        case .verified: return 2
+        case .failed: return 3 + controller.failures * 10
+        }
+    }
+
     private var dropZone: some View {
-        VStack(spacing: 6) {
+        let motion = WelcomeMotion.shared
+        return VStack(spacing: 5) {
             Image(systemName: "opticaldisc")
-                .font(.system(size: 30))
-                .foregroundStyle(.secondary)
-            MText("Drop your disc image here", size: 21)
+                .font(.system(size: 28))
+                .foregroundStyle(targeted ? PlayerColor.p1 : .secondary)
+                .offset(y: targeted && !motion.reduce ? -3 : 0)
+            MText(targeted ? "Drop it" : "Drop your disc image here", size: 21)
             MText("Melee USA 1.02:  .iso  .gcm  .ciso  .rvz", size: 15)
                 .foregroundStyle(.secondary)
             Button { controller.chooseFile() } label: {
@@ -195,69 +344,70 @@ struct WelcomeDiscStep: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
                     .background(Capsule().fill(Color.primary.opacity(0.14)))
+                    .contentShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressStyle())
             .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
+        .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.primary.opacity(targeted ? 0.12 : 0.04))
+                .fill(targeted ? PlayerColor.p1.opacity(0.1) : Color.primary.opacity(0.04))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(targeted ? PlayerColor.p1 : Color.primary.opacity(0.25),
                               style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
         )
-        .modifier(DropTarget(targeted: $targeted, live: !controller.isSample) { controller.drop($0) })
-    }
-
-    private var isFailed: Bool {
-        if case .failed = controller.disc { return true }
-        return false
+        .scaleEffect(targeted && !motion.reduce ? 1.02 : 1)
+        .animation(motion.quick, value: targeted)
+        .modifier(DropTarget(targeted: $targeted, live: !controller.isSample) {
+            controller.drop($0)
+        })
     }
 
     @ViewBuilder
     private var status: some View {
         switch controller.disc {
         case .empty:
-            EmptyView()
+            Color.clear.frame(height: 0)
         case .checking(let path, let percent):
-            statusBox {
-                row(symbol: "hourglass", color: .secondary,
-                    title: "Checking your disc… \(percent)%", detail: fileName(path))
+            WelcomeBox {
+                row(title: "Checking your disc… \(percent)%", detail: fileName(path)) {
+                    Spinning(period: 1.2) {
+                        Image(systemName: "opticaldisc").foregroundStyle(.secondary)
+                    }
+                }
                 ProgressBar(fraction: Double(percent) / 100)
             }
         case .verified(let path):
-            statusBox {
-                row(symbol: "checkmark.circle.fill", color: .green,
-                    title: "Super Smash Bros. Melee · USA · 1.02 · verified", detail: fileName(path))
+            WelcomeBox {
+                row(title: "Super Smash Bros. Melee · USA · 1.02 · verified",
+                    detail: fileName(path)) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .modifier(PopOnAppear(from: 0.3))
+                }
             }
         case .failed(let path, let message):
-            statusBox {
-                row(symbol: "xmark.octagon.fill", color: .red, title: message, detail: fileName(path))
+            WelcomeBox {
+                row(title: message, detail: fileName(path)) {
+                    Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
+                }
             }
+            .modifier(ShakeOnAppear())
         }
     }
 
     private func fileName(_ path: String) -> String { (path as NSString).lastPathComponent }
 
-    private func statusBox<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 8) { content() }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.primary.opacity(0.06))
-            )
-    }
-
-    private func row(symbol: String, color: Color, title: String, detail: String) -> some View {
+    private func row<Icon: View>(title: String, detail: String,
+                                 @ViewBuilder icon: () -> Icon) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: symbol)
-                .foregroundStyle(color)
+            icon()
                 .font(.system(size: 15))
+                .frame(width: 18, height: 18)
             VStack(alignment: .leading, spacing: 2) {
                 MParagraph(title, size: 18, width: 330)
                 MText(detail, size: 15)
@@ -282,6 +432,8 @@ struct ProgressBar: View {
             }
         }
         .frame(height: 5)
+        // Progress arrives in steps (a timer); glide between them.
+        .animation(.linear(duration: 0.15), value: fraction)
     }
 }
 
@@ -312,18 +464,25 @@ struct WelcomeLoading: View {
     var body: some View {
         VStack(spacing: 14) {
             Spacer()
-            Image(systemName: "opticaldisc")
-                .font(.system(size: 44))
-                .foregroundStyle(.secondary)
-                .symbolEffect(.pulse)
-            MText("Getting Melee ready...", size: 26)
-            if progress.active {
-                MParagraph("The first launch builds Melee's graphics, so matches never stutter. It takes a few minutes, once. You can use your Mac in the meantime.",
-                           size: 17, width: 340, alignment: .center)
+            Spinning(period: 2.4) {
+                Image(systemName: "opticaldisc")
+                    .font(.system(size: 44))
                     .foregroundStyle(.secondary)
-                ShaderProgressBar(progress: progress)
-                    .frame(width: 340)
-                    .padding(.top, 6)
+            }
+            .entrance(0)
+            MText("Getting Melee ready...", size: 26)
+                .entrance(1)
+            if progress.active {
+                VStack(spacing: 14) {
+                    MParagraph("The first launch builds Melee's graphics, so matches never "
+                               + "stutter. It takes a few minutes, once. You can use your Mac "
+                               + "in the meantime.", size: 17, width: 340, alignment: .center)
+                        .foregroundStyle(.secondary)
+                    ShaderProgressBar(progress: progress)
+                        .frame(width: 340)
+                        .padding(.top, 6)
+                }
+                .entrance(2)
             }
             Spacer()
         }
@@ -336,129 +495,395 @@ struct WelcomeLoading: View {
 struct WelcomeControlsStep: View {
     @ObservedObject var controller: WelcomeController
 
-    private static let playerColors = [PlayerColor.p1, PlayerColor.p2,
-                                       Color(red: 0.95, green: 0.75, blue: 0.15),
-                                       Color(red: 0.25, green: 0.70, blue: 0.35)]
+    static let playerColors = [PlayerColor.p1, PlayerColor.p2,
+                               Color(red: 0.95, green: 0.75, blue: 0.15),
+                               Color(red: 0.25, green: 0.70, blue: 0.35)]
 
     var body: some View {
+        let motion = WelcomeMotion.shared
         VStack(alignment: .leading, spacing: 12) {
             MText("Grab a controller", size: 31)
             HStack(spacing: 8) {
-                card(.gameCube, symbol: "gamecontroller.fill", title: "GameCube",
-                     detail: "Official adapter, or one in Wii U mode")
-                card(.otherPad, symbol: "gamecontroller", title: "Xbox, PS, Switch",
-                     detail: "USB or Bluetooth")
-                card(.keyboard, symbol: "keyboard", title: "Keyboard",
-                     detail: controller.keyboardOpen ? "Hide the keys" : "See the keys")
-                    .onTapGesture { controller.keyboardOpen.toggle() }
+                DeviceCard(lit: litColor(.gameCube)) {
+                    DeviceIcon(kind: .gameCube)
+                } text: {
+                    cardText("GameCube", "Official adapter, or one in Wii U mode")
+                }
+                DeviceCard(lit: litColor(.otherPad)) {
+                    DeviceIcon(kind: .otherPad)
+                } text: {
+                    cardText("Xbox, PS, Switch", "USB or Bluetooth")
+                }
+                KeyboardCard(open: controller.keyboardOpen, lit: litColor(.keyboard)) {
+                    controller.keyboardOpen.toggle()
+                }
             }
-            if controller.keyboardOpen {
-                keyboardKeys
-            } else {
-                presses
+            ZStack(alignment: .topLeading) {
+                if controller.keyboardOpen {
+                    keyboardKeys.transition(.blurRise(-8))
+                } else {
+                    players.transition(.blurRise(8))
+                }
             }
+            .animation(motion.step, value: controller.keyboardOpen)
             Spacer(minLength: 0)
-            WelcomeButton("Continue") { controller.goTo(.permission) }
+            WelcomeNav(controller: controller, title: "Continue") {
+                controller.goTo(.permission)
+            }
         }
     }
 
-    private func color(_ port: Int) -> Color { Self.playerColors[min(port, 3)] }
+    static func color(_ port: Int) -> Color { playerColors[min(port, 3)] }
 
-    /// The first player whose press matches this kind of device.
-    private func lit(_ kind: WelcomeController.DeviceKind) -> Int? {
-        controller.pressed.first { WelcomeController.kind(of: $0.name) == kind }?.port
+    /// The color of the first player whose press matches this kind of device.
+    private func litColor(_ kind: WelcomeController.DeviceKind) -> Color? {
+        controller.pressed.first { WelcomeController.kind(of: $0.name) == kind }
+            .map { Self.color($0.port) }
     }
 
-    private func card(_ kind: WelcomeController.DeviceKind, symbol: String, title: String,
-                      detail: String) -> some View {
-        let port = lit(kind)
-        return VStack(spacing: 5) {
-            Image(systemName: symbol)
-                .font(.system(size: 22))
-                .foregroundStyle(port.map { color($0) } ?? .secondary)
-                .frame(height: 26)
+    private func cardText(_ title: String, _ detail: String) -> some View {
+        VStack(spacing: 5) {
             MText(title, size: fittedSize(title, size: 17, width: 112))
-            MParagraph(detail, size: 14, width: 112)
+            MParagraph(detail, size: 14, width: 112, alignment: .center)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: Players
+
+    /// Four slots that fill as players press: the screen is listening.
+    private var players: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                ListeningDot()
+                WelcomeLabel(controller.pressed.isEmpty ? "Press any button"
+                             : "Listening for more players")
+            }
+            let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible())]
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(0..<4, id: \.self) { port in
+                    PlayerSlot(port: port,
+                               press: controller.pressed.first { $0.port == port },
+                               next: port == firstFree)
+                }
+            }
+            .animation(WelcomeMotion.shared.pop, value: controller.pressed)
+            MParagraph("Press a button on each controller, or a key, to see who's who. Ports "
+                       + "can be changed in the menu bar's Controls tab.", size: 15, width: 392)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var firstFree: Int? {
+        (0..<4).first { p in !controller.pressed.contains { $0.port == p } }
+    }
+
+    // MARK: Keyboard
+
+    private func key(_ slot: Int32) -> String { String(cString: desktop_melee_key_name(slot)) }
+
+    private var keyboardKeys: some View {
+        WelcomeBox {
+            let buttons: [(badge: Int, slot: Int32)] = [(0, 0), (1, 1), (2, 2), (3, 3),
+                                                        (4, 5), (5, 6), (6, 7)]
+            let columns = [GridItem(.flexible(), alignment: .leading),
+                           GridItem(.flexible(), alignment: .leading)]
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 4) {
+                ForEach(buttons, id: \.badge) { b in
+                    HStack(spacing: 8) {
+                        PadBadge(button: b.badge)
+                        KeyCap(key(b.slot))
+                    }
+                }
+                HStack(spacing: 8) {
+                    MText("Start", size: 16).foregroundStyle(.secondary)
+                    KeyCap(key(4))
+                }
+            }
+            keyRow("Stick") { stickKeys }
+            keyRow("C-stick") {
+                ForEach([18, 17, 19, 16], id: \.self) { KeyCap(key(Int32($0))) }
+            }
+            MParagraph("The keyboard works while Desktop Melee is the active app.",
+                       size: 15, width: 360)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The stick keys, read live from the bindings (up left down right).
+    @ViewBuilder
+    private var stickKeys: some View {
+        let keys = [14, 13, 15, 12].map { key(Int32($0)) }
+        if keys == ["Up", "Left", "Down", "Right"] {
+            KeyCap("Arrows")
+            MText("or", size: 15).foregroundStyle(.secondary)
+            ForEach(["W", "A", "S", "D"], id: \.self) { KeyCap($0) }
+        } else {
+            ForEach(keys.indices, id: \.self) { KeyCap(keys[$0]) }
+        }
+    }
+
+    private func keyRow<C: View>(_ label: String, @ViewBuilder keys: () -> C) -> some View {
+        HStack(spacing: 4) {
+            MText(label, size: 16).foregroundStyle(.secondary)
+                .frame(width: 66, alignment: .leading)
+            keys()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// One kind of device. Lights up in a player's color when that player's press
+/// came from one: the border, a glow and a hop of the icon.
+struct DeviceCard<Icon: View, Caption: View>: View {
+    let lit: Color?
+    @ViewBuilder let icon: Icon
+    @ViewBuilder let text: Caption
+
+    var body: some View {
+        let motion = WelcomeMotion.shared
+        VStack(spacing: 5) {
+            icon
+                .foregroundStyle(lit ?? Color.secondary)
+                .frame(height: 26)
+                .phaseAnimator([1.0, 1.25, 1.0], trigger: lit != nil) { view, scale in
+                    view.scaleEffect(motion.reduce || lit == nil ? 1 : scale)
+                } animation: { _ in motion.easeOut(0.16) }
+            text
         }
         .frame(maxWidth: .infinity, minHeight: 100, alignment: .top)
         .padding(.vertical, 8)
         .padding(.horizontal, 6)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
+                .fill(lit.map { $0.opacity(0.12) } ?? Color.primary.opacity(0.06))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(port.map { color($0) } ?? .clear, lineWidth: 2)
+                .strokeBorder(lit ?? .clear, lineWidth: 2)
         )
+        .shadow(color: (lit ?? .clear).opacity(0.5), radius: lit == nil ? 0 : 8)
+        .animation(motion.pop, value: lit)
         .contentShape(Rectangle())
     }
+}
 
-    private var presses: some View {
-        Section(title: "Press any button") {
-            if controller.pressed.isEmpty {
-                MParagraph("Press a button on each controller, or a key, to see who's who.",
-                           size: 17, width: 360)
-                    .foregroundStyle(.secondary)
-            }
-            ForEach(controller.pressed) { press in
-                HStack(spacing: 10) {
-                    MText("P\(press.port + 1)", size: 22)
-                        .foregroundStyle(color(press.port))
-                    MText(press.name, size: fittedSize(press.name, size: 19, width: 270))
-                    Spacer()
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+/// The keyboard card is a button (the key layout), and looks like one: a
+/// "Show keys" pill with a chevron, a hover highlight and a press.
+struct KeyboardCard: View {
+    let open: Bool
+    let lit: Color?
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        let motion = WelcomeMotion.shared
+        Button(action: action) {
+            DeviceCard(lit: lit) {
+                DeviceIcon(kind: .keyboard)
+            } text: {
+                VStack(spacing: 6) {
+                    MText("Keyboard", size: 17)
+                    HStack(spacing: 4) {
+                        MText(open ? "Hide keys" : "Show keys", size: 15)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .rotationEffect(.degrees(open ? 180 : 0))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.primary.opacity(hovering || open ? 0.22
+                                                                         : 0.14)))
                 }
             }
-            MParagraph("Ports can be changed in the menu bar's Controls tab.", size: 15, width: 360)
-                .foregroundStyle(.secondary)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.primary.opacity(hovering ? 0.05 : 0))
+                    .allowsHitTesting(false)
+            )
+        }
+        .buttonStyle(PressStyle())
+        .onHover { hovering = $0 }
+        .animation(motion.quick, value: hovering)
+        .animation(motion.step, value: open)
+        .accessibilityLabel(open ? "Hide the keyboard keys" : "Show the keyboard keys")
+    }
+}
+
+/// One player port: dashed and waiting, or filled in the player's color with
+/// the device that pressed. The next slot to fill breathes.
+struct PlayerSlot: View {
+    let port: Int
+    let press: WelcomeController.PortPress?
+    let next: Bool
+
+    var body: some View {
+        let motion = WelcomeMotion.shared
+        let color = WelcomeControlsStep.color(port)
+        HStack(spacing: 8) {
+            MText("P\(port + 1)", size: 22)
+                .foregroundStyle(press == nil ? color.opacity(0.45) : color)
+            if let press {
+                let name = Self.shortName(press.name)
+                MText(name, size: fittedSize(name, size: 18, width: 104))
+                    .transition(.blurRise(4))
+                    .help(press.name)
+                Spacer(minLength: 0)
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .transition(.blurPop(0.3))
+            } else {
+                MText("Waiting", size: 16)
+                    .foregroundStyle(.tertiary)
+                    .transition(.blurFade)
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 40)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(press == nil ? Color.primary.opacity(0.04) : color.opacity(0.16))
+        )
+        .overlay { border(color) }
+        .phaseAnimator([1.0, 1.05, 1.0], trigger: press != nil) { view, scale in
+            view.scaleEffect(motion.reduce || press == nil ? 1 : scale)
+        } animation: { _ in motion.easeOut(0.14) }
+        .animation(motion.pop, value: press)
+    }
+
+    @ViewBuilder
+    private func border(_ color: Color) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        if press != nil {
+            shape.strokeBorder(color.opacity(0.9), lineWidth: 1.5)
+        } else if next {
+            LoopClock { t in
+                shape.strokeBorder(color.opacity(0.3 + 0.25 * sin(t * 2 * .pi / 1.6)),
+                                   style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+            }
+        } else {
+            shape.strokeBorder(Color.primary.opacity(0.14),
+                               style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
         }
     }
 
-    private func key(_ slot: Int32) -> String { String(cString: desktop_melee_key_name(slot)) }
-
-    /// The stick and C-stick keys, read live from the bindings.
-    private var stickKeys: String {
-        let keys = [14, 13, 15, 12].map { key(Int32($0)) } // up left down right
-        if keys == ["Up", "Left", "Down", "Right"] { return "Arrow keys or W A S D" }
-        return keys.joined(separator: " ")
+    /// "DualSense Wireless Controller" → "DualSense": the slot is small, the
+    /// full name is in the tooltip.
+    static func shortName(_ name: String) -> String {
+        for suffix in [" Wireless Controller", " Controller", " controller"]
+        where name.hasSuffix(suffix) {
+            return String(name.dropLast(suffix.count))
+        }
+        return name
     }
+}
 
-    private var cStickKeys: String {
-        [18, 17, 19, 16].map { key(Int32($0)) }.joined(separator: " ")
+/// A red dot with a ring that keeps spreading from it: listening.
+struct ListeningDot: View {
+    var body: some View {
+        LoopClock { t in
+            let x = (t / 1.4).truncatingRemainder(dividingBy: 1)
+            ZStack {
+                Circle()
+                    .stroke(PlayerColor.p1, lineWidth: 1.5)
+                    .scaleEffect(1 + x * 1.6)
+                    .opacity(t == 0 ? 0 : 0.7 * (1 - x))
+                Circle().fill(PlayerColor.p1)
+            }
+            .frame(width: 7, height: 7)
+        }
+        .frame(width: 14, height: 14)
+        .accessibilityHidden(true)
     }
+}
 
-    private var keyboardKeys: some View {
-        Section(title: "Keyboard") {
-            let buttons: [(badge: Int, slot: Int32)] = [(0, 0), (1, 1), (2, 2), (3, 3), (4, 5), (5, 6), (6, 7)]
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 3) {
-                ForEach(buttons, id: \.badge) { b in
-                    HStack(spacing: 8) {
-                        PadBadge(button: b.badge)
-                        MText(key(b.slot), size: 18)
+/// A key on a keyboard, with its name.
+struct KeyCap: View {
+    let name: String
+
+    init(_ name: String) { self.name = name }
+
+    var body: some View {
+        MText(name, size: 16)
+            .padding(.horizontal, 6)
+            .frame(minWidth: 22, minHeight: 21)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Color.primary.opacity(0.1))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.18), lineWidth: 1)
+                    .padding(.bottom, -0.5)
+            )
+            .overlay(alignment: .bottom) {
+                // The key's front edge.
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Color.black.opacity(0.35))
+                    .frame(height: 2)
+                    .padding(.horizontal, 2)
+                    .offset(y: 1)
+            }
+    }
+}
+
+/// The three device kinds, drawn (no Nintendo art): a GameCube pad (filled,
+/// with its big A and C-stick), another pad (outlined, two sticks and four
+/// face buttons) and a keyboard.
+struct DeviceIcon: View {
+    let kind: WelcomeController.DeviceKind
+
+    var body: some View {
+        Canvas { ctx, size in
+            let u = size.width / 30 // drawn on a 30 x 22 grid
+            func r(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> CGRect {
+                CGRect(x: x * u, y: y * u, width: w * u, height: h * u)
+            }
+            func circle(_ x: Double, _ y: Double, _ radius: Double) -> Path {
+                Path(ellipseIn: r(x - radius, y - radius, radius * 2, radius * 2))
+            }
+            let shading = GraphicsContext.Shading.foreground
+            switch kind {
+            case .gameCube, .otherPad:
+                var body = Path(roundedRect: r(3, 2, 24, 11), cornerRadius: 5.5 * u)
+                body.addPath(Path(roundedRect: r(2.5, 6, 9, 15), cornerRadius: 4.5 * u))
+                body.addPath(Path(roundedRect: r(18.5, 6, 9, 15), cornerRadius: 4.5 * u))
+                if kind == .gameCube {
+                    ctx.fill(body, with: shading)
+                    ctx.blendMode = .destinationOut
+                    ctx.stroke(circle(8.5, 8, 2.6), with: .color(.black), lineWidth: 1.4 * u)
+                    ctx.fill(circle(21.5, 8, 2.6), with: .color(.black))
+                    ctx.fill(circle(18, 10.8, 1.2), with: .color(.black))
+                    ctx.fill(circle(18.5, 15.5, 1.6), with: .color(.black))
+                    ctx.fill(Path(r(10.4, 15, 3.2, 1.1)), with: .color(.black))
+                    ctx.fill(Path(r(11.45, 13.95, 1.1, 3.2)), with: .color(.black))
+                } else {
+                    ctx.stroke(body, with: shading, lineWidth: 1.5 * u)
+                    ctx.stroke(circle(9.5, 13, 2.2), with: shading, lineWidth: 1.3 * u)
+                    ctx.stroke(circle(18.5, 15.5, 1.8), with: shading, lineWidth: 1.3 * u)
+                    for (x, y) in [(21.5, 6.2), (19.3, 8.4), (23.7, 8.4), (21.5, 10.6)] {
+                        ctx.fill(circle(x, y, 1.05), with: shading)
+                    }
+                    ctx.fill(Path(r(5.2, 7.9, 4.6, 1.2)), with: shading)
+                    ctx.fill(Path(r(6.9, 6.2, 1.2, 4.6)), with: shading)
+                }
+            case .keyboard:
+                let frame = Path(roundedRect: r(1.5, 3.5, 27, 15), cornerRadius: 3 * u)
+                ctx.stroke(frame, with: shading, lineWidth: 1.5 * u)
+                for row in 0..<2 {
+                    for col in 0..<6 {
+                        let x = 4.5 + Double(col) * 3.75, y = 6.8 + Double(row) * 3.4
+                        ctx.fill(Path(roundedRect: r(x, y, 2.3, 2), cornerRadius: 0.5 * u),
+                                 with: shading)
                     }
                 }
-                HStack(spacing: 8) {
-                    MText("Start", size: 16).foregroundStyle(.secondary)
-                    MText(key(4), size: 18)
-                }
+                ctx.fill(Path(roundedRect: r(9, 14, 12, 2), cornerRadius: 0.8 * u),
+                         with: shading)
             }
-            keyRow("Stick", stickKeys)
-            keyRow("C-stick", cStickKeys)
-            MParagraph("The keyboard works while Desktop Melee is the active app.", size: 15, width: 360)
-                .foregroundStyle(.secondary)
         }
-    }
-
-    private func keyRow(_ label: String, _ keys: String) -> some View {
-        HStack(spacing: 10) {
-            MText(label, size: 16).foregroundStyle(.secondary)
-                .frame(width: 70, alignment: .leading)
-            MText(keys, size: fittedSize(keys, size: 18, width: 280))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: 30, height: 22)
+        .accessibilityHidden(true)
     }
 }
 
@@ -469,29 +894,110 @@ struct WelcomePermissionStep: View {
     private static let title = "Let Desktop Melee measure your Dock"
 
     var body: some View {
+        let motion = WelcomeMotion.shared
         VStack(alignment: .leading, spacing: 14) {
             MText(Self.title, size: fittedSize(Self.title, size: 31, width: 392))
-            MParagraph("With Accessibility turned on, the stage matches your Dock to the pixel. Desktop Melee only reads where the Dock is.",
-                       size: 19, width: 392)
+            MParagraph("With Accessibility turned on, the stage matches your Dock to the pixel. "
+                       + "Desktop Melee only reads where the Dock is.", size: 19, width: 392)
                 .foregroundStyle(.secondary)
-            Section(title: "Accessibility") {
-                HStack(spacing: 10) {
-                    Image(systemName: controller.axGranted ? "checkmark.circle.fill" : "circle.dashed")
-                        .foregroundStyle(controller.axGranted ? Color.green : Color.orange)
-                    MText(controller.axGranted ? "Turned on: the Dock is measured exactly"
-                                               : "Waiting for permission...", size: 18)
+            DockMeasureSketch(exact: controller.axGranted)
+                .frame(height: 104)
+            VStack(alignment: .leading, spacing: 8) {
+                WelcomeLabel("Accessibility")
+                WelcomeBox {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            if controller.axGranted {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                    .transition(.blurPop(0.3))
+                            } else {
+                                Spinning(period: 4) {
+                                    Image(systemName: "circle.dashed")
+                                        .foregroundStyle(.orange)
+                                }
+                                .transition(.blurFade)
+                            }
+                        }
+                        .frame(width: 18, height: 18)
+                        ZStack(alignment: .leading) {
+                            MText(controller.axGranted ? "Turned on: the Dock is measured exactly"
+                                                       : "Waiting for permission...", size: 18)
+                                .id(controller.axGranted)
+                                .transition(.blurFade)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .animation(motion.pop, value: controller.axGranted)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             Spacer(minLength: 0)
-            WelcomeButton("Open System Settings") { controller.requestAccessibility() }
+            WelcomeNav(controller: controller, title: "Open System Settings") {
+                controller.requestAccessibility()
+            }
             Button { controller.goTo(.ready) } label: {
                 MText("Not now: the Dock size will be estimated", size: 16)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressStyle())
         }
+    }
+}
+
+/// The Dock with a measuring bracket over it: loose and orange while the size
+/// is estimated, snapping to the Dock's edges in green once it is measured.
+struct DockMeasureSketch: View {
+    let exact: Bool
+
+    var body: some View {
+        GeometryReader { g in
+            let w = g.size.width, h = g.size.height
+            let dock = w * 0.56
+            LoopClock { t in
+                let loose = exact ? 0 : 0.1 + 0.04 * sin(t * 2 * .pi / 2.2)
+                let span = dock * (1 + loose)
+                let color: Color = exact ? .green : .orange
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(white: 0.09))
+                    // The Dock and its icons.
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color(white: 0.3))
+                        .frame(width: dock, height: 26)
+                        .offset(x: (w - dock) / 2, y: h - 36)
+                    ForEach(0..<6, id: \.self) { i in
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Color(white: 0.45))
+                            .frame(width: 16, height: 16)
+                            .offset(x: (w - dock) / 2 + 12 + CGFloat(i) * (dock - 40) / 5,
+                                    y: h - 31)
+                    }
+                    // The bracket over it.
+                    bracket(span: span, color: color)
+                        .offset(x: (w - span) / 2, y: h - 66)
+                    MText(exact ? "Exact" : "Estimated", size: 15)
+                        .foregroundStyle(color)
+                        .frame(width: w)
+                        .offset(y: h - 92)
+                }
+            }
+            .animation(WelcomeMotion.shared.pop, value: exact)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func bracket(span: CGFloat, color: Color) -> some View {
+        Path { p in
+            p.move(to: CGPoint(x: 0, y: 12))
+            p.addLine(to: CGPoint(x: 0, y: 2))
+            p.addLine(to: CGPoint(x: span, y: 2))
+            p.addLine(to: CGPoint(x: span, y: 12))
+        }
+        .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round,
+                                          dash: exact ? [] : [5, 4]))
+        .frame(width: span, height: 14)
     }
 }
 
@@ -504,12 +1010,17 @@ struct WelcomeReadyStep: View {
         VStack(alignment: .leading, spacing: 14) {
             MenuBarSketch()
                 .frame(height: 120)
+                .entrance(0)
             MText("You're set", size: 42)
-            MParagraph("Desktop Melee lives in your menu bar. Use it to pick characters, change controls and start a match.",
-                       size: 21, width: 392)
+                .entrance(1)
+            MParagraph("Desktop Melee lives in your menu bar. Use it to pick characters, change "
+                       + "controls and start a match.", size: 21, width: 392)
                 .foregroundStyle(.secondary)
+                .entrance(2)
             Spacer(minLength: 0)
-            WelcomeButton("Start a match") { controller.startMatch() }
+            WelcomeNav(controller: controller, title: "Start a match") {
+                controller.startMatch()
+            }
             MText("or press Start on your controller", size: 16)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
@@ -517,44 +1028,57 @@ struct WelcomeReadyStep: View {
     }
 }
 
-/// The top of a screen: the menu bar, with an arrow at the Smash icon.
+/// The top of a screen: the menu bar, with an arrow bobbing at the Smash icon.
 struct MenuBarSketch: View {
     @ObservedObject private var assets = GameAssets.shared
 
     var body: some View {
         GeometryReader { g in
             let w = g.size.width
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(white: 0.09))
-                Rectangle()
-                    .fill(Color(white: 0.2))
-                    .frame(width: w, height: 30)
-                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12, topTrailingRadius: 12))
-                // Other menu bar items, then the Smash icon.
-                ForEach(0..<3) { i in
-                    Capsule().fill(Color(white: 0.35))
-                        .frame(width: 18, height: 8)
-                        .offset(x: w - 40 - CGFloat(i) * 28, y: 11)
-                }
-                Group {
-                    if assets.ready, let emblem = GameImages.template("emblem", height: 18) {
-                        Image(nsImage: emblem).renderingMode(.template)
-                    } else {
-                        Image(nsImage: SmashEmblem.image(size: 18)).renderingMode(.template)
+            LoopClock { t in
+                let bob = CGFloat(sin(t * 2 * .pi / 1.3)) * 4
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(white: 0.09))
+                    Rectangle()
+                        .fill(Color(white: 0.2))
+                        .frame(width: w, height: 30)
+                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12,
+                                                          topTrailingRadius: 12))
+                    // Other menu bar items, then the Smash icon.
+                    ForEach(0..<3) { i in
+                        Capsule().fill(Color(white: 0.35))
+                            .frame(width: 18, height: 8)
+                            .offset(x: w - 40 - CGFloat(i) * 28, y: 11)
                     }
+                    // A soft highlight behind the icon.
+                    Circle()
+                        .fill(PlayerColor.p1.opacity(0.25 + 0.1 * sin(t * 2 * .pi / 1.3)))
+                        .frame(width: 30, height: 30)
+                        .blur(radius: 6)
+                        .offset(x: w - 154, y: 0)
+                    emblem
+                        .foregroundStyle(.white)
+                        .frame(width: 22, height: 22)
+                        .offset(x: w - 150, y: 4)
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(PlayerColor.p1)
+                        .offset(x: w - 154, y: 40 + bob)
+                    MText("Smash icon", size: 18)
+                        .foregroundStyle(.secondary)
+                        .offset(x: w - 262, y: 74)
                 }
-                .foregroundStyle(.white)
-                .frame(width: 22, height: 22)
-                .offset(x: w - 150, y: 4)
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(PlayerColor.p1)
-                    .offset(x: w - 154, y: 40)
-                MText("Smash icon", size: 18)
-                    .foregroundStyle(.secondary)
-                    .offset(x: w - 262, y: 74)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var emblem: some View {
+        if assets.shown, let emblem = GameImages.template("emblem", height: 18) {
+            Image(nsImage: emblem).renderingMode(.template)
+        } else {
+            Image(nsImage: SmashEmblem.image(size: 18)).renderingMode(.template)
         }
     }
 }
