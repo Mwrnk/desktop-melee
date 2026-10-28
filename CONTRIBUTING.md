@@ -29,6 +29,9 @@ these rules for it (Claude Code reads it through `CLAUDE.md`).
 
 - Never attach, link or commit game data: disc images, extracted files,
   textures, sounds, or `DESKTOP_MELEE_DUMP` output.
+- Clips and screenshots of the game running are fine, and welcome, in pull
+  requests and issues. Attach them there; don't commit them to the
+  repository.
 - Never share an app built by a plain `desktop-melee/package.sh`. It contains
   Melee's font, copied from your own disc. Only release builds
   (`DESKTOP_MELEE_RELEASE=1`) are made to be shared.

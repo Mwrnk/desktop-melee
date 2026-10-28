@@ -87,7 +87,8 @@ reads it through the bridge:
 These are Nintendo's. A port must load them the same way, at runtime, and
 **must never put them in the repository**: no screenshots of the UI with game
 art in them, no extracted icons, no copies of the font. That is why this guide
-has no images. Anything the UI needs before the disc is in (the menu icon, the
+has no images. (A screenshot or clip attached to a pull request or issue, to
+show a change, is fine: it just doesn't get committed.) Anything the UI needs before the disc is in (the menu icon, the
 welcome window's first two steps) has to be drawn from scratch, as
 `Emblem.swift` and the welcome window's desktop sketch are.
 
