@@ -538,6 +538,11 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     @MainActor
     private func dumpPhaseOne() {
         guard let dir = ProcessInfo.processInfo.environment["DESKTOP_MELEE_DUMP"] else { return }
+        // DESKTOP_MELEE_DUMP_SYSTEM_FONT=1: as a release build draws them on a
+        // Mac that has never had the disc (no Melee font yet).
+        let env = ProcessInfo.processInfo.environment
+        GameAssets.shared.debugBeforeDisc = env["DESKTOP_MELEE_DUMP_SYSTEM_FONT"] == "1"
+        defer { GameAssets.shared.debugBeforeDisc = false }
         let samples: [(String, WelcomeStep, DiscStatus, Bool)] = [
             ("welcome_1", .welcome, .empty, false),
             ("welcome_2_empty", .disc, .empty, false),
