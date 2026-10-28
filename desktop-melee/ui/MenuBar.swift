@@ -110,6 +110,8 @@ public func desktopMeleeUIInstall(_ gameWindow: UnsafeMutableRawPointer?) {
     let controller = MenuBarController(gameWindow: window)
     MenuBarController.shared = controller
     PauseHotkey.install()
+    // Start on a controller: only if the Match tab turned it on.
+    StartButton.apply()
     // Accessory apps are not made active at launch; do it so the game window
     // gets keyboard focus (melee-pc ignores keys while it is unfocused).
     NSApp.activate(ignoringOtherApps: true)

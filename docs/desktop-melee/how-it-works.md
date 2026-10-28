@@ -474,7 +474,7 @@ stateDiagram-v2
     Match: VS match
     Match: Final Destination stretched to the Dock
     Match: items off, no self-destruct penalty
-    Idle --> Match: menu bar "Start", or Start on any controller
+    Idle --> Match: menu bar "Start", or Start on a controller (if turned on)
     Match --> Match: "Start" again restarts it
     Match --> Idle: match ends (no results screen)
 ```

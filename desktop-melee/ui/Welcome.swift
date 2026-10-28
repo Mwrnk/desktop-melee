@@ -112,14 +112,14 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         step = next
         if next == .disc, disc == .empty { startCandidateCheck() }
         if next == .controls {
-            if !debug { desktop_melee_set_start_starts_match(false) }
+            if !debug { StartButton.heldByWelcome = true }
             if padTimer == nil { startPadPolling() }
         }
         if next == .permission { watchAccessibility() }
         if next == .ready, !debug {
             DiscMemory.onboardingDone = true
-            // "Or press Start on your controller."
-            desktop_melee_set_start_starts_match(true)
+            // Listening is over: Start does what the Match tab says.
+            StartButton.heldByWelcome = false
         }
     }
 
@@ -169,7 +169,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         window.level = .popUpMenu
         goTo(next)
         if step == .controls {
-            desktop_melee_set_start_starts_match(false)
+            StartButton.heldByWelcome = true
             startPadPolling()
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -330,7 +330,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         // Not modal any more: stay above the game overlay.
         window.level = .popUpMenu
         // "Press any button" must not start a match underneath.
-        desktop_melee_set_start_starts_match(false)
+        StartButton.heldByWelcome = true
         assetsReady = GameAssets.shared.$ready.sink { [weak self] ready in
             guard ready else { return }
             // @Published announces before the value changes.
@@ -393,7 +393,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         axTimer?.invalidate()
         axTimer = nil
         assetsReady = nil
-        if !debug { desktop_melee_set_start_starts_match(true) }
+        StartButton.heldByWelcome = false
     }
 
     // MARK: Debug (DESKTOP_MELEE_WELCOME=debug)
@@ -420,8 +420,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
 
     func showDebugWindow() {
         // Pressing Start to test "Press any button" must not start a match
-        // underneath; back on when the window closes.
-        desktop_melee_set_start_starts_match(false)
+        // underneath; released when the window closes (endPhaseTwo).
+        StartButton.heldByWelcome = true
         let window = makeWindow()
         NSApp.activate(ignoringOtherApps: true)
         if !window.isVisible { window.center() }
@@ -525,7 +525,6 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         stopCheck()
         endPhaseTwo()
-        if debug { desktop_melee_set_start_starts_match(true) }
         if !modal {
             MenuBarController.shared?.focusGame()
         }

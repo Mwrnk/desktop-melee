@@ -148,7 +148,8 @@ void gm_Scene_DesktopMeleeIdle_OnEnter(void* unused) {
 void gm_Scene_DesktopMeleeIdle_OnExit(void* unused) {}
 
 /* Nothing is drawn (the overlay stays transparent) until a match is asked
- * for, from the menu bar or with Start on any controller. */
+ * for, from the menu bar or, when the Match tab allows it, with Start on any
+ * controller. */
 void gm_Scene_DesktopMeleeIdle_OnFrame(void) {
     if ((gm_GetButtonsTriggered(PAD_MAX_CONTROLLERS) & HSD_PAD_START) != 0 &&
         desktop_melee_start_starts_match())

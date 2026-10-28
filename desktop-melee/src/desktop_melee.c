@@ -599,7 +599,9 @@ void desktop_melee_request_match(void) {
     s_match_requested = true;
 }
 
-static bool s_start_starts_match = true;
+/* Start on a controller starts a match from idle: off until the menu bar
+ * app applies the Match tab's switch (StartButton in MatchTab.swift). */
+static bool s_start_starts_match = false;
 bool desktop_melee_start_starts_match(void) {
     return s_start_starts_match;
 }

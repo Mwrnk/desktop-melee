@@ -24,6 +24,7 @@ fi
 DIR="$(mktemp -d)"
 ADDED=()
 HUD_WAS=""
+START_WAS=""
 restore() {
     exec 3>&- 2> /dev/null
     for key in ${ADDED[@]+"${ADDED[@]}"}; do
@@ -31,6 +32,10 @@ restore() {
     done
     if [[ -n "${HUD_WAS}" ]]; then
         defaults write desktop-melee display.hud -string "${HUD_WAS}"
+    fi
+    if [[ -n "${START_WAS}" ]]; then
+        [[ "${START_WAS}" == 1 ]] && START_WAS=true || START_WAS=false
+        defaults write desktop-melee match.startOnController -bool "${START_WAS}"
     fi
     rm -rf "${DIR}"
 }
@@ -54,6 +59,10 @@ if [[ "$(defaults read desktop-melee onboarding.done 2> /dev/null)" != "1" ]]; t
     defaults write desktop-melee onboarding.done -bool true
     ADDED+=(onboarding.done)
 fi
+# Start on a controller starts a match (the Match tab's switch, off by default).
+START_WAS="$(defaults read desktop-melee match.startOnController 2> /dev/null)"
+[[ -z "${START_WAS}" ]] && ADDED+=(match.startOnController)
+defaults write desktop-melee match.startOnController -bool true
 # Stocks and percents in the island (display.hud; the old display.island
 # switch only matters before the app has migrated it).
 HUD_NOW="$(defaults read desktop-melee display.hud 2> /dev/null)"

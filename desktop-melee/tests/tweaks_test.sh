@@ -79,6 +79,8 @@ SWIFT
 fi
 [[ "$(defaults read desktop-melee onboarding.done 2> /dev/null)" == "1" ]] ||
     with_setting onboarding.done bool true
+# Matches start with Start on a controller (the Match tab's switch).
+with_setting match.startOnController bool true
 
 swiftc -O -o "${DIR}/window_list" desktop-melee/tools/window_list.swift 2> /dev/null ||
     { echo "FAIL: build window_list"; exit 1; }
