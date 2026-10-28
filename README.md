@@ -62,6 +62,13 @@ You only do this once per version. If you granted Accessibility (see
 [Permissions](#permissions)), macOS forgets it with each new version: remove
 Desktop Melee from the Accessibility list and add it again.
 
+### Disc setup
+
+On first launch, a welcome window asks for your disc image, checks it, has
+you pick up a controller and shows where Desktop Melee lives in the menu bar:
+
+<p align="center"><img src="docs/desktop-melee/images/disc-setup.gif" alt="The welcome window: the disc is verified, then Grab a controller with the keyboard keys, then You're set" width="440"></p>
+
 ## Requirements
 
 - A Mac with Apple silicon. Tested on macOS 27 only. If you build the app
