@@ -3,6 +3,9 @@
 Bug reports and pull requests are welcome. Desktop Melee is small and run by
 one person, so keeping changes focused helps a lot.
 
+Working with a coding agent? [AGENTS.md](AGENTS.md) is the short version of
+these rules for it (Claude Code reads it through `CLAUDE.md`).
+
 ## Scope
 
 - **macOS only, for now; Windows and Linux are open for help.** melee-pc
