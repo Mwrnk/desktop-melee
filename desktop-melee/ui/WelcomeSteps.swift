@@ -217,18 +217,9 @@ struct WelcomeIntroStep: View {
 /// A desktop drawn with shapes (no Nintendo art): menu bar, two windows, the
 /// Dock as the stage with P1 and P2 hopping on it, and the screen edge dashed
 /// as the blast zone.
-///
-/// Every loop in the welcome window only moves, turns, scales or fades a
-/// layer, inside a LoopClock around just the moving part: a shape whose
-/// geometry or color changes each frame is redrawn and sent to the window
-/// server every frame, which stalls the game's main thread.
+/// Every loop in the welcome window is a `Looping` (WelcomeMotion.swift),
+/// around just the part that moves.
 struct DesktopSketch: View {
-    /// How high a fighter is at `t`: hops for half of each period, then stands.
-    private static func hop(_ t: Double, period: Double, phase: Double) -> CGFloat {
-        let x = (t / period + phase).truncatingRemainder(dividingBy: 1)
-        return x < 0.5 ? CGFloat(sin(x * 2 * .pi)) * 16 : 0
-    }
-
     var body: some View {
         GeometryReader { g in
             let w = g.size.width, h = g.size.height
@@ -267,10 +258,9 @@ struct DesktopSketch: View {
     }
 
     private func fighter(_ color: Color, period: Double, phase: Double) -> some View {
-        LoopClock { t in
+        Looping(.hop(height: 16, period: period, phase: phase)) {
             Circle().fill(color)
                 .frame(width: 16, height: 16)
-                .offset(y: -Self.hop(t, period: period, phase: phase))
         }
     }
 }
@@ -440,8 +430,6 @@ struct ProgressBar: View {
             }
         }
         .frame(height: 5)
-        // Progress arrives in steps (a timer); glide between them.
-        .animation(.linear(duration: 0.15), value: fraction)
     }
 }
 
@@ -765,10 +753,9 @@ struct PlayerSlot: View {
         if press != nil {
             shape.strokeBorder(color.opacity(0.9), lineWidth: 1.5)
         } else if next {
-            LoopClock { t in
-                shape.strokeBorder(color.opacity(0.55),
+            Looping(.breathe(low: 0.25, period: 1.6)) {
+                shape.strokeBorder(color.opacity(0.7),
                                    style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                    .opacity(0.55 + 0.45 * sin(t * 2 * .pi / 1.6))
             }
         } else {
             shape.strokeBorder(Color.primary.opacity(0.14),
@@ -790,17 +777,13 @@ struct PlayerSlot: View {
 /// A red dot with a ring that keeps spreading from it: listening.
 struct ListeningDot: View {
     var body: some View {
-        LoopClock { t in
-            let x = (t / 1.4).truncatingRemainder(dividingBy: 1)
-            ZStack {
-                Circle()
-                    .stroke(PlayerColor.p1, lineWidth: 1.5)
-                    .scaleEffect(1 + x * 1.6)
-                    .opacity(t == 0 ? 0 : 0.7 * (1 - x))
-                Circle().fill(PlayerColor.p1)
+        ZStack {
+            Looping(.ripple(scale: 2.6, period: 1.4)) {
+                Circle().stroke(PlayerColor.p1, lineWidth: 1.2)
             }
-            .frame(width: 7, height: 7)
+            Circle().fill(PlayerColor.p1)
         }
+        .frame(width: 7, height: 7)
         .frame(width: 14, height: 14)
         .accessibilityHidden(true)
     }
@@ -981,9 +964,14 @@ struct DockMeasureSketch: View {
                 }
                 // The bracket over it, Dock-wide, stretched while loose (a
                 // scale, so it is never redrawn).
-                LoopClock { t in
-                    bracket(span: dock, color: color)
-                        .scaleEffect(x: exact ? 1 : 1.1 + 0.04 * sin(t * 2 * .pi / 2.2))
+                Group {
+                    if exact {
+                        bracket(span: dock, color: color)
+                    } else {
+                        Looping(.stretch(from: 1.06, to: 1.16, period: 2.2)) {
+                            bracket(span: dock, color: color)
+                        }
+                    }
                 }
                 .offset(x: (w - dock) / 2, y: h - 66)
                 MText(exact ? "Exact" : "Estimated", size: 15)
@@ -1059,24 +1047,22 @@ struct MenuBarSketch: View {
                 }
                 // A soft highlight behind the icon (a gradient, not a blur),
                 // breathing with the arrow.
-                LoopClock { t in
+                Looping(.breathe(low: 0.4, period: 1.3)) {
                     Circle()
                         .fill(RadialGradient(colors: [PlayerColor.p1.opacity(0.5),
                                                       PlayerColor.p1.opacity(0)],
                                              center: .center, startRadius: 0, endRadius: 18))
                         .frame(width: 36, height: 36)
-                        .opacity(0.7 + 0.3 * sin(t * 2 * .pi / 1.3))
                 }
                 .offset(x: w - 157, y: -3)
                 emblem
                     .foregroundStyle(.white)
                     .frame(width: 22, height: 22)
                     .offset(x: w - 150, y: 4)
-                LoopClock { t in
+                Looping(.bob(distance: 4, period: 1.3)) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 30, weight: .bold))
                         .foregroundStyle(PlayerColor.p1)
-                        .offset(y: CGFloat(sin(t * 2 * .pi / 1.3)) * 4)
                 }
                 .offset(x: w - 154, y: 40)
                 MText("Smash icon", size: 18)
