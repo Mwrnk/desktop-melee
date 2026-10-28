@@ -2426,8 +2426,8 @@ extern "C" int pc_get_key_binding(int slot) {
 
 /* desktop-melee: the menu bar app reads and changes the sound settings through
  * these, sharing launcher.cfg with the launcher and the F1 menu. */
-extern "C" void pc_prefs_get_audio(float* volume, float* music, float* sfx, bool* mute,
-                                   bool* reverb) {
+extern "C" void pc_prefs_get_audio(
+    float* volume, float* music, float* sfx, bool* mute, bool* reverb) {
     *volume = prefs.volume;
     *music = prefs.music_volume;
     *sfx = prefs.sfx_volume;

@@ -17,7 +17,7 @@ bool desktop_melee_hide_stage(void);
  * of the screen, and the screen is DESKTOP_MELEE_SCALE units wide (default 490,
  * Final Destination's blastzone width). False when not in overlay mode. */
 bool desktop_melee_camera(float* eye_x, float* eye_y, float* eye_z, float* interest_x,
-                float* interest_y, float* interest_z, float* fov);
+    float* interest_y, float* interest_z, float* fov);
 
 /* Screen shake (Display tab): when off, Melee's quake offset is not applied
  * to the overlay camera. Applies immediately. */

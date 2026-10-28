@@ -7,15 +7,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-static inline uint16_t be16(const uint8_t* p) { return (uint16_t)(p[0] << 8 | p[1]); }
+static inline uint16_t be16(const uint8_t* p) {
+    return (uint16_t)(p[0] << 8 | p[1]);
+}
 
-static inline uint8_t x4(unsigned v) { return (uint8_t)(v << 4 | v); }
-static inline uint8_t x5(unsigned v) { return (uint8_t)(v << 3 | v >> 2); }
-static inline uint8_t x6(unsigned v) { return (uint8_t)(v << 2 | v >> 4); }
-static inline uint8_t x3(unsigned v) { return (uint8_t)(v << 5 | v << 2 | v >> 1); }
+static inline uint8_t x4(unsigned v) {
+    return (uint8_t)(v << 4 | v);
+}
+static inline uint8_t x5(unsigned v) {
+    return (uint8_t)(v << 3 | v >> 2);
+}
+static inline uint8_t x6(unsigned v) {
+    return (uint8_t)(v << 2 | v >> 4);
+}
+static inline uint8_t x3(unsigned v) {
+    return (uint8_t)(v << 5 | v << 2 | v >> 1);
+}
 
-static void put(uint8_t* out, int w, int h, int x, int y, uint8_t r, uint8_t g, uint8_t b,
-                uint8_t a) {
+static void put(
+    uint8_t* out, int w, int h, int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
     if (x >= w || y >= h) {
         return;
     }
@@ -168,7 +178,8 @@ uint8_t* gctex_decode(const GcTexture* tex) {
                         src[32 + i * 2 + 1], src[i * 2]);
         break;
     case GCTEX_CI4: /* 8x8 tiles of 4-bit palette indices */
-        if (tex->tlut == NULL) break;
+        if (tex->tlut == NULL)
+            break;
         for (int ty = 0; ty < h; ty += 8)
             for (int tx = 0; tx < w; tx += 8)
                 for (int y = 0; y < 8; y++)
@@ -180,7 +191,8 @@ uint8_t* gctex_decode(const GcTexture* tex) {
                     }
         break;
     case GCTEX_CI8: /* 8x4 tiles of 8-bit palette indices */
-        if (tex->tlut == NULL) break;
+        if (tex->tlut == NULL)
+            break;
         for (int ty = 0; ty < h; ty += 4)
             for (int tx = 0; tx < w; tx += 8)
                 for (int y = 0; y < 4; y++)

@@ -84,8 +84,8 @@ int desktop_melee_costume_count(int ckind);
 /* Melee's text font: character entries (Shift-JIS, atlas glyph, margins)
  * and the atlas glyphs' 32x32 coverage, one byte per pixel. */
 int desktop_melee_font_glyph_count(void);
-bool desktop_melee_font_glyph_info(int i, uint8_t* sjis_hi, uint8_t* sjis_lo, int* atlas, int* left,
-                         int* right);
+bool desktop_melee_font_glyph_info(
+    int i, uint8_t* sjis_hi, uint8_t* sjis_lo, int* atlas, int* left, int* right);
 const uint8_t* desktop_melee_font_glyph_alpha(int i);
 
 /* Named graphics from the game ("emblem", "melee"): coverage, one byte per

@@ -12,7 +12,9 @@
 #include "disc_check.h"
 
 /* The game's log (src/pc), which disc_open.c writes to; unused here. */
-void pc_log_line(const char* fmt, ...) { (void)fmt; }
+void pc_log_line(const char* fmt, ...) {
+    (void)fmt;
+}
 
 int main(int argc, char** argv) {
     long cancel_ms = -1;
@@ -32,7 +34,7 @@ int main(int argc, char** argv) {
         const DesktopMeleeDiscState before = desktop_melee_disc_check_poll(check, NULL, NULL, 0);
         desktop_melee_disc_check_free(check);
         printf("canceled: freed while %s\n",
-               before == DESKTOP_MELEE_DISC_CHECKING ? "checking" : "finished");
+            before == DESKTOP_MELEE_DISC_CHECKING ? "checking" : "finished");
         return 4;
     }
     char message[512];
@@ -40,13 +42,15 @@ int main(int argc, char** argv) {
     DesktopMeleeDiscState state;
     const struct timespec tick = {0, 100 * 1000 * 1000};
     while ((state = desktop_melee_disc_check_poll(check, &percent, message, sizeof message)) ==
-           DESKTOP_MELEE_DISC_CHECKING) {
+           DESKTOP_MELEE_DISC_CHECKING)
+    {
         nanosleep(&tick, NULL);
     }
     desktop_melee_disc_check_free(check);
     static const char* names[] = {"checking", "verified", "rejected", "modified", "error"};
     printf("%s: %s\n", names[state], message);
-    return state == DESKTOP_MELEE_DISC_VERIFIED ? 0 : state == DESKTOP_MELEE_DISC_REJECTED ? 1
-                                         : state == DESKTOP_MELEE_DISC_MODIFIED  ? 2
-                                                                       : 3;
+    return state == DESKTOP_MELEE_DISC_VERIFIED ? 0 :
+           state == DESKTOP_MELEE_DISC_REJECTED ? 1 :
+           state == DESKTOP_MELEE_DISC_MODIFIED ? 2 :
+                                                  3;
 }

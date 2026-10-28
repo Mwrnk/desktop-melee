@@ -53,8 +53,8 @@ struct DesktopMeleeDiscCheck {
             const auto verified = launcher::verify_disc(path, cancel, progress);
             switch (verified.state) {
             case launcher::VerifyState::Verified:
-                finish(DESKTOP_MELEE_DISC_VERIFIED,
-                       "Super Smash Bros. Melee · USA · 1.02 · verified");
+                finish(
+                    DESKTOP_MELEE_DISC_VERIFIED, "Super Smash Bros. Melee · USA · 1.02 · verified");
                 break;
             case launcher::VerifyState::Mismatch:
                 finish(DESKTOP_MELEE_DISC_MODIFIED, k_modified);
@@ -77,9 +77,8 @@ extern "C" DesktopMeleeDiscCheck* desktop_melee_disc_check_start(const char* pat
     return check;
 }
 
-extern "C" DesktopMeleeDiscState desktop_melee_disc_check_poll(DesktopMeleeDiscCheck* check,
-                                                               int* percent, char* message,
-                                                               int message_size) {
+extern "C" DesktopMeleeDiscState desktop_melee_disc_check_poll(
+    DesktopMeleeDiscCheck* check, int* percent, char* message, int message_size) {
     if (check == nullptr) {
         return DESKTOP_MELEE_DISC_ERROR;
     }

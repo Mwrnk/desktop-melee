@@ -43,13 +43,13 @@ void desktop_melee_request_quit(void);
 /* Screen size and Dock top, in points, measured once at startup. */
 void desktop_melee_set_screen_geometry(float width_pt, float height_pt, float floor_pt);
 #ifdef __APPLE__
-void desktop_melee_mac_screen_geometry(SDL_Window* window, float* width_pt, float* height_pt,
-                             float* floor_pt);
+void desktop_melee_mac_screen_geometry(
+    SDL_Window* window, float* width_pt, float* height_pt, float* floor_pt);
 /* The Dock bar on the overlay's screen, in points (y up from that screen's
  * bottom). False when the Dock is not on that screen. Exact when
  * Accessibility is granted, otherwise estimated from the Dock's settings. */
-bool desktop_melee_mac_dock_frame(float screen_w, float screen_h, float* left, float* right,
-                        float* top, bool* exact);
+bool desktop_melee_mac_dock_frame(
+    float screen_w, float screen_h, float* left, float* right, float* top, bool* exact);
 #endif
 
 /* Notch (camera housing) of the overlay's screen, in points from its left and

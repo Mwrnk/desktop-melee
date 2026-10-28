@@ -23,8 +23,8 @@ typedef struct DesktopMeleeDiscCheck DesktopMeleeDiscCheck;
 DesktopMeleeDiscCheck* desktop_melee_disc_check_start(const char* path);
 /* The state so far, the hash progress (0..100) and, once finished, a message
  * for the player. Never blocks. */
-DesktopMeleeDiscState desktop_melee_disc_check_poll(DesktopMeleeDiscCheck* check, int* percent,
-                                                    char* message, int message_size);
+DesktopMeleeDiscState desktop_melee_disc_check_poll(
+    DesktopMeleeDiscCheck* check, int* percent, char* message, int message_size);
 /* Cancels the check if it is still running, waits for it, and frees it. */
 void desktop_melee_disc_check_free(DesktopMeleeDiscCheck* check);
 
