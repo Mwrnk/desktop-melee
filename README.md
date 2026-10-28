@@ -98,7 +98,8 @@ controller, and shows how to play.
 **The first launch takes several minutes** ("Getting Melee ready…"): the game
 builds all of its graphics shaders once, so matches never stutter. Later
 launches take a few seconds. Then click the stage icon in the menu bar
-and press **Start**, or press Start on a controller.
+and press **Start**. To start matches with Start on a controller too, turn
+on **Start starts a match** in the Match tab.
 
 To run it from a terminal with the log visible:
 

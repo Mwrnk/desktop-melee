@@ -1025,9 +1025,11 @@ struct WelcomeReadyStep: View {
             WelcomeNav(controller: controller, title: "Start a match") {
                 controller.startMatch()
             }
-            MText("or press Start on your controller", size: 16)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
+            if StartButton.enabled {
+                MText("or press Start on your controller", size: 16)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+            }
         }
     }
 }

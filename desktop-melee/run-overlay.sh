@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run Desktop Melee: the transparent desktop overlay with its menu bar app.
 # It boots into an empty idle scene; start a match from the Smash icon in the
-# menu bar (or with Start on a controller).
+# menu bar (or with Start on a controller, once the Match tab turns it on).
 #
 # It opens the app bundle (desktop-melee/package.sh builds and installs it) rather than
 # the bare binary, so macOS gives the Accessibility permission to Desktop

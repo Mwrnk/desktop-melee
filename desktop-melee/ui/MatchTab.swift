@@ -3,6 +3,30 @@
 import DesktopMeleeBridge
 import SwiftUI
 
+/// Whether Start on a controller starts a match from idle: only when the
+/// player turns it on (the Match tab; off by default), and never while the
+/// welcome window listens for presses.
+enum StartButton {
+    private static var defaults: UserDefaults { Settings.defaults }
+
+    static var enabled: Bool {
+        get { defaults.bool(forKey: "match.startOnController") }
+        set {
+            defaults.set(newValue, forKey: "match.startOnController")
+            apply()
+        }
+    }
+
+    /// The welcome window is listening for presses ("Press any button").
+    static var heldByWelcome = false {
+        didSet { apply() }
+    }
+
+    static func apply() {
+        desktop_melee_set_start_starts_match(enabled && !heldByWelcome)
+    }
+}
+
 /// The match rules, remembered across launches and handed to the game's
 /// GM_DESKTOP_MELEE mode (desktop_melee_set_match_setup) whenever they change. The players part
 /// of the setup is left as the game has it (the Players tab owns it).
@@ -16,6 +40,9 @@ final class MatchSettings: ObservableObject {
     @Published var minutes: Int {
         didSet { Self.defaults.set(minutes, forKey: "match.minutes"); push() }
     }
+    @Published var startOnController: Bool {
+        didSet { StartButton.enabled = startOnController }
+    }
     @Published private(set) var active = false
     /// Pause and hide is on: the fighters are hidden.
     @Published private(set) var hidden = false
@@ -24,6 +51,7 @@ final class MatchSettings: ObservableObject {
         let d = Self.defaults
         stocks = d.object(forKey: "match.stocks") as? Int ?? 4
         minutes = d.object(forKey: "match.minutes") as? Int ?? 7
+        startOnController = StartButton.enabled
         push()
     }
 
@@ -107,6 +135,19 @@ struct MatchTab: View {
                                size: 17, width: 262)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            Section(title: "Controllers") {
+                Toggle(isOn: $match.startOnController) {
+                    OptionLabel(symbol: "gamecontroller", text: "Start starts a match")
+                }
+                .toggleStyle(.switch)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onChange(of: match.startOnController) { _ in MenuSound.confirm.play() }
+                MParagraph("Press Start on any controller to start a match with this setup.",
+                           size: 15, width: 300)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             MText("Rule changes apply to the next match.", size: 15)
