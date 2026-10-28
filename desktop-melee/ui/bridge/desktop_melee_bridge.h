@@ -12,10 +12,10 @@ void pc_prefs_save(void);
 /* The disc check (desktop-melee/src/disc_check.cpp). */
 #include "../../src/disc_check.h"
 
-/* Hide or show the game overlay (desktop-melee/src/overlay_mac.m). Hidden while the
+/* Hide or show the game overlay (desktop-melee/src/platform.h). Hidden while the
  * welcome window waits for a disc: nothing is drawn yet, and a full-screen
  * window there only gets in the way. */
-void desktop_melee_mac_overlay_set_hidden(bool hidden);
+void desktop_melee_platform_overlay_set_hidden(bool hidden);
 
 /* The welcome window (desktop-melee/ui/Welcome.swift): buttons held on a controller
  * port (HSD_PAD_* bits; desktop-melee/game/gmdesktopmelee.c) and a keyboard binding's key

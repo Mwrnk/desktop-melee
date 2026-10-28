@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
+#include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_log.h>
 
 #include "gctex.h"
@@ -22,11 +22,9 @@ static void dump_named(const char* name, const uint8_t* rgba, int w, int h) {
         return;
     }
     char path[1024];
-    mkdir(dir, 0755);
+    SDL_CreateDirectory(dir);
     snprintf(path, sizeof path, "%s/%s.png", dir, name);
-#ifdef __APPLE__
-    desktop_melee_mac_write_png(path, rgba, w, h);
-#endif
+    desktop_melee_platform_write_png(path, rgba, w, h);
 }
 
 static bool seen(const void* data) {
@@ -52,12 +50,10 @@ void desktop_melee_asset_found(const char* tag, int index, const struct GcTextur
         return;
     }
     char path[1024];
-    mkdir(dir, 0755);
+    SDL_CreateDirectory(dir);
     snprintf(path, sizeof path, "%s/%s_%03d_%dx%d_f%d.png", dir, tag, index, tex->width,
         tex->height, tex->format);
-#ifdef __APPLE__
-    desktop_melee_mac_write_png(path, rgba, tex->width, tex->height);
-#endif
+    desktop_melee_platform_write_png(path, rgba, tex->width, tex->height);
     free(rgba);
 }
 
@@ -216,16 +212,10 @@ const uint8_t* desktop_melee_font_glyph_alpha(int i) {
     return s_glyph_alpha[i];
 }
 
-#ifdef __APPLE__
-void desktop_melee_ui_assets_ready(void); /* desktop-melee/ui/GameAssets.swift */
-#endif
-
 void desktop_melee_assets_ready(void) {
-#ifdef __APPLE__
     if (desktop_melee_overlay_enabled()) {
-        desktop_melee_ui_assets_ready();
+        desktop_melee_platform_ui_assets_ready();
     }
-#endif
 }
 
 /* ---- named graphics ------------------------------------------------------ */

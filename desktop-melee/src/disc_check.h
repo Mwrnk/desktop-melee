@@ -27,6 +27,11 @@ DesktopMeleeDiscState desktop_melee_disc_check_poll(
     DesktopMeleeDiscCheck* check, int* percent, char* message, int message_size);
 /* Cancels the check if it is still running, waits for it, and frees it. */
 void desktop_melee_disc_check_free(DesktopMeleeDiscCheck* check);
+/* Checks the image at path and waits for the result, which can take a few
+ * seconds (the full-image hash). For a UI that has nothing to show
+ * meanwhile, such as the platform skeletons. */
+DesktopMeleeDiscState desktop_melee_disc_check_wait(
+    const char* path, char* message, int message_size);
 
 #ifdef __cplusplus
 }
