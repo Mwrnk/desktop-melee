@@ -914,14 +914,24 @@ struct WelcomePermissionStep: View {
                 .frame(width: 18, height: 18)
                 ZStack(alignment: .leading) {
                     let status = granted ? "Turned on: measured exactly"
-                                         : "Waiting for permission..."
+                        : controller.axRequested ? "Turn on Desktop Melee in the list"
+                        : "Not turned on yet"
                     MText(status, size: fittedSize(status, size: 18, width: 350))
-                        .id(granted)
+                        .id(status)
                         .transition(.fade)
                 }
             }
             .padding(.horizontal, 4)
             .animation(motion.pop, value: granted)
+            // macOS ties the permission to each build's signature, so after an
+            // update an old entry can show as on and still not count.
+            if controller.axRequested && !granted {
+                MParagraph("Already on? Select Desktop Melee, remove it with the minus "
+                           + "button, then add it again with plus. macOS forgets it after "
+                           + "each update.", size: 16, width: 392)
+                    .foregroundStyle(.secondary)
+                    .transition(.fade)
+            }
             Spacer(minLength: 0)
             // Once it is on, the step is done: on to the last one.
             WelcomeNav(controller: controller,
@@ -933,10 +943,15 @@ struct WelcomePermissionStep: View {
                 }
             }
             if !granted {
+                // A real button, like Back: skipping is a fine answer.
                 Button { controller.goTo(.ready) } label: {
-                    MText("Not now: the Dock size will be estimated", size: 16)
-                        .foregroundStyle(.secondary)
+                    MText("Not now: estimate the Dock size", size: 19)
                         .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.primary.opacity(0.1))
+                        )
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressStyle())

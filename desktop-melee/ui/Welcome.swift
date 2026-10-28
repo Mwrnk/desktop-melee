@@ -165,6 +165,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         pressed = []
         keyboardOpen = false
         axGranted = false
+        axRequested = false
         window.level = .popUpMenu
         goTo(next)
         if step == .controls {
@@ -180,10 +181,13 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
     // MARK: Step 4
 
     @Published var axGranted = false
+    /// Open System Settings was clicked: the step says what to do there.
+    @Published var axRequested = false
     private var axTimer: Timer?
 
     /// Open System Settings: the system dialog, then watch for the switch.
     func requestAccessibility() {
+        axRequested = true
         if debug {
             // No system dialog: the switch is turned on a moment later.
             let delay = 1.2 / WelcomeMotion.shared.speed
@@ -584,6 +588,8 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         sample.keyboardOpen = false
         sample.step = .permission
         WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_4.png")
+        sample.axRequested = true
+        WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_4_requested.png")
         sample.axGranted = true
         WelcomeController.dump(WelcomeView(controller: sample), to: "\(dir)/welcome_4_granted.png")
         sample.step = .ready
