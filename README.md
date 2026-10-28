@@ -7,7 +7,7 @@ play.
 
 ![Desktop Melee on a Mac desktop](docs/desktop-melee/images/overlay.svg)
 
-**Beta (0.1.0), macOS only for now.** Windows and Linux are in progress.
+**Beta (0.1.1), macOS only for now.** Windows and Linux are in progress.
 
 **You need your own Melee disc image (USA 1.02). No game data is included.**
 Desktop Melee is a fan project. It is not affiliated with or endorsed by
@@ -181,7 +181,7 @@ Desktop Melee stands on the work of:
 
 ## Status
 
-Version 0.1.0, the first beta: [download the app](#download) or build it
+Version 0.1.1, a beta: [download the app](#download) or build it
 yourself. macOS only for now; Windows and Linux are in progress.
 
 Works: two-player VS matches (human or CPU) on the Dock, every character and
