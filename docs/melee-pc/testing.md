@@ -12,7 +12,7 @@ ninja -C build unit_tests && ctest --test-dir build -L melee --output-on-failure
 ```
 
 CI also runs `python3 tools/check_style.py` and `python3 tools/compile_check.py`
-on every push (see [CODING_STYLE.md](../CODING_STYLE.md)).
+on every push (see [CODING_STYLE.md](CODING_STYLE.md)).
 
 ## Netplay implementation checks
 

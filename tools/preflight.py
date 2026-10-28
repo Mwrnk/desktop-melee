@@ -263,7 +263,7 @@ def main(argv):
                 print(f"        fix:      {fix}")
     print(f"\n{len(results) - failed} passed, {failed} failed")
     if failed:
-        print("docs/building.md has the supported version table and the container build.")
+        print("docs/melee-pc/building.md has the supported version table and the container build.")
     return 1 if failed else 0
 
 

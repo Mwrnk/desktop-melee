@@ -103,6 +103,7 @@ desktop-melee/run-overlay.sh path/to/melee.iso
 | `extern/aurora/` | aurora: GameCube SDK → WebGPU/SDL3. |
 | `docs/desktop-melee/` | Desktop Melee's documentation. |
 | `MELEE-PC.md` | melee-pc's own README: the port Desktop Melee is built on. |
+| `docs/melee-pc/` | melee-pc's docs, roadmap and coding style, kept as they were. |
 
 ## Before you share anything
 

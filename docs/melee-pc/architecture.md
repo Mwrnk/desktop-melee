@@ -24,7 +24,7 @@ extern/aurora (vendored)      GX command processor -> WebGPU (Dawn: Vulkan,
 ```
 
 The boundary rule and the per-layer coding conventions are in
-[CODING_STYLE.md](../CODING_STYLE.md#1-architectural-overview--the-two-layers).
+[CODING_STYLE.md](CODING_STYLE.md#1-architectural-overview--the-two-layers).
 
 - `src/melee`, `src/sysdolphin` - game code from the decomp, adapted to the PC
   data model ([porting-notes.md](porting-notes.md)). Divergences from upstream
