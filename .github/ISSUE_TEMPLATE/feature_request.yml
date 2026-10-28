@@ -1,0 +1,21 @@
+name: Feature request
+description: An idea for Desktop Melee.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [roadmap](https://github.com/Mwrnk/desktop-melee#roadmap) and existing issues first.
+        Desktop Melee changes the camera, the stage and the HUD around the game, never Melee's movement, hitboxes or knockback.
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What should Desktop Melee do, and when would you use it?
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Sketches, videos, how other apps do it.

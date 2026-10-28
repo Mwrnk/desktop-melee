@@ -11,8 +11,8 @@ body:
     id: version
     attributes:
       label: Version
-      description: The commit you built from (`git rev-parse --short HEAD`).
-      placeholder: 5c518ae
+      description: The release you downloaded, or the commit you built from (`git rev-parse --short HEAD`).
+      placeholder: 0.1.0
     validations:
       required: true
   - type: input
@@ -63,8 +63,10 @@ body:
     attributes:
       label: Log
       description: |
-        Quit Desktop Melee from the menu bar, then run `DESKTOP_MELEE_LOG=desktop-melee.log desktop-melee/run-overlay.sh` from the repository, reproduce the problem and attach `desktop-melee.log`.
-        Paste the last 30 lines here if the file is small; attach the whole file otherwise.
+        Quit Desktop Melee from the menu bar, then start it from Terminal so it writes a log to your Desktop:
+        `open -n -W --stdout ~/Desktop/desktop-melee.log --stderr ~/Desktop/desktop-melee.log "/Applications/Desktop Melee.app"`
+        Reproduce the problem, quit, and attach `desktop-melee.log`. (Built from source? `DESKTOP_MELEE_LOG=desktop-melee.log desktop-melee/run-overlay.sh` does the same.)
+        Paste the last 30 lines here if the file is small; attach the whole file otherwise. Check it first: it may name the folder your disc image is in.
       render: text
     validations:
       required: true
