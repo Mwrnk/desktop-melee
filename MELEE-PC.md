@@ -1,5 +1,9 @@
 # melee-pc
 
+> **This is melee-pc's README, kept as it was.** Desktop Melee is built on
+> melee-pc; its own README is [README.md](README.md). The features, downloads,
+> status and roadmap below are melee-pc's, not Desktop Melee's.
+
 **Beta, for testing only.** "melee-pc" is a working name. Online play with
 rollback netcode is in development. This branch includes LAN, internet friend
 codes, Unranked matchmaking and ranked best-of-three sets. See

@@ -1,5 +1,8 @@
 # Melee-PC Development Roadmap
 
+> **This is melee-pc's roadmap, kept as it was.** Desktop Melee's own roadmap
+> is in its [README](https://github.com/Mwrnk/desktop-melee#roadmap).
+
 Scope and sequencing for **Melee-PC**, a native source-level PC port of *Super
 Smash Bros. Melee* (NTSC-U 1.02) on the **Aurora** engine (Dawn/WebGPU, SDL3)
 and modern C11/C++20.
