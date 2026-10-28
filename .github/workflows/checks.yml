@@ -1,0 +1,47 @@
+name: Checks
+
+# What every pull request must pass: the style check and a macOS build of the
+# game with Desktop Melee in it. Neither needs a disc image or a signing
+# certificate. Packaging (desktop-melee/package.sh) and the tests stay local:
+# they need your disc and take over the screen.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  style:
+    name: Style
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format 18
+        run: pipx install clang-format==18.1.8
+
+      - name: Check style
+        run: desktop-melee/tests/check_style.sh
+
+  build:
+    name: Build (macOS, Apple silicon)
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        # The same list as the README's Requirements.
+        run: |
+          xcodebuild -version
+          brew install gcc cmake ninja sdl3 zstd libpng freetype
+
+      - name: Build
+        run: desktop-melee/build.sh
