@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* macOS window settings for the desktop overlay that SDL has no API for. */
+/* The macOS implementation of desktop-melee/src/platform.h: window settings
+ * for the desktop overlay that SDL has no API for, the Dock and notch, and
+ * the hooks into the SwiftUI menu bar app (desktop-melee/ui). */
 #import <AppKit/AppKit.h>
 #import <ApplicationServices/ApplicationServices.h>
 #import <ImageIO/ImageIO.h>
@@ -9,6 +11,14 @@
 #include <SDL3/SDL_video.h>
 
 #include "desktop_melee.h"
+
+/* The SwiftUI menu bar app (desktop-melee/ui, @_cdecl). */
+void desktop_melee_ui_install(void* game_window); /* MenuBar.swift; the NSWindow */
+void desktop_melee_ui_focus_game(void);           /* MenuBar.swift */
+void desktop_melee_ui_loading_begin(void);        /* Loading.swift */
+void desktop_melee_ui_loading_end(void);
+const char* desktop_melee_ui_choose_disc(const char* candidate); /* DiscMemory.swift */
+void desktop_melee_ui_assets_ready(void);                        /* GameAssets.swift */
 
 /* The overlay window, and the screen it is on (the menu's choice). */
 static NSWindow* s_overlay;
@@ -42,13 +52,13 @@ static DesktopMeleeClickThroughGuard* s_click_guard;
 
 /* Pause and hide: the overlay goes fully transparent but keeps drawing, so
  * the game loop never stalls on a hidden window. */
-void desktop_melee_mac_overlay_set_faded(bool faded) {
+void desktop_melee_platform_overlay_set_faded(bool faded) {
     if (s_overlay != nil) {
         s_overlay.alphaValue = faded ? 0.0 : 1.0;
     }
 }
 
-void desktop_melee_mac_overlay_set_hidden(bool hidden) {
+void desktop_melee_platform_overlay_set_hidden(bool hidden) {
     if (s_overlay == nil) {
         return;
     }
@@ -64,9 +74,21 @@ static NSScreen* overlay_screen(void) {
     return s_overlay.screen != nil ? s_overlay.screen : NSScreen.mainScreen;
 }
 
-void desktop_melee_overlay_mac_setup(SDL_Window* window) {
-    NSWindow* nswindow = (__bridge NSWindow*)SDL_GetPointerProperty(
+void desktop_melee_platform_configure(AuroraConfig* config) {
+    (void)config; /* aurora's overlay window is what macOS needs */
+}
+
+bool desktop_melee_platform_window_covers_screen(void) {
+    return true;
+}
+
+static NSWindow* cocoa_window(SDL_Window* window) {
+    return (__bridge NSWindow*)SDL_GetPointerProperty(
         SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
+}
+
+void desktop_melee_platform_overlay_setup(SDL_Window* window) {
+    NSWindow* nswindow = cocoa_window(window);
     if (nswindow == nil) {
         SDL_Log("desktop-melee: no NSWindow for the overlay");
         return;
@@ -101,8 +123,6 @@ void desktop_melee_overlay_mac_setup(SDL_Window* window) {
                                   NSWindowCollectionBehaviorIgnoresCycle;
     SDL_Log("desktop-melee: overlay window %.0fx%.0f, click-through", nswindow.frame.size.width,
             nswindow.frame.size.height);
-    /* The menu bar app (desktop-melee/ui, Swift). */
-    desktop_melee_ui_install((__bridge void*)nswindow);
     /* The Metal layer must be non-opaque or the compositor ignores our alpha. */
     NSMutableArray<NSView*>* views = [NSMutableArray arrayWithObject:nswindow.contentView];
     while (views.count > 0) {
@@ -125,10 +145,9 @@ void desktop_melee_overlay_mac_setup(SDL_Window* window) {
     }
 }
 
-void desktop_melee_mac_screen_geometry(SDL_Window* window, float* width_pt, float* height_pt,
-                             float* floor_pt) {
-    NSWindow* nswindow = (__bridge NSWindow*)SDL_GetPointerProperty(
-        SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
+void desktop_melee_platform_screen_geometry(SDL_Window* window, float* width_pt,
+                                            float* height_pt, float* floor_pt) {
+    NSWindow* nswindow = cocoa_window(window);
     NSScreen* screen = nswindow.screen != nil ? nswindow.screen : NSScreen.mainScreen;
     const NSRect frame = screen.frame;
     const NSRect visible = screen.visibleFrame;
@@ -234,8 +253,8 @@ static void dock_frame_estimate(float screen_w, float* left, float* right) {
     *right = 0.5f * (screen_w + width);
 }
 
-bool desktop_melee_mac_dock_frame(float screen_w, float screen_h, float* left, float* right,
-                        float* top, bool* exact) {
+bool desktop_melee_platform_dock_frame(float screen_w, float screen_h, float* left,
+                                       float* right, float* top, bool* exact) {
     (void)screen_h;
     NSScreen* screen = overlay_screen();
     bool on_screen = false;
@@ -261,7 +280,7 @@ bool desktop_melee_mac_dock_frame(float screen_w, float screen_h, float* left, f
     return true;
 }
 
-void desktop_melee_mac_notch(float* left, float* right, float* height) {
+void desktop_melee_platform_notch(float* left, float* right, float* height) {
     NSScreen* screen = overlay_screen();
     const NSRect frame = screen.frame;
     if (@available(macOS 12.0, *)) {
@@ -299,7 +318,7 @@ void desktop_melee_mac_notch(float* left, float* right, float* height) {
 static NSWindow* s_island;
 static void island_create(NSRect rect, float height);
 
-void desktop_melee_mac_island_place(float left, float right, float height) {
+void desktop_melee_platform_island_place(float left, float right, float height) {
     const NSRect frame = overlay_screen().frame;
     const NSRect rect =
         NSMakeRect(frame.origin.x + left, NSMaxY(frame) - height, right - left, height);
@@ -361,7 +380,8 @@ static void island_create(NSRect rect, float height) {
 }
 
 /* Writes straight RGBA8 pixels as a PNG (asset dumps). */
-void desktop_melee_mac_write_png(const char* path, const uint8_t* rgba, int width, int height) {
+void desktop_melee_platform_write_png(const char* path, const uint8_t* rgba, int width,
+                                      int height) {
     CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
     CGContextRef ctx = CGBitmapContextCreate((void*)rgba, (size_t)width, (size_t)height, 8,
                                              (size_t)width * 4, space,
@@ -401,3 +421,24 @@ void desktop_melee_ax_request(void) {
     NSDictionary* opts = @{(__bridge NSString*)kAXTrustedCheckOptionPrompt : @YES};
     AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)opts);
 }
+
+/* ---- the menu bar app (desktop-melee/ui) --------------------------------- */
+
+void desktop_melee_platform_ui_install(SDL_Window* window) {
+    NSWindow* nswindow = cocoa_window(window);
+    if (nswindow != nil) {
+        desktop_melee_ui_install((__bridge void*)nswindow);
+    }
+}
+
+void desktop_melee_platform_ui_focus_game(void) { desktop_melee_ui_focus_game(); }
+
+void desktop_melee_platform_ui_loading_begin(void) { desktop_melee_ui_loading_begin(); }
+
+void desktop_melee_platform_ui_loading_end(void) { desktop_melee_ui_loading_end(); }
+
+const char* desktop_melee_platform_ui_choose_disc(const char* candidate) {
+    return desktop_melee_ui_choose_disc(candidate);
+}
+
+void desktop_melee_platform_ui_assets_ready(void) { desktop_melee_ui_assets_ready(); }
