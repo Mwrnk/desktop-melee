@@ -19,7 +19,7 @@ endif ()
 set(_melee_toolchain_fix
     "  fix:      CC=gcc CXX=g++ cmake -B build -G Ninja   (delete the stale cache first)\n"
     "            python3 tools/preflight.py                # checks the whole toolchain\n"
-    "            docs/building.md lists the supported versions.")
+    "            docs/melee-pc/building.md lists the supported versions.")
 
 if (NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
     message(FATAL_ERROR

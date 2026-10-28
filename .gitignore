@@ -4,17 +4,9 @@ dist/
 __pycache__/
 .zsign_cache/
 
-# Internal working notes stay local; only the screenshots are published.
+# Internal working notes stay local; only these two folders are published.
 docs/*
-!docs/screenshots/
-!docs/CODING_STYLE.md
-!docs/netcode-plan.md
-!docs/architecture.md
-!docs/building.md
-!docs/debugging.md
-!docs/porting-notes.md
-!docs/testing.md
-!docs/site/
+!docs/melee-pc/
 !docs/desktop-melee/
 
 # Android build outputs (CI builds these from source).

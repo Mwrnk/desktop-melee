@@ -55,12 +55,14 @@ Desktop Melee also changes these melee-pc files (GPL-3.0 section 5a). Each
 change is tagged `desktop-melee` in a comment and listed in
 [`docs/desktop-melee/how-it-works.md`](../docs/desktop-melee/how-it-works.md#where-desktop-melee-touches-melee-pc):
 
-- Build: `CMakeLists.txt` (includes `desktop-melee/desktop-melee.cmake`), `.gitignore`.
+- Build: `CMakeLists.txt` (includes `desktop-melee/desktop-melee.cmake`), `.gitignore`,
+  `cmake/MeleeToolchainCheck.cmake` and `tools/preflight.py` (doc path only).
 - Port code: `src/pc/main.c`, `src/pc/launcher.cpp`.
 - Repository: `.github/workflows/build.yml` (manual only, release job removed),
   `.github/ISSUE_TEMPLATE/`; `.github/RELEASE_NOTES.md` and
   `.github/workflows/pages.yml` removed; melee-pc's `README.md` is now
-  `MELEE-PC.md`.
+  `MELEE-PC.md`, and its `ROADMAP.md`, `CODING_STYLE.md`, `docs/*.md`,
+  `docs/screenshots/` and `docs/site/` moved to `docs/melee-pc/` (links fixed).
 - aurora: `extern/aurora/include/aurora/aurora.h`, `extern/aurora/lib/aurora.cpp`,
   `extern/aurora/lib/window.cpp`, `extern/aurora/lib/webgpu/gpu.cpp`,
   `extern/aurora/lib/webgpu/gpu.hpp`, `extern/aurora/lib/gx/gx.cpp`,

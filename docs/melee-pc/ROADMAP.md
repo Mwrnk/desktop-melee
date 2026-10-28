@@ -6,7 +6,7 @@ and modern C11/C++20.
 
 > **This file carries no feature status.** What is done, partly done or not
 > started lives in one place, the status table in
-> [MELEE-PC.md](MELEE-PC.md#status). Everything below is the plan: what each phase
+> [MELEE-PC.md](../../MELEE-PC.md#status). Everything below is the plan: what each phase
 > covers and why it is ordered that way. Items stay listed after they ship so
 > the design rationale does not get deleted with them.
 
@@ -89,7 +89,7 @@ Focus: Cutting-edge display performance and competitive practice tools (UnclePun
 
 ### Phase 4: Serverless Online Netcode (BitTorrent-Style P2P Matchmaking & Rollback)
 
-Focus: Zero-delay online play with completely decentralized, serverless peer matchmaking. Design document: [docs/netcode-plan.md](docs/netcode-plan.md).
+Focus: Zero-delay online play with completely decentralized, serverless peer matchmaking. Design document: [docs/netcode-plan.md](netcode-plan.md).
 
 - [ ] **Native Rollback Netcode** (Slippi model, re-implemented on native memory):
   * Input delay 0–4 (auto from RTT), 7-frame rollback window, repeat-last-input prediction, snapshots only on predicted frames.
@@ -115,4 +115,4 @@ Focus: Zero-delay online play with completely decentralized, serverless peer mat
 
 ## Feedback & Community
 
-Discussions, bug reports, and feature proposals are welcome on [GitHub Issues](https://github.com/999sian/melee-pc/issues) and [Discord](https://discord.gg/aurt34svq). The current feature-status table is in [MELEE-PC.md](MELEE-PC.md#status).
+Discussions, bug reports, and feature proposals are welcome on [GitHub Issues](https://github.com/999sian/melee-pc/issues) and [Discord](https://discord.gg/aurt34svq). The current feature-status table is in [MELEE-PC.md](../../MELEE-PC.md#status).

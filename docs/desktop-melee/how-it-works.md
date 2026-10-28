@@ -170,7 +170,7 @@ Every place where melee-pc had to change the decompiled code is tagged
 `/* PORT: ... */`, and every Desktop Melee hook is tagged `desktop-melee` inside
 `#ifdef TARGET_PC`. The rest is the decompiled code as it is. The long list
 of 64-bit bug classes (8-byte pointers, signed `char` on ARM, `bool`
-clamping, missing `GXEnd`) is in [porting-notes.md](../porting-notes.md).
+clamping, missing `GXEnd`) is in [porting-notes.md](../melee-pc/porting-notes.md).
 
 ---
 
@@ -217,7 +217,7 @@ flowchart LR
 - **Input:** keyboard and touch are sampled at 1000 Hz on their own thread.
   An official GameCube controller adapter is read raw at 1000 Hz too.
 
-More: [architecture.md](../architecture.md) (threads, memory map) and the
+More: [architecture.md](../melee-pc/architecture.md) (threads, memory map) and the
 [melee-pc README](../../MELEE-PC.md).
 
 ---

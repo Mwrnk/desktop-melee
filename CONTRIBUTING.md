@@ -43,12 +43,28 @@ desktop-melee/tests/run_all.sh    # every test, about 9 minutes
 [docs/desktop-melee/how-it-works.md](docs/desktop-melee/how-it-works.md)
 explains the code layer by layer.
 
+## Code style
+
+- **C, C++ and Objective-C:** format with the repository's `.clang-format`
+  (100 columns).
+- **Every new file** starts with `SPDX-License-Identifier: GPL-3.0-or-later`
+  in a comment, like the existing ones.
+- **Hooks in melee-pc files** stay a few lines long and call into
+  `desktop-melee/`. Each one gets a comment that starts with `desktop-melee`,
+  so `git grep -n 'desktop-melee' -- src extern` finds them all.
+- **Comments explain why**, not what the next line does.
+- **Swift:** the menu bar app and the welcome window run on the game loop's
+  main thread. Don't use SwiftUI-driven loops (`TimelineView`,
+  `.repeatForever`) or blur filters there; run looping motion on Core
+  Animation layers instead.
+
+melee-pc's own guide, [docs/melee-pc/CODING_STYLE.md](docs/melee-pc/CODING_STYLE.md),
+still applies to its code under `src/` and `extern/`.
+
 ## Pull requests
 
-- Keep changes outside `desktop-melee/` small, and tag them with a
-  `desktop-melee` comment, like the existing hooks. Add any newly changed
-  melee-pc file to the list in `licenses/LICENSE.md`.
-- Follow `CODING_STYLE.md` (100 columns).
+- Keep changes outside `desktop-melee/` small and tagged (see Code style).
+  Add any newly changed melee-pc file to the list in `licenses/LICENSE.md`.
 - Say how you tested it, and on which macOS version and Mac.
 
 By contributing, you agree that your changes are licensed under

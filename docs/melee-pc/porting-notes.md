@@ -1,7 +1,7 @@
 # Porting notes
 
 The data model and the bug classes that come with it. Coding rules that follow
-from these live in [CODING_STYLE.md](../CODING_STYLE.md); the harnesses that
+from these live in [CODING_STYLE.md](CODING_STYLE.md); the harnesses that
 find the next batch are in [testing.md](testing.md#harnesses-for-port-bugs).
 
 ## Data model
@@ -52,7 +52,7 @@ Bug classes that keep coming back when bringing up a new scene:
   `char x = -1; if (x < 5)` (ifPrize's intro counter) never counts on ARM.
 
 Tag every such divergence from upstream with a `/* PORT: ... */` comment
-(see [CODING_STYLE.md](../CODING_STYLE.md#tagging-porting-divergences)).
+(see [CODING_STYLE.md](CODING_STYLE.md#tagging-porting-divergences)).
 
 ## Regions
 

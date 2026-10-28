@@ -47,18 +47,18 @@ in the [status table](#status) below.
 
 ## Screenshots
 
-![Title screen](docs/screenshots/title.png)
+![Title screen](docs/melee-pc/screenshots/title.png)
 
 | | |
 |---|---|
-| ![Main menu](docs/screenshots/main-menu.png) | ![Character select](docs/screenshots/character-select.png) |
+| ![Main menu](docs/melee-pc/screenshots/main-menu.png) | ![Character select](docs/melee-pc/screenshots/character-select.png) |
 | Main menu | Character select |
-| ![Stage select](docs/screenshots/stage-select.png) | ![Gameplay](docs/screenshots/gameplay-4p.png) |
+| ![Stage select](docs/melee-pc/screenshots/stage-select.png) | ![Gameplay](docs/melee-pc/screenshots/gameplay-4p.png) |
 | Stage select | Four-player match |
-| ![Gameplay](docs/screenshots/gameplay-onett.png) | ![Settings](docs/screenshots/pc-settings.png) |
+| ![Gameplay](docs/melee-pc/screenshots/gameplay-onett.png) | ![Settings](docs/melee-pc/screenshots/pc-settings.png) |
 | Onett | F1 settings overlay |
 
-![Launcher](docs/screenshots/launcher.png)
+![Launcher](docs/melee-pc/screenshots/launcher.png)
 
 ## Status
 
@@ -101,7 +101,7 @@ table is right and the other one is stale.
 | RetroAchievements | planned | |
 
 The phases behind the planned rows, and why they are ordered that way, are in
-[ROADMAP.md](ROADMAP.md).
+[ROADMAP.md](docs/melee-pc/ROADMAP.md).
 
 ## Download
 
@@ -117,7 +117,7 @@ list the per-platform files, known issues and requirements.
 **Melee USA revision 2 (NTSC-U 1.02, GALE01)** is the supported disc. A
 **Europe (PAL, GALP01)** image also boots, with the limits listed in the
 [status table](#status) and the mechanics in
-[porting-notes.md](docs/porting-notes.md#regions). `.iso`,
+[porting-notes.md](docs/melee-pc/porting-notes.md#regions). `.iso`,
 `.gcm`, `.ciso` and `.rvz` images are accepted. A valid disc path on the
 command line boots straight in; a missing or invalid one returns to the
 launcher. Settings and the selected path live in `launcher.cfg` in SDL's
@@ -132,7 +132,7 @@ SHA-1 against the
 progress and cancellation, and is not cached between launches. Unverified images
 still play; PAL images have no reference hash and always report as unverified.
 
-Building from source: [docs/building.md](docs/building.md).
+Building from source: [docs/melee-pc/building.md](docs/melee-pc/building.md).
 
 ## Requirements
 
@@ -244,7 +244,7 @@ per-device `.controller` files; keyboard bindings and the menu shortcut share
 
 Diagnostic knobs (`MELEE_DEBUG`, `MELEE_FPS`, `MELEE_HEAP_CHECK`, the
 `AURORA_*` draw filters, ...) are listed in
-[docs/debugging.md](docs/debugging.md#diagnostic-environment-variables).
+[docs/melee-pc/debugging.md](docs/melee-pc/debugging.md#diagnostic-environment-variables).
 
 ## Community
 
@@ -253,12 +253,12 @@ Diagnostic knobs (`MELEE_DEBUG`, `MELEE_FPS`, `MELEE_HEAP_CHECK`, the
   known issues.
 - [Bug report form](https://github.com/999sian/melee-pc/issues/new?template=bug_report.yml);
   attach the log (`melee-pc.log` on Windows, see
-  [docs/debugging.md](docs/debugging.md#log-files)).
+  [docs/melee-pc/debugging.md](docs/melee-pc/debugging.md#log-files)).
 
 ## Netplay (LAN and direct IP, prototype)
 
 Two copies of the game play a rollback match over UDP (`src/pc/net.c`;
-design and current state in [docs/netcode-plan.md](docs/netcode-plan.md)).
+design and current state in [docs/melee-pc/netcode-plan.md](docs/melee-pc/netcode-plan.md)).
 Both must run the same build **and the same game image**, with no memory card
 (`--no-card`). The LAN lobby announces a 32-bit id of the disc it booted
 (region, revision, file-table shape and the DOL, so a code mod counts), and a
@@ -380,19 +380,19 @@ python3 tools/net_determinism.py --only linux,linux-flip   # ~2 min, no Proton
 
 ## Documentation
 
-- [docs/building.md](docs/building.md) - toolchain, packaging, cross-compiling
+- [docs/melee-pc/building.md](docs/melee-pc/building.md) - toolchain, packaging, cross-compiling
   for Windows, Android, iOS and macOS.
-- [docs/testing.md](docs/testing.md) - unit tests, drive/capture tools,
+- [docs/melee-pc/testing.md](docs/melee-pc/testing.md) - unit tests, drive/capture tools,
   port-bug harnesses.
-- [docs/debugging.md](docs/debugging.md) - log files, crash handler, gdb, heap
+- [docs/melee-pc/debugging.md](docs/melee-pc/debugging.md) - log files, crash handler, gdb, heap
   check, diagnostic environment variables.
-- [docs/porting-notes.md](docs/porting-notes.md) - the big-endian data model,
+- [docs/melee-pc/porting-notes.md](docs/melee-pc/porting-notes.md) - the big-endian data model,
   LP64 bug classes, PAL support.
-- [docs/architecture.md](docs/architecture.md) - layers, threads, memory map,
+- [docs/melee-pc/architecture.md](docs/melee-pc/architecture.md) - layers, threads, memory map,
   aurora.
-- [CODING_STYLE.md](CODING_STYLE.md) - coding standards and verification
+- [CODING_STYLE.md](docs/melee-pc/CODING_STYLE.md) - coding standards and verification
   procedure; run `python3 tools/check_style.py` before opening pull requests.
-- [ROADMAP.md](ROADMAP.md) - scope and sequencing of the remaining phases. It
+- [ROADMAP.md](docs/melee-pc/ROADMAP.md) - scope and sequencing of the remaining phases. It
   carries no status; the [table above](#status) does.
 
 ## License
