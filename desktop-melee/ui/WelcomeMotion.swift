@@ -22,8 +22,10 @@ final class WelcomeMotion: ObservableObject {
     @Published var values = Values()
     /// Playback speed: below 1 is slow motion (debug only).
     @Published var speed = 1.0
-    /// Debug: act as if Reduce Motion were on.
-    @Published var forceReduce = false
+    /// Debug: act as if Reduce Motion were on (DESKTOP_MELEE_REDUCE_MOTION=1
+    /// from launch).
+    @Published var forceReduce =
+        ProcessInfo.processInfo.environment["DESKTOP_MELEE_REDUCE_MOTION"] == "1"
 
     var reduce: Bool {
         forceReduce || NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -62,9 +64,10 @@ extension EnvironmentValues {
 
 // MARK: - Transitions
 
-/// Faded, blurred and moved by (x, y) when `active`. The blur blends the two
-/// states of a crossfade into one.
-struct BlurShift: ViewModifier {
+/// Faded, scaled and moved by (x, y) when `active`. No blur: the window server
+/// draws every filter, and one over a view that redraws every frame (the
+/// looping sketches) stalled it, and with it the game's main thread.
+struct FadeShift: ViewModifier {
     let active: Bool
     var x: CGFloat = 0
     var y: CGFloat = 0
@@ -73,27 +76,26 @@ struct BlurShift: ViewModifier {
     func body(content: Content) -> some View {
         content
             .opacity(active ? 0 : 1)
-            .blur(radius: active ? 4 : 0)
             .scaleEffect(active ? scale : 1)
             .offset(x: active ? x : 0, y: active ? y : 0)
     }
 }
 
 extension AnyTransition {
-    /// A crossfade through a light blur.
-    static var blurFade: AnyTransition {
-        .modifier(active: BlurShift(active: true), identity: BlurShift(active: false))
+    /// A plain crossfade, as a modifier so it composes like the others.
+    static var fade: AnyTransition {
+        .modifier(active: FadeShift(active: true), identity: FadeShift(active: false))
     }
 
     /// Rises `y` points into place while fading in.
-    static func blurRise(_ y: CGFloat) -> AnyTransition {
-        .modifier(active: BlurShift(active: true, y: y), identity: BlurShift(active: false))
+    static func rise(_ y: CGFloat) -> AnyTransition {
+        .modifier(active: FadeShift(active: true, y: y), identity: FadeShift(active: false))
     }
 
     /// Grows from `scale` while fading in (never from nothing).
-    static func blurPop(_ scale: CGFloat) -> AnyTransition {
-        .modifier(active: BlurShift(active: true, scale: scale),
-                  identity: BlurShift(active: false))
+    static func pop(_ scale: CGFloat) -> AnyTransition {
+        .modifier(active: FadeShift(active: true, scale: scale),
+                  identity: FadeShift(active: false))
     }
 
     /// One step to the next: the new one slides in from the side it comes
@@ -101,9 +103,9 @@ extension AnyTransition {
     static func welcomeStep(forward: Bool, motion: WelcomeMotion) -> AnyTransition {
         let slide = motion.reduce ? 0 : CGFloat(motion.values.stepSlide)
         let insertion = AnyTransition.modifier(
-            active: BlurShift(active: true, x: forward ? slide : -slide),
-            identity: BlurShift(active: false))
-        let removal = AnyTransition.blurFade
+            active: FadeShift(active: true, x: forward ? slide : -slide),
+            identity: FadeShift(active: false))
+        let removal = AnyTransition.fade
             .animation(motion.easeOut(motion.values.stepDuration * 0.6))
         return .asymmetric(insertion: insertion, removal: removal)
     }
@@ -123,7 +125,6 @@ struct Entrance: ViewModifier {
         let visible = shown || still
         content
             .opacity(visible ? 1 : 0)
-            .blur(radius: visible ? 0 : 4)
             .offset(y: visible || motion.reduce ? 0 : 10)
             .onAppear {
                 withAnimation(motion.easeOut(0.5).delay(Double(index) * motion.values.stagger

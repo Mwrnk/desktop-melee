@@ -62,11 +62,11 @@ struct WelcomeView: View {
                 if assets.shown, let emblem = GameImages.template("emblem", height: 28) {
                     Image(nsImage: emblem)
                         .renderingMode(.template)
-                        .transition(.blurPop(0.4))
+                        .transition(.pop(0.4))
                 } else {
                     Image(nsImage: NSApp.applicationIconImage)
                         .resizable()
-                        .transition(.blurFade)
+                        .transition(.fade)
                 }
             }
             .frame(width: 30, height: 30)
@@ -216,7 +216,12 @@ struct WelcomeIntroStep: View {
 
 /// A desktop drawn with shapes (no Nintendo art): menu bar, two windows, the
 /// Dock as the stage with P1 and P2 hopping on it, and the screen edge dashed
-/// as the blast zone, slowly running.
+/// as the blast zone.
+///
+/// Every loop in the welcome window only moves, turns, scales or fades a
+/// layer, inside a LoopClock around just the moving part: a shape whose
+/// geometry or color changes each frame is redrawn and sent to the window
+/// server every frame, which stalls the game's main thread.
 struct DesktopSketch: View {
     /// How high a fighter is at `t`: hops for half of each period, then stands.
     private static func hop(_ t: Double, period: Double, phase: Double) -> CGFloat {
@@ -227,43 +232,46 @@ struct DesktopSketch: View {
     var body: some View {
         GeometryReader { g in
             let w = g.size.width, h = g.size.height
-            LoopClock { t in
-                ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(white: 0.09))
-                    Rectangle()
-                        .fill(Color(white: 0.2))
-                        .frame(width: w, height: 14)
-                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12,
-                                                          topTrailingRadius: 12))
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(white: 0.22))
-                        .frame(width: w * 0.42, height: h * 0.42)
-                        .offset(x: w * 0.12, y: h * 0.22)
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(white: 0.18))
-                        .frame(width: w * 0.32, height: h * 0.34)
-                        .offset(x: w * 0.56, y: h * 0.14)
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(white: 0.32))
-                        .frame(width: w * 0.5, height: 16)
-                        .offset(x: w * 0.25, y: h - 26)
-                    Circle().fill(PlayerColor.p1)
-                        .frame(width: 16, height: 16)
-                        .offset(x: w * 0.36, y: h - 43 - Self.hop(t, period: 1.5, phase: 0))
-                    Circle().fill(PlayerColor.p2)
-                        .frame(width: 16, height: 16)
-                        .offset(x: w * 0.6, y: h - 43 - Self.hop(t, period: 1.8, phase: 0.4))
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(PlayerColor.p1.opacity(0.8),
-                                      style: StrokeStyle(lineWidth: 1.5, dash: [6, 5],
-                                                         dashPhase: CGFloat(-t * 8)))
-                }
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(white: 0.09))
+                Rectangle()
+                    .fill(Color(white: 0.2))
+                    .frame(width: w, height: 14)
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12,
+                                                      topTrailingRadius: 12))
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(white: 0.22))
+                    .frame(width: w * 0.42, height: h * 0.42)
+                    .offset(x: w * 0.12, y: h * 0.22)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(white: 0.18))
+                    .frame(width: w * 0.32, height: h * 0.34)
+                    .offset(x: w * 0.56, y: h * 0.14)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(white: 0.32))
+                    .frame(width: w * 0.5, height: 16)
+                    .offset(x: w * 0.25, y: h - 26)
+                fighter(PlayerColor.p1, period: 1.5, phase: 0)
+                    .offset(x: w * 0.36, y: h - 43)
+                fighter(PlayerColor.p2, period: 1.8, phase: 0.4)
+                    .offset(x: w * 0.6, y: h - 43)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(PlayerColor.p1.opacity(0.8),
+                                  style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
             }
         }
         .accessibilityElement()
         .accessibilityLabel("Your desktop: the Dock is the stage, the screen edges are the "
                             + "blast zones")
+    }
+
+    private func fighter(_ color: Color, period: Double, phase: Double) -> some View {
+        LoopClock { t in
+            Circle().fill(color)
+                .frame(width: 16, height: 16)
+                .offset(y: -Self.hop(t, period: period, phase: phase))
+        }
     }
 }
 
@@ -294,7 +302,7 @@ struct WelcomeDiscStep: View {
             ZStack(alignment: .topLeading) {
                 status
                     .id(statusKey)
-                    .transition(.blurRise(8))
+                    .transition(.rise(8))
             }
             .animation(WelcomeMotion.shared.step, value: statusKey)
             Spacer(minLength: 0)
@@ -520,9 +528,9 @@ struct WelcomeControlsStep: View {
             }
             ZStack(alignment: .topLeading) {
                 if controller.keyboardOpen {
-                    keyboardKeys.transition(.blurRise(-8))
+                    keyboardKeys.transition(.rise(-8))
                 } else {
-                    players.transition(.blurRise(8))
+                    players.transition(.rise(8))
                 }
             }
             .animation(motion.step, value: controller.keyboardOpen)
@@ -634,7 +642,7 @@ struct WelcomeControlsStep: View {
 }
 
 /// One kind of device. Lights up in a player's color when that player's press
-/// came from one: the border, a glow and a hop of the icon.
+/// came from one: the border, a tint and a hop of the icon.
 struct DeviceCard<Icon: View, Caption: View>: View {
     let lit: Color?
     @ViewBuilder let icon: Icon
@@ -662,7 +670,6 @@ struct DeviceCard<Icon: View, Caption: View>: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(lit ?? .clear, lineWidth: 2)
         )
-        .shadow(color: (lit ?? .clear).opacity(0.5), radius: lit == nil ? 0 : 8)
         .animation(motion.pop, value: lit)
         .contentShape(Rectangle())
     }
@@ -726,16 +733,16 @@ struct PlayerSlot: View {
             if let press {
                 let name = Self.shortName(press.name)
                 MText(name, size: fittedSize(name, size: 18, width: 104))
-                    .transition(.blurRise(4))
+                    .transition(.rise(4))
                     .help(press.name)
                 Spacer(minLength: 0)
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
-                    .transition(.blurPop(0.3))
+                    .transition(.pop(0.3))
             } else {
                 MText("Waiting", size: 16)
                     .foregroundStyle(.tertiary)
-                    .transition(.blurFade)
+                    .transition(.fade)
                 Spacer(minLength: 0)
             }
         }
@@ -759,8 +766,9 @@ struct PlayerSlot: View {
             shape.strokeBorder(color.opacity(0.9), lineWidth: 1.5)
         } else if next {
             LoopClock { t in
-                shape.strokeBorder(color.opacity(0.3 + 0.25 * sin(t * 2 * .pi / 1.6)),
+                shape.strokeBorder(color.opacity(0.55),
                                    style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                    .opacity(0.55 + 0.45 * sin(t * 2 * .pi / 1.6))
             }
         } else {
             shape.strokeBorder(Color.primary.opacity(0.14),
@@ -910,13 +918,13 @@ struct WelcomePermissionStep: View {
                             if controller.axGranted {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.green)
-                                    .transition(.blurPop(0.3))
+                                    .transition(.pop(0.3))
                             } else {
                                 Spinning(period: 4) {
                                     Image(systemName: "circle.dashed")
                                         .foregroundStyle(.orange)
                                 }
-                                .transition(.blurFade)
+                                .transition(.fade)
                             }
                         }
                         .frame(width: 18, height: 18)
@@ -924,7 +932,7 @@ struct WelcomePermissionStep: View {
                             MText(controller.axGranted ? "Turned on: the Dock is measured exactly"
                                                        : "Waiting for permission...", size: 18)
                                 .id(controller.axGranted)
-                                .transition(.blurFade)
+                                .transition(.fade)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -955,33 +963,33 @@ struct DockMeasureSketch: View {
         GeometryReader { g in
             let w = g.size.width, h = g.size.height
             let dock = w * 0.56
-            LoopClock { t in
-                let loose = exact ? 0 : 0.1 + 0.04 * sin(t * 2 * .pi / 2.2)
-                let span = dock * (1 + loose)
-                let color: Color = exact ? .green : .orange
-                ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(white: 0.09))
-                    // The Dock and its icons.
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color(white: 0.3))
-                        .frame(width: dock, height: 26)
-                        .offset(x: (w - dock) / 2, y: h - 36)
-                    ForEach(0..<6, id: \.self) { i in
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(Color(white: 0.45))
-                            .frame(width: 16, height: 16)
-                            .offset(x: (w - dock) / 2 + 12 + CGFloat(i) * (dock - 40) / 5,
-                                    y: h - 31)
-                    }
-                    // The bracket over it.
-                    bracket(span: span, color: color)
-                        .offset(x: (w - span) / 2, y: h - 66)
-                    MText(exact ? "Exact" : "Estimated", size: 15)
-                        .foregroundStyle(color)
-                        .frame(width: w)
-                        .offset(y: h - 92)
+            let color: Color = exact ? .green : .orange
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(white: 0.09))
+                // The Dock and its icons.
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color(white: 0.3))
+                    .frame(width: dock, height: 26)
+                    .offset(x: (w - dock) / 2, y: h - 36)
+                ForEach(0..<6, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color(white: 0.45))
+                        .frame(width: 16, height: 16)
+                        .offset(x: (w - dock) / 2 + 12 + CGFloat(i) * (dock - 40) / 5,
+                                y: h - 31)
                 }
+                // The bracket over it, Dock-wide, stretched while loose (a
+                // scale, so it is never redrawn).
+                LoopClock { t in
+                    bracket(span: dock, color: color)
+                        .scaleEffect(x: exact ? 1 : 1.1 + 0.04 * sin(t * 2 * .pi / 2.2))
+                }
+                .offset(x: (w - dock) / 2, y: h - 66)
+                MText(exact ? "Exact" : "Estimated", size: 15)
+                    .foregroundStyle(color)
+                    .frame(width: w)
+                    .offset(y: h - 92)
             }
             .animation(WelcomeMotion.shared.pop, value: exact)
         }
@@ -1035,40 +1043,45 @@ struct MenuBarSketch: View {
     var body: some View {
         GeometryReader { g in
             let w = g.size.width
-            LoopClock { t in
-                let bob = CGFloat(sin(t * 2 * .pi / 1.3)) * 4
-                ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(white: 0.09))
-                    Rectangle()
-                        .fill(Color(white: 0.2))
-                        .frame(width: w, height: 30)
-                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12,
-                                                          topTrailingRadius: 12))
-                    // Other menu bar items, then the Smash icon.
-                    ForEach(0..<3) { i in
-                        Capsule().fill(Color(white: 0.35))
-                            .frame(width: 18, height: 8)
-                            .offset(x: w - 40 - CGFloat(i) * 28, y: 11)
-                    }
-                    // A soft highlight behind the icon.
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(white: 0.09))
+                Rectangle()
+                    .fill(Color(white: 0.2))
+                    .frame(width: w, height: 30)
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12,
+                                                      topTrailingRadius: 12))
+                // Other menu bar items, then the Smash icon.
+                ForEach(0..<3) { i in
+                    Capsule().fill(Color(white: 0.35))
+                        .frame(width: 18, height: 8)
+                        .offset(x: w - 40 - CGFloat(i) * 28, y: 11)
+                }
+                // A soft highlight behind the icon (a gradient, not a blur),
+                // breathing with the arrow.
+                LoopClock { t in
                     Circle()
-                        .fill(PlayerColor.p1.opacity(0.25 + 0.1 * sin(t * 2 * .pi / 1.3)))
-                        .frame(width: 30, height: 30)
-                        .blur(radius: 6)
-                        .offset(x: w - 154, y: 0)
-                    emblem
-                        .foregroundStyle(.white)
-                        .frame(width: 22, height: 22)
-                        .offset(x: w - 150, y: 4)
+                        .fill(RadialGradient(colors: [PlayerColor.p1.opacity(0.5),
+                                                      PlayerColor.p1.opacity(0)],
+                                             center: .center, startRadius: 0, endRadius: 18))
+                        .frame(width: 36, height: 36)
+                        .opacity(0.7 + 0.3 * sin(t * 2 * .pi / 1.3))
+                }
+                .offset(x: w - 157, y: -3)
+                emblem
+                    .foregroundStyle(.white)
+                    .frame(width: 22, height: 22)
+                    .offset(x: w - 150, y: 4)
+                LoopClock { t in
                     Image(systemName: "arrow.up")
                         .font(.system(size: 30, weight: .bold))
                         .foregroundStyle(PlayerColor.p1)
-                        .offset(x: w - 154, y: 40 + bob)
-                    MText("Smash icon", size: 18)
-                        .foregroundStyle(.secondary)
-                        .offset(x: w - 262, y: 74)
+                        .offset(y: CGFloat(sin(t * 2 * .pi / 1.3)) * 4)
                 }
+                .offset(x: w - 154, y: 40)
+                MText("Smash icon", size: 18)
+                    .foregroundStyle(.secondary)
+                    .offset(x: w - 262, y: 74)
             }
         }
     }

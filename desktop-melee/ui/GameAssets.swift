@@ -292,10 +292,10 @@ struct MText: View {
             Image(nsImage: image)
                 .renderingMode(.template)
                 .accessibilityLabel(text)
-                .transition(.blurFade)
+                .transition(.fade)
         } else {
             Text(text).font(.system(size: size * 0.6, weight: .bold))
-                .transition(.blurFade)
+                .transition(.fade)
         }
     }
 }
