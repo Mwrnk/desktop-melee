@@ -62,7 +62,7 @@ explains the code layer by layer.
 - **Swift:** the menu bar app and the welcome window run on the game loop's
   main thread. Don't use SwiftUI-driven loops (`TimelineView`,
   `.repeatForever`) or blur filters there; run looping motion on Core
-  Animation layers instead.
+  Animation layers instead (`Looping` in `WelcomeMotion.swift`).
 
 melee-pc's own guide, [docs/melee-pc/CODING_STYLE.md](docs/melee-pc/CODING_STYLE.md),
 still applies to its code under `src/` and `extern/`.
