@@ -501,7 +501,7 @@ final class WelcomeController: NSObject, ObservableObject, NSWindowDelegate {
         if let window { return window }
         // A panel that takes clicks without becoming key, so the game keeps
         // the keyboard in phase 2 (runModal still makes it key in phase 1).
-        let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 440, height: 560),
+        let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 440, height: 570),
                              styleMask: [.titled, .closable, .fullSizeContentView],
                              backing: .buffered, defer: false)
         window.becomesKeyOnlyIfNeeded = true
