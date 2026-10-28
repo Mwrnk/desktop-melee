@@ -372,5 +372,6 @@ more here:
   [`licenses/LICENSE.md`](../../licenses/LICENSE.md).
 - **No game data in the repository**: no disc images, no
   `DESKTOP_MELEE_DUMP` output, no portraits, icons or fonts from the disc, and
-  no screenshots that show them.
+  no screenshots that show them. A clip or screenshot of your port running is
+  welcome in the pull request itself: attach it there.
 - **Melee USA 1.02 only.** The disc check is the same on every system.

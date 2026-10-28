@@ -28,6 +28,9 @@ version, plus what agents tend to miss.
   disc, `DESKTOP_MELEE_DUMP` output, or a built `Desktop Melee.app`. Running
   `DESKTOP_MELEE_DUMP=<dir>` locally is fine; point it at a folder outside the
   repository. Stage files by path, not with `git add -A`.
+- **Clips and screenshots of the game running are welcome** in pull
+  requests and issues, to show a change. Attach them there; don't commit them
+  to the repository.
 - **The macOS app must behave the same** after a port's pull request. Shared
   files may change, as long as macOS builds and works as before. Every pull
   request builds macOS, Linux and Windows in CI.
