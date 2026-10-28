@@ -48,8 +48,8 @@ sed -e "s/@DESKTOP_MELEE_VERSION@/${VERSION}/g" -e "s/@DESKTOP_MELEE_MIN_MACOS@/
 # so the welcome window has it before any disc is in.
 FONT="${HOME}/Library/Application Support/Desktop Melee/melee-font.bin"
 if [[ "${RELEASE}" == "1" ]]; then
-    echo "note: release build: Melee's font is left out; the welcome window uses the" \
-        "system font until the player's disc is in" >&2
+    echo "note: release build: Melee's font from your disc is left out; the app uses" \
+        "its own DesktopMelee.ttf until the player's disc is in" >&2
 elif [[ -f "${FONT}" ]]; then
     cp "${FONT}" "${APP}/Contents/Resources/melee-font.bin"
     echo "note: the app now holds Melee's font from your disc (Nintendo's); keep this" \
@@ -57,6 +57,10 @@ elif [[ -f "${FONT}" ]]; then
 else
     echo "warning: no ${FONT} yet; boot the game once and package again to bundle Melee's font" >&2
 fi
+
+# The app's own font (desktop-melee/macos/DesktopMelee.ttf), used until the
+# disc's glyphs are loaded; release builds include it too.
+cp desktop-melee/macos/DesktopMelee.ttf "${APP}/Contents/Resources/"
 
 # App icon: a beige Mac in Light Mode, an indigo one in Dark Mode. actool
 # writes Assets.car for macOS 26+ and AppIcon.icns for older systems.

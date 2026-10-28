@@ -151,7 +151,9 @@ This is not legal advice.
   GPL-3.0-or-later.** Third-party parts keep their own licenses (MIT, zlib,
   BSD, OFL).
 - No game assets are in this repository. Everything is read from your disc
-  at runtime.
+  at runtime. The one thing that comes close is the interface font,
+  `desktop-melee/macos/DesktopMelee.ttf`: a vector recreation of Melee's menu
+  font, whose letter shapes are Nintendo's design.
 - "Super Smash Bros." and "Melee" are trademarks of Nintendo.
 
 The details are in [licenses/LICENSE.md](licenses/LICENSE.md).

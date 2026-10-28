@@ -565,6 +565,10 @@ flowchart LR
   `~/Library/Application Support/Desktop Melee/melee-font.bin` on first boot,
   and `desktop-melee/package.sh` copies it into the app so the welcome window can use it
   before a disc is chosen. That makes a built app personal: never upload one.
+- **Before any disc**, text uses `desktop-melee/macos/DesktopMelee.ttf`, a
+  vector recreation of Melee's menu font that every build bundles (release
+  builds too). `AppFont` in `GameAssets.swift` registers it; its em is one
+  32-unit glyph cell, so it lines up with the disc's glyphs at the same size.
 
 `DESKTOP_MELEE_DUMP=<dir>` writes every asset found to PNG files, to help find
 assets. Never commit that output.

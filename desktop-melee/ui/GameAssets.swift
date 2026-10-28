@@ -3,6 +3,7 @@
 // (desktop-melee/src/assets.c): the text font, the character roster's face icons and
 // the per-costume portraits.
 import AppKit
+import CoreText
 import DesktopMeleeBridge
 import SwiftUI
 
@@ -91,6 +92,38 @@ enum MenuSound: Int32 {
 }
 
 // MARK: - Font
+
+/// The app's own font, bundled as DesktopMelee.ttf: a vector recreation of
+/// Melee's menu font. Text uses it until the disc's own glyphs are loaded
+/// (MeleeFont), so a release build looks the same before any disc is in. Its
+/// em is one 32-unit glyph cell, so a point size here matches MeleeFont's size.
+enum AppFont {
+    static let postScriptName = "DesktopMelee-Regular"
+
+    /// Registers the bundled font for this process, once. False when the app
+    /// isn't running from its bundle (a bare dev build), so callers fall back
+    /// to the system font.
+    static let available: Bool = {
+        guard let url = Bundle.main.url(forResource: "DesktopMelee", withExtension: "ttf") else {
+            return false
+        }
+        var error: Unmanaged<CFError>?
+        if !CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
+            // Already registered (e.g. installed system-wide) still counts.
+            error?.release()
+        }
+        return NSFont(name: postScriptName, size: 12) != nil
+    }()
+
+    static func nsFont(_ size: CGFloat) -> NSFont? {
+        available ? NSFont(name: postScriptName, size: size) : nil
+    }
+
+    /// `size` is Melee's glyph cell height, as for MText.
+    static func font(_ size: CGFloat, systemWeight: Font.Weight = .bold) -> Font {
+        available ? .custom(postScriptName, fixedSize: size) : .system(size: size * 0.6, weight: systemWeight)
+    }
+}
 
 /// Melee's text font (the sislib glyphs, 32x32 each, with per-glyph margins).
 enum MeleeFont {
@@ -209,7 +242,9 @@ enum MeleeFont {
     static func width(_ text: String, size: CGFloat, tracking: CGFloat = 0) -> CGFloat {
         load()
         let unit = size / 32
-        let fallback = NSFont.systemFont(ofSize: size * 0.62, weight: .bold)
+        // Before the disc's glyphs exist, text is drawn in AppFont: measure that.
+        let fallback = (loaded ? nil : AppFont.nsFont(size))
+            ?? NSFont.systemFont(ofSize: size * 0.62, weight: .bold)
         var w: CGFloat = 0
         for c in text {
             if let g = glyphs[c] {
@@ -268,8 +303,8 @@ enum MeleeFont {
     }
 }
 
-/// Text in Melee's font, tinted by the foreground style like `Text`. Falls back
-/// to the system font until the game has loaded its font.
+/// Text in Melee's font, tinted by the foreground style like `Text`. Uses
+/// AppFont until the game has loaded its font.
 struct MText: View {
     let text: String
     var size: CGFloat = 16
@@ -290,7 +325,7 @@ struct MText: View {
                 .renderingMode(.template)
                 .accessibilityLabel(text)
         } else {
-            Text(text).font(.system(size: size * 0.6, weight: .bold))
+            Text(text).font(AppFont.font(size)).fixedSize()
         }
     }
 }
@@ -335,7 +370,7 @@ struct MParagraph: View {
             }
         } else {
             Text(text)
-                .font(.system(size: size * 0.6))
+                .font(AppFont.font(size, systemWeight: .regular))
                 .multilineTextAlignment(alignment == .center ? .center : .leading)
                 .fixedSize(horizontal: false, vertical: true)
         }

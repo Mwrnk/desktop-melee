@@ -22,6 +22,11 @@ No game assets are contained in this repository. Textures, audio, models,
 text, and the two HSD font atlases are all read at runtime from a disc image
 the user supplies; see `src/pc/discfont.c`.
 
+`desktop-melee/macos/DesktopMelee.ttf`, Desktop Melee's interface font, is a
+vector recreation of Melee's menu font. Its outlines are new, but its letter
+shapes are Nintendo's design, so like the game code it is offered under no
+license.
+
 ## 2. Port code — GPL-3.0-or-later
 
 `src/pc/`, `tools/`, `platforms/`, `cmake/` and `.github/` are original work
