@@ -90,6 +90,23 @@ if [[ "${RELEASE}" == "1" ]]; then
         echo "${GAME_DATA}" >&2
         exit 1
     fi
+    # Nothing from this Mac's file system in the binaries: the executable looks
+    # for libraries only in the app (not in the build folder or Homebrew, which
+    # a player may have with other versions), and the libraries lose their
+    # debug info, which names the build folder.
+    EXE="${APP}/Contents/MacOS/melee"
+    otool -l "${EXE}" | awk '/cmd LC_RPATH/ { getline; getline; print $2 }' |
+        while read -r RPATH; do
+            if [[ "${RPATH}" != @* && "${RPATH}" != /usr/lib/* ]]; then
+                install_name_tool -delete_rpath "${RPATH}" "${EXE}" 2> /dev/null
+            fi
+        done
+    strip -S "${APP}"/Contents/Frameworks/*.dylib
+    if grep -rlq -- "${HOME}" "${APP}"; then
+        echo "error: the release app still names ${HOME}:" >&2
+        grep -rl -- "${HOME}" "${APP}" >&2
+        exit 1
+    fi
     # No extended attributes from this Mac (provenance, quarantine) in the zip.
     xattr -cr "${APP}"
 fi
