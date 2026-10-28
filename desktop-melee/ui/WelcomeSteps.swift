@@ -33,9 +33,10 @@ struct WelcomeView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 34)
-        .padding(.bottom, 22)
+        // Clear of the window's rounded bottom corners.
+        .padding(.bottom, 32)
         // Pinned to the top: a tall step never pushes the header down.
-        .frame(width: 440, height: 560, alignment: .top)
+        .frame(width: 440, height: 570, alignment: .top)
         .background(Color(white: 0.14))
         .foregroundStyle(.primary)
         // The reveal: Melee's font and emblem arrive with the disc.
