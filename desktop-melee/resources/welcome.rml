@@ -4,75 +4,124 @@
     <link type="text/rcss" href="welcome.rcss" />
 </head>
 <!-- Desktop Melee's welcome window on Windows and Linux
-     (docs/desktop-melee/ui-guide.md sections 9 to 11). One page per step;
+     (docs/desktop-melee/ui-guide.md sections 9 to 11), laid out like the
+     macOS one (desktop-melee/ui/WelcomeSteps.swift). One page per step;
      desktop-melee/src/welcome_window.cpp shows one at a time, fills in the
      values and handles every click by id. -->
 <body>
-    <div id="top">
+    <div id="header">
+        <div id="emblem">
+            <img id="emblem-img" class="hidden" />
+            <img id="app-icon" src="app-icon.png" />
+        </div>
         <span class="title">Desktop Melee</span>
-        <span id="counter"></span>
+        <div id="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
     </div>
 
-    <div id="body">
-        <div id="step-welcome" class="step">
-            <div id="sketch">
-                <div class="edge left"></div><div class="edge right"></div>
-                <div class="fighter p1"></div><div class="fighter p2"></div>
-                <div class="panel"></div>
-            </div>
-            <h1>Desktop Melee</h1>
-            <p class="lead">Real Melee, played right on your desktop. Your panel is the stage, and the edges of the screen are the blast zones.</p>
-        </div>
-
+    <div id="steps">
         <div id="step-disc" class="step">
-            <h1 id="disc-title">Bring your own Melee</h1>
-            <p id="disc-lead" class="lead">Desktop Melee includes the game's code but none of Nintendo's data. Characters, stages and sound come from your own copy of Melee.</p>
+            <h2 id="disc-title">Bring your own Melee</h2>
+            <p id="disc-lead" class="lead"></p>
+            <p id="old-disc" class="hidden"><img src="icons/clock.arrow.circlepath.png" /><span id="old-disc-path"></span></p>
             <div id="drop">
+                <img src="icons/opticaldisc.png" />
                 <p class="big">Drop your disc image here</p>
                 <p class="types">Melee USA 1.02:  .iso  .gcm  .ciso  .rvz</p>
-                <button id="choose" class="secondary">Choose file...</button>
+                <span id="choose" class="pill">Choose file...</span>
             </div>
-            <div id="disc-status">
-                <p id="disc-line" class="line"></p>
-                <div id="disc-bar" class="bar hidden"><div id="disc-fill" class="fill"></div></div>
-                <p id="disc-name" class="name"></p>
+            <div id="disc-status" class="box hidden">
+                <div class="row">
+                    <img id="disc-icon" src="icons/opticaldisc.png" />
+                    <div class="text">
+                        <p id="disc-line" class="line"></p>
+                        <p id="disc-name" class="name"></p>
+                    </div>
+                </div>
+                <div id="disc-bar" class="bar"><div id="disc-fill" class="fill"></div></div>
             </div>
         </div>
 
         <div id="step-loading" class="step">
-            <h1>Getting Melee ready...</h1>
-            <p id="loading-lead" class="lead">The first launch builds Melee's graphics, so matches never stutter. It takes a few minutes, once. You can use your computer in the meantime.</p>
-            <div class="bar"><div id="loading-fill" class="fill"></div></div>
-            <p id="loading-count" class="small"></p>
+            <img id="loading-disc" src="icons/opticaldisc.png" />
+            <p class="loading-title e1">Getting Melee ready...</p>
+            <div class="e2">
+                <p id="loading-lead" class="loading-lead"></p>
+                <div class="bar"><div id="loading-fill" class="fill"></div></div>
+                <p id="loading-count" class="loading-count"></p>
+            </div>
+        </div>
+
+        <div id="step-welcome" class="step">
+            <div id="sketch" class="e0">
+                <div class="menubar"></div>
+                <div class="window w1"></div><div class="window w2"></div>
+                <div class="stage"></div>
+                <div class="fighter p1"></div><div class="fighter p2"></div>
+                <div class="blastzone"></div>
+            </div>
+            <h1 class="e1">Desktop Melee</h1>
+            <p class="lead big e2">Real Melee, played right on your desktop. Your panel is the stage, and the edges of the screen are the blast zones.</p>
         </div>
 
         <div id="step-controls" class="step">
-            <h1>Grab a controller</h1>
+            <h2>Grab a controller</h2>
             <div id="cards">
-                <div id="card-gamecube" class="card"><p class="name">GameCube</p><p class="sub">Official adapter, or one in Wii U mode</p></div>
-                <div id="card-pad" class="card"><p class="name">Xbox, PS, Switch</p><p class="sub">USB or Bluetooth</p></div>
-                <div id="card-keyboard" class="card"><p class="name">Keyboard</p><p id="keys-toggle" class="sub">Show the keys</p></div>
+                <div id="card-gamecube" class="card">
+                    <img src="icons/device.gamecube.png" />
+                    <p class="name">GameCube</p>
+                    <p class="sub">Official adapter, or one in Wii U mode</p>
+                </div>
+                <div id="card-pad" class="card">
+                    <img src="icons/device.pad.png" />
+                    <p class="name">Xbox, PS, Switch</p>
+                    <p class="sub">USB or Bluetooth</p>
+                </div>
+                <div id="card-keyboard" class="card">
+                    <img src="icons/device.keyboard.png" />
+                    <p class="name">Keyboard</p>
+                    <span id="keys-toggle" class="pill small"><span id="keys-label">Show keys</span><img id="keys-chevron" src="icons/chevron.down.png" /></span>
+                </div>
             </div>
-            <div id="keys" class="hidden"></div>
-            <p class="listen-title">PRESS ANY BUTTON</p>
-            <div id="pressed"></div>
-            <p class="small">Press a button on each controller, or a key, to see who's who. Ports can be changed in the settings window's Controls tab.</p>
-            <p class="small">The keyboard works while the game window is in front: click it before pressing keys.</p>
+            <div id="keys" class="box">
+                <div id="key-grid"></div>
+                <p class="note">The keyboard works while the game window is in front: click it before pressing keys.</p>
+            </div>
+            <div id="players">
+                <p class="label"><span class="listening"><span class="ring"></span></span><span id="listen-label">Press any button</span></p>
+                <div id="slots">
+                    <div id="slot-0" class="slot p1"><span class="tag">P1</span><span class="waiting">Waiting</span><span id="who-0" class="who"></span><img src="icons/checkmark.circle.fill.png" /></div>
+                    <div id="slot-1" class="slot p2"><span class="tag">P2</span><span class="waiting">Waiting</span><span id="who-1" class="who"></span><img src="icons/checkmark.circle.fill.png" /></div>
+                    <div id="slot-2" class="slot p3"><span class="tag">P3</span><span class="waiting">Waiting</span><span id="who-2" class="who"></span><img src="icons/checkmark.circle.fill.png" /></div>
+                    <div id="slot-3" class="slot p4"><span class="tag">P4</span><span class="waiting">Waiting</span><span id="who-3" class="who"></span><img src="icons/checkmark.circle.fill.png" /></div>
+                </div>
+                <p class="note">Press a button on each controller, or a key, to see who's who. Ports can be changed in the settings window's Controls tab.</p>
+            </div>
         </div>
 
         <div id="step-done" class="step">
-            <div id="tray-sketch">
-                <span class="spacer"></span>
-                <div class="icon"><div class="floor"></div><div class="f1"></div><div class="f2"></div></div>
-                <span>12:00</span>
+            <div id="tray-sketch" class="e0">
+                <div class="panel">
+                    <div class="item"></div><div class="item"></div>
+                    <div id="tray-emblem">
+                        <div id="tray-glow"></div>
+                        <img id="tray-emblem-img" class="hidden" />
+                        <img id="tray-app-icon" src="icons/emblem.standin.png" />
+                    </div>
+                    <div class="item"></div>
+                </div>
+                <img id="tray-arrow" src="icons/arrow.up.png" />
+                <p class="caption">Tray icon</p>
             </div>
-            <h1>You're set</h1>
-            <p class="lead">Desktop Melee lives in your system tray. Use it to pick characters, change controls and start a match.</p>
+            <h1 class="e1">You're set</h1>
+            <p class="lead big e2">Desktop Melee lives in your system tray. Use it to pick characters, change controls and start a match.</p>
         </div>
     </div>
 
-    <div id="bottom">
-        <button id="next" class="primary">Get started</button>
+    <div id="nav">
+        <div id="buttons">
+            <div id="back" class="hidden"><img src="icons/chevron.left.png" /><span>Back</span></div>
+            <div id="next">Get started</div>
+        </div>
         <p id="or-start" class="hidden">or press Start on your controller</p>
     </div>
 </body>

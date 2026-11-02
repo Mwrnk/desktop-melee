@@ -25,6 +25,7 @@ extern "C" {
 #include "../ui/bridge/desktop_melee_bridge.h"
 #include "settings_file.h"
 #include "welcome_window.h"
+#include "window_icon.h"
 }
 
 namespace {
@@ -911,6 +912,7 @@ bool desktop_melee_settings_window_open(void) {
         SDL_Log("desktop-melee: settings window: could not open");
         return false;
     }
+    desktop_melee_set_window_icons();
     /* The bundled free fonts (melee-pc's menu fonts): the disc's font isn't
      * needed, so the window works before the game's assets load. RmlUi
      * skips faces it already has. */

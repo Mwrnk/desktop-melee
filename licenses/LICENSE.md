@@ -97,6 +97,9 @@ change is tagged `desktop-melee` in a comment and listed in
 - `extern/dht/sha1.c`, `extern/dht/sha1.h` — Steve Reid's SHA-1, public domain.
 - `extern/monocypher/` — Monocypher 4.0.3, BSD-2-Clause or CC0 (notice in the
   files).
+- `desktop-melee/resources/icons/` — Phosphor Icons 2.1.1, MIT. See
+  `desktop-melee/resources/icons/PHOSPHOR-LICENSE.txt`. All of them except
+  `device.*` and `emblem.standin`, which are Desktop Melee's own (section 2).
 - Dawn, SDL3, nod, RmlUi and the other dependencies are fetched at build time
   under their own licenses.
 

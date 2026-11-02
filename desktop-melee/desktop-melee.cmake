@@ -25,11 +25,13 @@ if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
     set(DESKTOP_MELEE_MACOS ON)
 elseif (WIN32)
     target_sources(melee PRIVATE desktop-melee/src/platform_windows.c
-            desktop-melee/src/settings_file.c desktop-melee/src/settings_window.cpp desktop-melee/src/welcome_window.cpp)
+            desktop-melee/src/settings_file.c desktop-melee/src/settings_window.cpp desktop-melee/src/welcome_window.cpp
+            desktop-melee/src/rml_dashed.cpp desktop-melee/src/window_icon.c)
 else ()
     target_sources(melee PRIVATE desktop-melee/src/platform_linux.c
             desktop-melee/src/settings_file.c desktop-melee/src/tray_sdl.c
-            desktop-melee/src/settings_window.cpp desktop-melee/src/welcome_window.cpp)
+            desktop-melee/src/settings_window.cpp desktop-melee/src/welcome_window.cpp
+            desktop-melee/src/rml_dashed.cpp desktop-melee/src/window_icon.c)
 endif ()
 
 # The settings window's documents (settings_window.cpp), next to melee-pc's

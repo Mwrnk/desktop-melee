@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 98">
+  <!-- A GameCube pad's face buttons, drawn for Desktop Melee: A, B, X and Y
+       on their purple lobe, joined to the C-stick's below it. -->
+  <g transform="translate(-14 -14) scale(0.125)"><g fill="#5b4cc4" transform="translate(0.000000,1008.000000) scale(0.100000,-0.100000)">
+    <path d="M4879 8750 c-1038 -79 -1913 -772 -2237 -1771 -113 -348 -141 -691 -93 -1169 49 -491 36 -670 -65 -888 -71 -154 -134 -232 -429 -532 -383 -389 -488 -534 -598 -830 -251 -676 21 -1457 650 -1867 706 -461 1620 -290 2142 400 115 153 206 334 318 637 127 341 169 430 272 567 160 213 303 297 831 485 544 194 839 368 1150 678 991 988 991 2562 0 3550 -517 515 -1246 793 -1941 740z"/>
+  </g></g>
+  <g fill="none" stroke="#d6d6de" stroke-width="11" stroke-linecap="round">
+    <path d="M36.39 22.95A21 21 0 0 1 46.92 16.62"/>
+    <path d="M70.87 27.79A21 21 0 0 1 72.38 42.08"/>
+  </g>
+  <circle cx="52" cy="37" r="12.5" fill="#3b3088"/>
+  <circle cx="52" cy="37" r="11.2" fill="#4fd1c5"/>
+  <circle cx="29.5" cy="53" r="7" fill="#3b3088"/>
+  <circle cx="29.5" cy="53" r="5.9" fill="#e8344c"/>
+  <polygon points="35.01,78.97 27.97,86.01 18.03,86.01 10.99,78.97 10.99,69.03 18.03,61.99 27.97,61.99 35.01,69.03" fill="#3b3088"/>
+  <polygon points="33.16,78.21 27.21,84.16 18.79,84.16 12.84,78.21 12.84,69.79 18.79,63.84 27.21,63.84 33.16,69.79" fill="#ffcc00"/>
+  <circle cx="23" cy="74" r="5.6" fill="#ffb000"/>
+</svg>

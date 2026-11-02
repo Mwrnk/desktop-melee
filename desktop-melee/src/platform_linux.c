@@ -21,6 +21,7 @@
 #include "settings_window.h"
 #include "tray_sdl.h"
 #include "welcome_window.h"
+#include "window_icon.h"
 
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_log.h>
@@ -157,6 +158,7 @@ void desktop_melee_platform_ui_install(SDL_Window* window) {
      *     (Wayland; KDE has it, GNOME only in recent releases). It calls
      *     desktop_melee_toggle_pause_and_hide(). */
     desktop_melee_settings_load();
+    desktop_melee_set_window_icons();
     /* Without a tray (GNOME without the AppIndicator extension) the menu is
      * unreachable: open the settings window instead, which can start
      * matches and quit too. */
