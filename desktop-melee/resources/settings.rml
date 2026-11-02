@@ -1,0 +1,172 @@
+<rml>
+<head>
+    <title>Desktop Melee</title>
+    <link type="text/rcss" href="settings.rcss" />
+</head>
+<!-- Desktop Melee's settings window on Windows and Linux
+     (docs/desktop-melee/ui-guide.md sections 3 to 8). desktop-melee/src/
+     settings_window.cpp fills in the values and handles every click by id. -->
+<body>
+    <div id="header">
+        <h1>Desktop Melee</h1>
+        <p>Running on your desktop</p>
+    </div>
+    <div id="tabs">
+        <button id="tab-match" class="selected">Match</button>
+        <button id="tab-players">Players</button>
+        <button id="tab-controls">Controls</button>
+        <button id="tab-sound">Sound</button>
+        <button id="tab-display">Display</button>
+    </div>
+    <div id="body">
+        <div id="page-match" class="page shown">
+            <button id="match-start" class="primary">Start Match</button>
+            <div class="group-title">RULES</div>
+            <div class="group">
+                <div class="row">
+                    <span class="name">Stocks</span>
+                    <button id="stocks-minus" class="step">-</button>
+                    <span id="stocks-value" class="value">4</span>
+                    <button id="stocks-plus" class="step">+</button>
+                </div>
+                <div class="row">
+                    <span class="name">Time</span>
+                    <button id="minutes-minus" class="step">-</button>
+                    <span id="minutes-value" class="value">7</span>
+                    <button id="minutes-plus" class="step">+</button>
+                </div>
+                <div class="row last">
+                    <span class="name">Items</span>
+                    <span class="value">Off</span>
+                </div>
+            </div>
+            <p class="note">When time runs out, the match ends and Desktop Melee goes back to idle.</p>
+            <p id="match-note" class="note">Rule changes apply to the next match.</p>
+        </div>
+        <div id="page-players" class="page">
+            <div id="cards">
+                <div id="card-p1" class="card editing">
+                    <div class="portrait"><img id="portrait-p1" src="" class="hidden" /></div>
+                    <div class="label"><span class="tag">P1</span><span id="fighter-p1" class="fighter">Fox</span></div>
+                    <div class="kind">
+                        <button id="human-p1" class="first selected">Human</button>
+                        <button id="cpu-p1" class="last">CPU</button>
+                    </div>
+                    <div id="level-row-p1" class="level disabled">
+                        <span class="name">CPU level</span>
+                        <button id="level-minus-p1" class="step">-</button>
+                        <span id="level-p1" class="value">9</span>
+                        <button id="level-plus-p1" class="step">+</button>
+                    </div>
+                </div>
+                <div id="card-p2" class="card">
+                    <div class="portrait"><img id="portrait-p2" src="" class="hidden" /></div>
+                    <div class="label"><span class="tag">P2</span><span id="fighter-p2" class="fighter">Fox</span></div>
+                    <div class="kind">
+                        <button id="human-p2" class="first selected">Human</button>
+                        <button id="cpu-p2" class="last">CPU</button>
+                    </div>
+                    <div id="level-row-p2" class="level disabled">
+                        <span class="name">CPU level</span>
+                        <button id="level-minus-p2" class="step">-</button>
+                        <span id="level-p2" class="value">9</span>
+                        <button id="level-plus-p2" class="step">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="group-title">COSTUME</div>
+            <div id="costumes"></div>
+            <div class="group-title">CHARACTER</div>
+            <p id="roster-loading" class="note">Loading characters...</p>
+            <div id="roster"></div>
+            <p class="note">Click a card to choose whose character the grid picks.</p>
+            <p id="players-note" class="note">Changes apply when the match starts.</p>
+        </div>
+
+        <div id="page-controls" class="page">
+            <div class="segments wide">
+                <button id="ctl-p1" class="selected">P1</button>
+                <button id="ctl-p2">P2</button>
+            </div>
+            <p id="ctl-cpu-note" class="note hidden"></p>
+            <div class="group-title">CONTROLLER PORT</div>
+            <div id="ports" class="p1">
+                <button id="port-0">1<span id="port-device-0" class="device"></span></button>
+                <button id="port-1">2<span id="port-device-1" class="device"></span></button>
+                <button id="port-2">3<span id="port-device-2" class="device"></span></button>
+                <button id="port-3">4<span id="port-device-3" class="device"></span></button>
+            </div>
+            <p id="port-desc" class="note">Port 1: keyboard</p>
+            <div class="group-title">JUMP</div>
+            <div class="group">
+                <div class="row"><span class="name">Tap jump</span><button id="tapjump" class="toggle on">On</button></div>
+                <div class="row last"><span class="name">Z = jump</span><button id="zjump" class="toggle">Off</button></div>
+            </div>
+            <div class="group-title">BUTTONS (CLICK TO CHANGE)</div>
+            <div class="group">
+                <div class="row"><span class="name"><span class="badge a">A</span>acts as</span><button id="map-0" class="map">A</button></div>
+                <div class="row"><span class="name"><span class="badge b">B</span>acts as</span><button id="map-1" class="map">B</button></div>
+                <div class="row"><span class="name"><span class="badge">X</span>acts as</span><button id="map-2" class="map">X (jump)</button></div>
+                <div class="row"><span class="name"><span class="badge">Y</span>acts as</span><button id="map-3" class="map">Y (jump)</button></div>
+                <div class="row"><span class="name"><span class="badge z">Z</span>acts as</span><button id="map-4" class="map">Z (grab)</button></div>
+                <div class="row"><span class="name"><span class="badge">L</span>acts as</span><button id="map-5" class="map">L (shield)</button></div>
+                <div class="row last"><span class="name"><span class="badge">R</span>acts as</span><button id="map-6" class="map">R (shield)</button></div>
+            </div>
+            <div class="row last"><span class="name"></span><button id="map-reset" class="small-button">Reset</button></div>
+            <div class="group-title">ALL PLAYERS</div>
+            <div class="group">
+                <div class="row last"><span class="name">UCF</span><button id="ucf" class="toggle">Off</button></div>
+            </div>
+            <p id="ucf-note" class="note">Fixes dashback and shield drops on any controller.</p>
+            <p id="controls-note" class="note">Buttons and jump apply right away.</p>
+        </div>
+
+        <div id="page-sound" class="page">
+            <div class="group">
+                <div id="row-master" class="row"><span class="name">Master</span>
+                    <input type="range" class="range" id="vol-master" min="0" max="100" step="1" value="100" />
+                    <span id="vol-master-value" class="slider-value">100%</span></div>
+                <div class="row"><span class="name">Music</span>
+                    <input type="range" class="range" id="vol-music" min="0" max="100" step="1" value="100" />
+                    <span id="vol-music-value" class="slider-value">100%</span></div>
+                <div class="row last"><span class="name">Effects</span>
+                    <input type="range" class="range" id="vol-sfx" min="0" max="100" step="1" value="100" />
+                    <span id="vol-sfx-value" class="slider-value">100%</span></div>
+            </div>
+            <div class="group">
+                <div class="row"><span class="name">Mute</span><button id="mute" class="toggle">Off</button></div>
+                <div class="row"><span class="name">Reverb</span><button id="reverb" class="toggle on">On</button></div>
+                <div class="row last"><span class="name">Menu sounds</span><button id="menu-sounds" class="toggle on">On</button></div>
+            </div>
+            <p class="note">Volume, mute and reverb are shared with melee-pc's own menus.</p>
+        </div>
+
+        <div id="page-display" class="page">
+            <div class="group-title">FIGHTERS</div>
+            <div class="group">
+                <div class="row"><span class="name">Fighter size</span>
+                    <input type="range" class="range" id="size" min="50" max="200" step="10" value="100" />
+                    <span id="size-value" class="slider-value">100%</span></div>
+                <div class="row last"><span class="name">Screen shake</span><button id="shake" class="toggle on">On</button></div>
+            </div>
+            <p id="size-note" class="note">The screen edges are the blast zones, so bigger fighters are KO'd sooner.</p>
+            <div class="group-title">ON SCREEN</div>
+            <div class="group">
+                <div class="row"><span class="name">Timer</span>
+                    <div class="segments"><button id="timer-top">Top</button><button id="timer-hidden">Hidden</button></div></div>
+                <div class="row"><span class="name">Player tags</span><button id="tags" class="toggle on">On</button></div>
+                <div class="row last"><span class="name">Stocks and percents</span>
+                    <div class="segments"><button id="hud-bottom">Bottom</button><button id="hud-hidden">Hidden</button></div></div>
+            </div>
+            <p id="hud-note" class="note">Melee's own, at the bottom of the screen.</p>
+            <div class="group-title">SCREEN</div>
+            <div id="screens" class="group"></div>
+            <p id="screen-note" class="note"></p>
+        </div>
+    </div>
+    <div id="footer">
+        <span class="spacer"></span>
+        <button id="quit">Quit</button>
+    </div>
+</body>
+</rml>

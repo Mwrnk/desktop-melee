@@ -7,8 +7,9 @@
  *   melee --dvd /path/to/melee.iso
  * The match plays in a normal, resizable window (not an overlay), the floor
  * sits a little above the window's bottom edge, there is no notch island,
- * and Pause and hide does nothing. Settings come from settings.cfg
- * (settings_file.h); there is no menu to change them yet.
+ * and Pause and hide only pauses. Settings come from settings.cfg
+ * (settings_file.h); a tray icon (tray_sdl.h) starts matches, pauses, quits
+ * and opens the settings window (settings_window.h).
  *
  * docs/desktop-melee/porting.md walks through each function; every TODO
  * below names what a port would use. X11 and Wayland differ for most of it:
@@ -17,6 +18,8 @@
 #include "platform.h"
 
 #include "settings_file.h"
+#include "settings_window.h"
+#include "tray_sdl.h"
 
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_log.h>
@@ -143,18 +146,23 @@ void desktop_melee_platform_island_place(float left, float right, float height) 
 
 void desktop_melee_platform_ui_install(SDL_Window* window) {
     (void)window;
-    /* TODO (docs/desktop-melee/ui-guide.md has the proposal):
-     *   - the menu: SDL_CreateTray (an AppIndicator / StatusNotifierItem icon;
-     *     GNOME shows it only with the AppIndicator extension), with Start
-     *     match, Pause and hide, Settings and Quit.
-     *   - settings: an RmlUi window, as melee-pc's launcher uses, saving
-     *     settings.cfg through desktop_melee_settings_save.
+    /* The settings file, then the tray (tray_sdl.c: a StatusNotifierItem;
+     * GNOME shows it only with the AppIndicator extension), whose Settings...
+     * opens the settings window (settings_window.cpp, an RmlUi document in
+     * aurora's second window).
+     * TODO (docs/desktop-melee/ui-guide.md):
+     *   - the welcome window and "How to play".
      *   - the Pause and hide hotkey, from any app: XGrabKey on the root window
      *     (X11), or the org.freedesktop.portal.GlobalShortcuts portal
      *     (Wayland; KDE has it, GNOME only in recent releases). It calls
      *     desktop_melee_toggle_pause_and_hide(). */
     desktop_melee_settings_load();
-    SDL_Log("desktop-melee: Linux skeleton: no menu yet; edit settings.cfg to change settings");
+    /* Without a tray (GNOME without the AppIndicator extension) the menu is
+     * unreachable: open the settings window instead, which can start
+     * matches and quit too. */
+    if (!desktop_melee_tray_install()) {
+        desktop_melee_settings_window_open();
+    }
 }
 
 void desktop_melee_platform_ui_focus_game(void) {
@@ -190,6 +198,7 @@ const char* desktop_melee_platform_ui_choose_disc(const char* candidate) {
 
 void desktop_melee_platform_ui_assets_ready(void) {
     /* TODO: the settings window may draw portraits and the font now. */
+    desktop_melee_tray_assets_ready();
 }
 
 /* ---- files -------------------------------------------------------------- */

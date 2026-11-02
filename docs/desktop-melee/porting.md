@@ -54,11 +54,13 @@ The skeletons compile and run, with fallbacks:
   blastzones keep the old size until a port watches `SDL_EVENT_WINDOW_RESIZED`
   and calls `desktop_melee_relayout()`.
 - **No notch island.** Stocks and percents stay in Melee's own HUD.
-- **Pause and hide does nothing.** There's no hotkey and no menu to press it
-  from.
-- **No settings UI.** Every setting keeps its default (Fox vs Fox, 4 stocks,
-  7 minutes). On Linux, `settings.cfg` changes them (ui-guide.md section
-  14); the Windows skeleton doesn't read it yet.
+- **Pause and hide only pauses.** The window doesn't hide yet, and there's
+  no hotkey; on Linux the tray menu presses it.
+- **Settings.** On Linux, a tray icon (`tray_sdl.c`) starts matches, pauses,
+  quits and opens the settings window (`settings_window.cpp`), which saves
+  `settings.cfg` (ui-guide.md section 14). The Windows skeleton builds the
+  window and the file but doesn't install the tray or load the file yet, so
+  every setting keeps its default there (Fox vs Fox, 4 stocks, 7 minutes).
 - **The disc comes from the command line**, and must pass the same check as
   on macOS: a clean Melee USA 1.02 image.
 
@@ -314,10 +316,13 @@ project.
 
 [ui-guide.md](ui-guide.md) describes every screen of the macOS app, with each
 control's range, default, setting and C call, and separates what any port
-must do from what is Mac styling. Section 14 there proposes an approach for
-Windows and Linux: an SDL tray icon for the menu, an RmlUi settings window,
-and a settings file the C side reads instead of UserDefaults. That's a
-proposal, not a decision: discuss it in the issue before building it.
+must do from what is Mac styling. Section 14 there describes the approach
+built for Linux, which Windows can reuse: an SDL tray icon for the menu
+(`tray_sdl.c`), an RmlUi settings window in aurora's second window
+(`settings_window.cpp`), and `settings.cfg` instead of UserDefaults
+(`settings_file.c`). On Windows, `ui_install` would call
+`desktop_melee_settings_load()` and `desktop_melee_tray_install()` as
+`platform_linux.c` does.
 
 A port can land its window work first and the UI later. Until a UI exists,
 `ui_install` can at least register the Pause and hide hotkey, which makes the
@@ -361,7 +366,8 @@ Each step is a pull request that works on its own:
    `ui_focus_game`.
 4. **The disc and loading.** `ui_choose_disc` with a file dialog and a
    remembered disc; `ui_loading_begin` / `_end`.
-5. **The settings UI**, after agreeing on the approach in the issue.
+5. **The settings UI.** Built for Linux (ui-guide.md section 14); still to
+   come: the welcome window and "How to play".
 
 ## 10. Ground rules
 

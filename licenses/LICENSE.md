@@ -71,7 +71,10 @@ change is tagged `desktop-melee` in a comment and listed in
   `extern/aurora/lib/gfx/recording.cpp`,
   `extern/aurora/lib/dolphin/gx/GXFrameBuffer.cpp`,
   `extern/aurora/cmake/AuroraSDL3Provider.cmake`,
-  `extern/aurora/cmake/patches/apply-sdl3-macos-libusb-claim.cmake`.
+  `extern/aurora/cmake/patches/apply-sdl3-macos-libusb-claim.cmake`,
+  `extern/aurora/cmake/aurora_core.cmake`,
+  `extern/aurora/include/aurora/rmlui.hpp`, `extern/aurora/lib/rmlui.cpp`,
+  `extern/aurora/lib/rmlui.hpp`; and adds `extern/aurora/lib/rmlui_window.cpp`.
 - Game code (section 1, still not licensed; the hooks are small and marked):
   `src/melee/cm/camera.c`, `src/melee/ft/fighter.c`,
   `src/melee/ft/kinds/ftCommon/ftCo_Jump.c`,

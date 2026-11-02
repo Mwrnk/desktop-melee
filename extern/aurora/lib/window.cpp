@@ -187,6 +187,12 @@ void sync_paused() {
 
 void process_event(SDL_Event& event) {
   const bool primaryWindow = targets_primary_window(&event);
+#ifdef AURORA_ENABLE_RMLUI
+  // desktop-melee: the second RmlUi window's events are its own.
+  if (!primaryWindow && rmlui::window_handle_event(event)) {
+    return;
+  }
+#endif
   const bool routed = primaryWindow && input::sdl::is_routed_event(event);
   if (primaryWindow && !routed) {
 #ifdef AURORA_ENABLE_GX

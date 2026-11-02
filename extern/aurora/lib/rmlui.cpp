@@ -574,6 +574,7 @@ RecordedFrame record_frame(const webgpu::Viewport& presentViewport) noexcept {
 }
 
 void shutdown() noexcept {
+  window_shutdown(); // desktop-melee: lib/rmlui_window.cpp
   input::unregister_layer(s_inputLayer);
   s_inputLayer = input::kInvalidLayerId;
   if (g_context == nullptr) {

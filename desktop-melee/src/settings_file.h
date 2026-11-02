@@ -52,6 +52,10 @@ size_t desktop_melee_settings_format(
 /* The live settings: the defaults until desktop_melee_settings_load. */
 DesktopMeleeSettings* desktop_melee_settings(void);
 
+/* The file's path: SDL_GetPrefPath(NULL, "Desktop Melee") + "settings.cfg".
+ * False when the preferences folder is unavailable or out_size too small. */
+bool desktop_melee_settings_path(char* out, size_t out_size);
+
 /* Reads the file into the live settings (defaults for what it lacks) and
  * pushes them into the game. A missing file is not an error. */
 void desktop_melee_settings_load(void);
