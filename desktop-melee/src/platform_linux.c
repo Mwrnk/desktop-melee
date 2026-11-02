@@ -85,7 +85,9 @@ void desktop_melee_platform_overlay_set_faded(bool faded) {
 
 void desktop_melee_platform_screen_geometry(
     SDL_Window* window, float* width_pt, float* height_pt, float* floor_pt) {
-    /* A normal window: it is the screen, and its bottom edge is the floor.
+    /* A normal window: it is the screen. The floor sits a little above its
+     * bottom edge, because the bottom edge is the bottom blastzone: a floor
+     * at 0 would KO fighters as soon as they land.
      * TODO, overlay: SDL_GetDisplayBounds of SDL_GetDisplayForWindow for the
      * size. The floor is how far SDL_GetDisplayUsableBounds stops above the
      * bottom: on X11 that comes from _NET_WORKAREA (one rectangle for all
@@ -96,7 +98,7 @@ void desktop_melee_platform_screen_geometry(
     SDL_GetWindowSize(window, &w, &h);
     *width_pt = (float)w;
     *height_pt = (float)h;
-    *floor_pt = 0.0f;
+    *floor_pt = 0.15f * (float)h;
 }
 
 bool desktop_melee_platform_dock_frame(
