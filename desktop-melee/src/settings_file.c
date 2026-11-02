@@ -290,8 +290,7 @@ DesktopMeleeSettings* desktop_melee_settings(void) {
     return &s_settings;
 }
 
-/* SDL_GetPrefPath + "settings.cfg"; false when the folder is unavailable. */
-static bool settings_path(char* out, size_t out_size) {
+bool desktop_melee_settings_path(char* out, size_t out_size) {
     char* folder = SDL_GetPrefPath(NULL, "Desktop Melee");
     if (folder == NULL) {
         SDL_Log("desktop-melee: settings: no preferences folder: %s", SDL_GetError());
@@ -305,7 +304,7 @@ static bool settings_path(char* out, size_t out_size) {
 void desktop_melee_settings_load(void) {
     DesktopMeleeSettings* settings = desktop_melee_settings();
     char path[1024];
-    if (settings_path(path, sizeof path)) {
+    if (desktop_melee_settings_path(path, sizeof path)) {
         size_t size = 0;
         char* text = (char*)SDL_LoadFile(path, &size);
         if (text != NULL) {
@@ -323,7 +322,7 @@ bool desktop_melee_settings_save(void) {
     char path[1024];
     char temporary[1040];
     char text[4096];
-    if (!settings_path(path, sizeof path)) {
+    if (!desktop_melee_settings_path(path, sizeof path)) {
         return false;
     }
     const size_t length =

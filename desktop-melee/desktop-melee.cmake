@@ -25,10 +25,22 @@ if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
     set(DESKTOP_MELEE_MACOS ON)
 elseif (WIN32)
     target_sources(melee PRIVATE desktop-melee/src/platform_windows.c
-            desktop-melee/src/settings_file.c)
+            desktop-melee/src/settings_file.c desktop-melee/src/settings_window.cpp)
 else ()
     target_sources(melee PRIVATE desktop-melee/src/platform_linux.c
-            desktop-melee/src/settings_file.c)
+            desktop-melee/src/settings_file.c desktop-melee/src/tray_sdl.c
+            desktop-melee/src/settings_window.cpp)
+endif ()
+
+# The settings window's documents (settings_window.cpp), next to melee-pc's
+# in resources/desktop-melee/.
+if (NOT DESKTOP_MELEE_MACOS)
+    add_custom_target(desktop_melee_resources ALL
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/desktop-melee/resources"
+            "$<TARGET_FILE_DIR:melee>/resources/desktop-melee")
+    add_dependencies(desktop_melee_resources launcher_resources)
+    add_dependencies(melee desktop_melee_resources)
 endif ()
 
 # The settings file's parser and writer, tested on their own

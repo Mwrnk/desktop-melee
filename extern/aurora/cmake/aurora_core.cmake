@@ -69,6 +69,7 @@ if (AURORA_ENABLE_RMLUI)
 
     target_sources(aurora_core PRIVATE
             lib/rmlui.cpp
+            lib/rmlui_window.cpp
             lib/rmlui/RuntimeTextureProvider.cpp
             lib/rmlui/RmlUi_Backend_Aurora.cpp
             lib/rmlui/WebGPURenderInterface.cpp

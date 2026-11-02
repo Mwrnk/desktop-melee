@@ -494,14 +494,16 @@ settings itself: at launch the UI reads its settings and pushes each one in
 through the setters above. Until it does, the game uses the defaults in
 `desktop_melee.c`, which match the table.
 
-## 14. Proposal: the UI on Windows and Linux
+## 14. The UI on Windows and Linux
 
-> **This is a proposal, not a decision.** It is one way to build the UI on
-> Windows and Linux. Discuss it in issue #11 or #12 before building on it.
+> **Built for Linux; Windows can reuse it.** The tray, the settings window
+> and the settings file run on Linux (issue #12). Still missing on both: the
+> welcome window, "How to play", the Pause and hide hotkey, and hiding the
+> window.
 
-The macOS UI is SwiftUI and won't run elsewhere. The proposal is to build the
-other systems' UI from pieces the build already has, so it can be one C/C++
-codebase for Windows and Linux:
+The macOS UI is SwiftUI and won't run elsewhere. The other systems' UI is
+built from pieces the build already has, so it is one C/C++ codebase for
+Windows and Linux:
 
 **The menu: SDL3's tray icon.** `SDL_CreateTray(icon, tooltip)`, in the SDL
 the build already vendors, gives a notification-area icon on Windows and an
@@ -522,20 +524,42 @@ only with the AppIndicator extension; on GNOME without it, Settings has to be
 reachable some other way, such as a desktop entry or launching the game a
 second time.
 
+**Built for Linux:** [`tray_sdl.c`](../../desktop-melee/src/tray_sdl.c). The
+icon is drawn in code: a floor and two fighters in the player colours. The
+menu is "Start or restart match" (the game doesn't call the UI back, so the
+label can't switch; `desktop_melee_request_match()` does both), "Pause and
+hide", "Settings..." and "Quit Desktop Melee"; "How to play" waits for the
+welcome window. Without a tray, the settings window opens at startup instead.
+
 **The settings window: RmlUi.** melee-pc's launcher is already RmlUi
 (HTML/CSS-like documents, drawn by aurora's RmlUi backend in
 `extern/aurora/lib/rmlui/`), so it's in the build and
 can draw with Melee's font and portraits once they are decoded. A settings
 window with the five tabs, in the same order and with the same controls,
 ranges and defaults as sections 4 to 8, and the welcome window's steps 1 to
-3 and 5 in the same window. Two open questions:
+3 and 5 in the same window.
 
-- RmlUi draws inside an SDL window, so the settings window would be a second
-  SDL window (normal, decorated, focusable) beside the overlay. aurora's
-  backend draws into the game's one window, so a second window is work in
-  aurora.
-- Before the disc is in (welcome steps 1 and 2), Melee's font isn't
-  available: those steps need a bundled free font.
+**Built for Linux:** [`settings_window.cpp`](../../desktop-melee/src/settings_window.cpp)
+with [`settings.rml`](../../desktop-melee/resources/settings.rml), all five
+tabs. How the two open questions were answered:
+
+- **A second window.** aurora gained one
+  ([`rmlui_window.cpp`](../../extern/aurora/lib/rmlui_window.cpp),
+  `aurora::rmlui::open_window` in `include/aurora/rmlui.hpp`): its own SDL
+  window, WebGPU surface, render interface and RmlUi context, recorded with
+  the game's frame and presented after it. Its events never reach the game.
+  Only the render thread touches its surface; closing it hides the window
+  and destroys it once the render thread has let go.
+- **The font.** It uses melee-pc's bundled Noto Sans
+  (`resources/menu*.ttf`), so it works before the disc's assets load.
+  Character icons and portraits come from the disc at runtime through
+  aurora's texture providers (`dmicon://`, `dmportrait://`), requested only
+  once the roster has loaded.
+
+Where it differs from the macOS app: Stocks and percents offers Bottom and
+Hidden only (no island); each button-map entry cycles through its targets on
+click instead of opening a menu; sliders save shortly after they stop
+moving.
 
 A native toolkit per system (Win32 or WinUI, GTK or Qt) is the alternative:
 it fits each desktop better, at the cost of two UIs to maintain.

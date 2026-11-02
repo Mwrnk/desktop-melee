@@ -1,0 +1,316 @@
+/* Desktop Melee's settings window on Windows and Linux
+ * (docs/desktop-melee/ui-guide.md sections 3 to 8). Its own look, not the
+ * macOS app's: a dark panel, the player colours, groups with a small title.
+ * Only bundled free fonts: Noto Sans (resources/menu*.ttf). */
+
+div, p, h1, h2, h3, span.block { display: block; }
+
+body {
+    font-family: "Noto Sans";
+    font-size: 15dp;
+    color: #e8e8f0;
+    background-color: #141419;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Scrollbars must be styled: RmlUi's unstyled one takes the content's width. */
+scrollbarvertical { width: 10dp; margin: 2dp 0; }
+scrollbarvertical slidertrack { background-color: #00000000; }
+scrollbarvertical sliderbar { background-color: #3a3a4a; border-radius: 5dp; min-height: 32dp; }
+scrollbarvertical sliderbar:hover, scrollbarvertical sliderbar:active { background-color: #55555f; }
+scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { height: 0; }
+scrollbarhorizontal { height: 0; }
+
+/* ---- Header and tabs ---------------------------------------------------- */
+
+#header { padding: 16dp 18dp 8dp; }
+#header h1 { font-size: 20dp; font-weight: bold; color: #ffffff; }
+#header p { font-size: 13dp; color: #9a9aa8; }
+
+#tabs {
+    display: flex;
+    flex-direction: row;
+    padding: 0 12dp;
+    border-bottom: 1dp #2a2a33;
+}
+#tabs button {
+    flex: 1;
+    padding: 8dp 0 9dp;
+    text-align: center;
+    color: #9a9aa8;
+    border-bottom: 3dp #00000000;
+    cursor: pointer;
+}
+#tabs button:hover { color: #e8e8f0; }
+#tabs button.selected { color: #ffffff; border-bottom-color: #3d75f5; }
+
+/* ---- Body --------------------------------------------------------------- */
+
+#body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14dp 18dp;
+}
+.page { display: none; }
+.page.shown { display: block; }
+
+.group-title {
+    font-size: 11dp;
+    font-weight: bold;
+    color: #8a8a98;
+    margin: 4dp 4dp 6dp;
+}
+.group {
+    background-color: #1e1e26;
+    border-radius: 10dp;
+    padding: 4dp 12dp;
+    margin-bottom: 14dp;
+}
+.row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-height: 40dp;
+    border-bottom: 1dp #2a2a33;
+}
+.row.last { border-bottom-width: 0; }
+.row .name { flex: 1; }
+.row .value { min-width: 52dp; text-align: center; font-weight: bold; }
+.note { font-size: 12dp; color: #8a8a98; margin: 0 4dp 12dp; }
+
+button { cursor: pointer; }
+.step {
+    width: 30dp;
+    height: 30dp;
+    line-height: 30dp;
+    text-align: center;
+    border-radius: 15dp;
+    background-color: #2c2c38;
+    font-size: 18dp;
+}
+.step:hover { background-color: #3a3a4a; }
+.step.disabled { color: #55555f; background-color: #22222a; }
+
+.primary {
+    display: block;
+    padding: 11dp 0;
+    margin-bottom: 14dp;
+    text-align: center;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #3d75f5;
+    border-radius: 10dp;
+}
+.primary:hover { background-color: #5585f7; }
+.primary.running { background-color: #e07a1f; }
+.primary.running:hover { background-color: #ea8c35; }
+
+/* ---- Footer ------------------------------------------------------------- */
+
+#footer {
+    display: flex;
+    flex-direction: row;
+    padding: 10dp 18dp 14dp;
+    border-top: 1dp #2a2a33;
+}
+#footer button { color: #9a9aa8; }
+#footer button:hover { color: #ffffff; }
+#footer .spacer { flex: 1; }
+
+/* ---- Shared controls ---------------------------------------------------- */
+
+.hidden { display: none; }
+
+/* On/off: a pill that reads On or Off. */
+.toggle {
+    min-width: 54dp;
+    padding: 5dp 0;
+    text-align: center;
+    border-radius: 13dp;
+    background-color: #2c2c38;
+    color: #9a9aa8;
+    font-weight: bold;
+    font-size: 13dp;
+}
+.toggle.on { background-color: #3d75f5; color: #ffffff; }
+.toggle.disabled { color: #55555f; background-color: #22222a; }
+
+/* A choice of a few: segmented pills in a row. */
+.segments { display: flex; flex-direction: row; }
+.segments button {
+    padding: 5dp 12dp;
+    margin-left: 4dp;
+    border-radius: 13dp;
+    background-color: #2c2c38;
+    color: #b8b8c4;
+    font-size: 13dp;
+}
+.segments button:hover { background-color: #3a3a4a; }
+.segments button.selected { background-color: #3d75f5; color: #ffffff; font-weight: bold; }
+.segments.wide { margin: 8dp 0; }
+.segments.wide button { flex: 1; text-align: center; margin: 0 2dp; }
+
+input.range { flex: 1; height: 24dp; margin: 0 10dp; cursor: pointer; }
+input.range slidertrack {
+    height: 6dp;
+    margin-top: 9dp;
+    background-color: #2c2c38;
+    border-radius: 3dp;
+}
+input.range sliderprogress {
+    height: 6dp;
+    background-color: #3d75f5;
+    border-radius: 3dp;
+}
+input.range sliderbar {
+    width: 18dp;
+    height: 18dp;
+    margin-top: 3dp;
+    margin-left: -9dp;
+    margin-right: -9dp;
+    border-radius: 9dp;
+    background-color: #e8e8f0;
+}
+input.range sliderarrowdec, input.range sliderarrowinc { width: 0; height: 0; }
+input.range.disabled sliderbar { background-color: #55555f; }
+.row .slider-value { width: 46dp; text-align: right; font-weight: bold; }
+.row.dim { color: #66666f; }
+
+/* ---- Players tab -------------------------------------------------------- */
+
+#cards { display: flex; flex-direction: row; margin-bottom: 10dp; }
+.card {
+    flex: 1;
+    margin: 0 4dp;
+    border-radius: 10dp;
+    border: 2dp #2a2a33;
+    background-color: #1e1e26;
+    overflow: hidden;
+}
+#card-p1.editing { border-color: #e83b38; }
+#card-p2.editing { border-color: #3d75f5; }
+.card .portrait {
+    display: block;
+    height: 96dp;
+    text-align: right;
+}
+#card-p1 .portrait { background-color: #e83b3840; }
+#card-p2 .portrait { background-color: #3d75f540; }
+.card .portrait img { height: 96dp; }
+.card .label { display: flex; flex-direction: row; padding: 6dp 8dp 2dp; }
+.card .tag { font-weight: bold; margin-right: 6dp; }
+#card-p1 .tag { color: #e83b38; }
+#card-p2 .tag { color: #3d75f5; }
+.card .fighter { flex: 1; font-weight: bold; white-space: nowrap; overflow: hidden; }
+.card .kind { display: flex; flex-direction: row; padding: 4dp 8dp 8dp; }
+.card .kind button {
+    flex: 1;
+    padding: 4dp 0;
+    text-align: center;
+    font-size: 12dp;
+    background-color: #2c2c38;
+    color: #9a9aa8;
+}
+.card .kind button.first { border-radius: 10dp 0 0 10dp; }
+.card .kind button.last { border-radius: 0 10dp 10dp 0; }
+#card-p1 .kind button.selected { background-color: #e83b38; color: #ffffff; }
+#card-p2 .kind button.selected { background-color: #3d75f5; color: #ffffff; }
+.card .level { display: flex; flex-direction: row; align-items: center; padding: 0 8dp 8dp; font-size: 12dp; }
+.card .level span.name { flex: 1; }
+.card .level .step { width: 24dp; height: 24dp; line-height: 24dp; border-radius: 12dp; font-size: 15dp; }
+.card .level .value { min-width: 26dp; text-align: center; font-weight: bold; }
+.card .level.disabled { color: #55555f; }
+
+#costumes { display: flex; flex-direction: row; flex-wrap: wrap; margin-bottom: 10dp; }
+#costumes button {
+    width: 46dp;
+    height: 46dp;
+    margin: 0 4dp 4dp 0;
+    border-radius: 8dp;
+    border: 2dp #2a2a33;
+    background-color: #1e1e26;
+    overflow: hidden;
+    text-align: center;
+}
+#costumes button img { height: 42dp; }
+#costumes button.selected { border-color: #ffffff; }
+#costumes button.taken { opacity: 0.35; }
+#costumes .x { position: absolute; left: 0; right: 0; top: 10dp; font-size: 18dp; font-weight: bold; color: #ff6060; }
+
+#roster { display: flex; flex-direction: row; flex-wrap: wrap; }
+#roster button {
+    width: 40dp;
+    height: 40dp;
+    margin: 0 2dp 2dp 0;
+    border-radius: 4dp;
+    background-color: #1e1e26;
+    text-align: center;
+}
+#roster button, #costumes button { position: relative; }
+#roster button:hover { background-color: #3a3a4a; }
+#roster button img { width: 40dp; height: 40dp; }
+#roster .badges { position: absolute; left: 1dp; top: 1dp; font-size: 9dp; font-weight: bold; }
+#roster .b1 { color: #ffffff; background-color: #e83b38; padding: 0 2dp; border-radius: 2dp; }
+#roster .b2 { color: #ffffff; background-color: #3d75f5; padding: 0 2dp; border-radius: 2dp; }
+#roster .sheik {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    font-size: 9dp;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #000000c0;
+}
+
+/* ---- Controls tab ------------------------------------------------------- */
+
+#ports { display: flex; flex-direction: row; margin: 8dp 0 4dp; }
+#ports button {
+    flex: 1;
+    margin: 0 3dp;
+    padding: 8dp 0;
+    text-align: center;
+    border-radius: 8dp;
+    background-color: #2c2c38;
+    font-weight: bold;
+}
+#ports button:hover { background-color: #3a3a4a; }
+#ports.p1 button.selected { background-color: #e83b38; color: #ffffff; }
+#ports.p2 button.selected { background-color: #3d75f5; color: #ffffff; }
+#ports button.other { color: #8a8a98; }
+#ports button .device { display: block; font-size: 10dp; font-weight: normal; color: #b8b8c4; }
+.badge {
+    display: inline-block;
+    min-width: 22dp;
+    padding: 2dp 0;
+    margin-right: 8dp;
+    text-align: center;
+    border-radius: 11dp;
+    font-size: 12dp;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #55555f;
+}
+.badge.a { background-color: #1fa86a; }
+.badge.b { background-color: #d84040; }
+.badge.z { background-color: #7a4fd0; }
+.map { min-width: 92dp; padding: 5dp 8dp; text-align: center; border-radius: 8dp; background-color: #2c2c38; }
+.map:hover { background-color: #3a3a4a; }
+.map.changed { color: #ffd84a; }
+.small-button { padding: 5dp 12dp; border-radius: 13dp; background-color: #2c2c38; font-size: 13dp; }
+.small-button:hover { background-color: #3a3a4a; }
+.small-button.disabled { color: #55555f; background-color: #22222a; }
+
+/* ---- Display tab -------------------------------------------------------- */
+
+#screens .row { cursor: pointer; }
+#screens .row:hover { background-color: #26262f; }
+.check { width: 22dp; color: #3d75f5; font-weight: bold; }
+.main-badge { font-size: 11dp; color: #9a9aa8; margin-left: 6dp; }

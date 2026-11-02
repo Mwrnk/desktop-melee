@@ -1,0 +1,929 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Desktop Melee's settings window (settings_window.h). Each tab follows
+ * docs/desktop-melee/ui-guide.md: the same controls, ranges, defaults, saved
+ * keys and C calls as the macOS app, in this window's own look.
+ *
+ * Changes apply and save at once (sliders save shortly after they stop
+ * moving). The window polls the game, which never calls it back: the match
+ * state twice a second, the plugged-in devices and screens once a second. */
+#include "settings_window.h"
+
+#include <RmlUi/Core.h>
+#include <RmlUi/Core/Elements/ElementFormControlInput.h>
+#include <SDL3/SDL.h>
+#include <aurora/rmlui.hpp>
+
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <optional>
+#include <string>
+#include <vector>
+
+extern "C" {
+#include "../ui/bridge/desktop_melee_bridge.h"
+#include "settings_file.h"
+}
+
+namespace {
+
+/* desktop_melee_sound_menu kinds (ui-guide.md section 1). */
+enum { SOUND_BACK = 0, SOUND_CONFIRM = 1, SOUND_MOVE = 2, SOUND_DENIED = 3 };
+
+constexpr const char* kContextName = "desktop-melee-settings";
+constexpr const char* kTabs[] = {"match", "players", "controls", "sound", "display"};
+constexpr int kZelda = 0x12;
+constexpr int kSheik = 0x13;
+constexpr const char* kNames[0x1A] = {"Captain Falcon", "Donkey Kong", "Fox", "Mr. Game & Watch",
+    "Kirby", "Bowser", "Link", "Luigi", "Mario", "Marth", "Mewtwo", "Ness", "Peach", "Pikachu",
+    "Ice Climbers", "Jigglypuff", "Samus", "Yoshi", "Zelda", "Sheik", "Falco", "Young Link",
+    "Dr. Mario", "Roy", "Pichu", "Ganondorf"};
+constexpr const char* kButtonTargets[DESKTOP_MELEE_BTN_COUNT + 1] = {
+    "A", "B", "X (jump)", "Y (jump)", "Z (grab)", "L (shield)", "R (shield)", "Nothing"};
+constexpr Uint64 kSaveDelayMs = 400;
+
+struct Fighter {
+    int ckind;
+    int icon;     /* roster index of its icon (Zelda's for Sheik) */
+    int announce; /* roster index for the announcer, -1 for none (Sheik) */
+};
+
+Rml::ElementDocument* s_document = nullptr;
+std::string s_tab = "match"; /* remembered until the game quits */
+int s_editing = 0;           /* whose character the Players grid picks */
+int s_control_player = 0;    /* whose controls the Controls tab shows */
+std::vector<Fighter> s_roster;
+bool s_updating = false; /* setting slider values: ignore their change events */
+Uint64 s_last_fast_poll = 0;
+Uint64 s_last_slow_poll = 0;
+bool s_last_match_active = false;
+std::string s_last_devices;
+int s_last_display_count = -1;
+Uint64 s_save_settings_at = 0; /* 0 = nothing to save */
+Uint64 s_save_prefs_at = 0;
+
+DesktopMeleeSettings& settings() {
+    return *desktop_melee_settings();
+}
+
+std::string resources_path() {
+    const char* base = SDL_GetBasePath();
+    return std::string(base != nullptr ? base : "./") + "resources/";
+}
+
+void play_sound(int kind) {
+    if (settings().menu_sounds) {
+        desktop_melee_sound_menu(kind);
+    }
+}
+
+std::string player_name(int player) {
+    return player == 0 ? "P1" : "P2";
+}
+
+/* ---- elements ----------------------------------------------------------- */
+
+Rml::Element* element(const std::string& id) {
+    return s_document != nullptr ? s_document->GetElementById(id) : nullptr;
+}
+
+void set_text(const std::string& id, const std::string& text) {
+    if (Rml::Element* e = element(id)) {
+        e->SetInnerRML(Rml::StringUtilities::EncodeRml(text));
+    }
+}
+
+void set_class(const std::string& id, const char* name, bool on) {
+    if (Rml::Element* e = element(id)) {
+        e->SetClass(name, on);
+    }
+}
+
+void set_toggle(const std::string& id, bool on, bool enabled = true) {
+    set_class(id, "on", on);
+    set_class(id, "disabled", !enabled);
+    set_text(id, on ? "On" : "Off");
+}
+
+void set_slider(const std::string& id, int value, bool enabled = true) {
+    auto* input = dynamic_cast<Rml::ElementFormControlInput*>(element(id));
+    if (input == nullptr) {
+        return;
+    }
+    s_updating = true;
+    input->SetValue(std::to_string(value));
+    s_updating = false;
+    input->SetClass("disabled", !enabled);
+    if (enabled) {
+        input->RemoveAttribute("disabled");
+    } else {
+        input->SetAttribute("disabled", "");
+    }
+}
+
+/* The id of the element clicked, or of its nearest parent with one (a click
+ * on a button's text lands on the text). */
+std::string clicked_id(Rml::Element* e) {
+    for (; e != nullptr; e = e->GetParentNode()) {
+        if (!e->GetId().empty()) {
+            return e->GetId();
+        }
+    }
+    return {};
+}
+
+bool starts_with(const std::string& text, const char* prefix) {
+    return text.rfind(prefix, 0) == 0;
+}
+
+/* "port-3" -> 3 after prefix "port-". */
+int id_number(const std::string& id, const char* prefix) {
+    return std::atoi(id.c_str() + std::strlen(prefix));
+}
+
+/* ---- saving ------------------------------------------------------------- */
+
+void save_settings_soon() {
+    s_save_settings_at = SDL_GetTicks() + kSaveDelayMs;
+}
+void save_prefs_soon() {
+    s_save_prefs_at = SDL_GetTicks() + kSaveDelayMs;
+}
+
+void flush_saves(bool now) {
+    const Uint64 t = SDL_GetTicks();
+    if (s_save_settings_at != 0 && (now || t >= s_save_settings_at)) {
+        s_save_settings_at = 0;
+        desktop_melee_settings_save();
+    }
+    if (s_save_prefs_at != 0 && (now || t >= s_save_prefs_at)) {
+        s_save_prefs_at = 0;
+        pc_prefs_save();
+    }
+}
+
+/* The match setup (rules, players, ports) into the game and the file. */
+void commit_match() {
+    desktop_melee_set_match_setup(&settings().match);
+    desktop_melee_settings_save();
+}
+
+/* ---- textures from the disc ----------------------------------------------- */
+
+/* dmicon://<roster index> and dmportrait://<ckind>-<costume>, decoded by the
+ * game from the player's disc (ui-guide.md section 2). Requested only once
+ * the roster has loaded, so RmlUi never caches a missing image. */
+std::optional<aurora::rmlui::RuntimeTexture> texture(const uint8_t* rgba, int w, int h) {
+    if (rgba == nullptr || w <= 0 || h <= 0) {
+        return std::nullopt;
+    }
+    return aurora::rmlui::RuntimeTexture{
+        .width = static_cast<uint32_t>(w),
+        .height = static_cast<uint32_t>(h),
+        .rgba8 = {reinterpret_cast<const std::byte*>(rgba), static_cast<size_t>(w) * h * 4},
+    };
+}
+
+void register_textures() {
+    static bool registered = false;
+    if (registered) {
+        return;
+    }
+    registered = true;
+    aurora::rmlui::register_texture_provider(
+        "dmicon", [](std::string_view source) -> std::optional<aurora::rmlui::RuntimeTexture> {
+            const int index = std::atoi(std::string(source.substr(source.find("://") + 3)).c_str());
+            int w = 0;
+            int h = 0;
+            const uint8_t* rgba = desktop_melee_roster_icon(index, &w, &h);
+            return texture(rgba, w, h);
+        });
+    aurora::rmlui::register_texture_provider(
+        "dmportrait", [](std::string_view source) -> std::optional<aurora::rmlui::RuntimeTexture> {
+            int ckind = 0;
+            int costume = 0;
+            const std::string rest(source.substr(source.find("://") + 3));
+            if (std::sscanf(rest.c_str(), "%d-%d", &ckind, &costume) != 2) {
+                return std::nullopt;
+            }
+            int w = 0;
+            int h = 0;
+            const uint8_t* rgba =
+                desktop_melee_portrait(ckind == kSheik ? kZelda : ckind, costume, &w, &h);
+            return texture(rgba, w, h);
+        });
+}
+
+bool roster_ready() {
+    return !s_roster.empty();
+}
+
+/* Melee's select grid order, Sheik closing the last row with Zelda's icon. */
+void load_roster() {
+    if (roster_ready() || desktop_melee_roster_count() <= 0) {
+        return;
+    }
+    int zelda = -1;
+    for (int i = 0; i < desktop_melee_roster_count(); i++) {
+        int ckind = 0;
+        int costumes = 0;
+        if (desktop_melee_roster_entry(i, &ckind, &costumes)) {
+            s_roster.push_back({ckind, i, i});
+            if (ckind == kZelda) {
+                zelda = i;
+            }
+        }
+    }
+    if (zelda >= 0) {
+        s_roster.push_back({kSheik, zelda, -1});
+    }
+}
+
+int costume_count(int ckind) {
+    int n = desktop_melee_costume_count(ckind);
+    if (n <= 0 && ckind == kSheik) {
+        n = desktop_melee_costume_count(kZelda);
+    }
+    return n;
+}
+
+const char* fighter_name(int ckind) {
+    return ckind >= 0 && ckind < 0x1A ? kNames[ckind] : "?";
+}
+
+/* ---- Match tab ---------------------------------------------------------- */
+
+void refresh_match() {
+    const DesktopMeleeMatchSetup& match = settings().match;
+    const int minutes = match.time_seconds / 60;
+    set_text("stocks-value", std::to_string(match.stocks));
+    set_text("minutes-value", minutes == 0 ? "None" : std::to_string(minutes));
+    set_class("stocks-minus", "disabled", match.stocks <= 1);
+    set_class("stocks-plus", "disabled", match.stocks >= 99);
+    set_class("minutes-minus", "disabled", minutes <= 0);
+    set_class("minutes-plus", "disabled", minutes >= 99);
+
+    const bool active = desktop_melee_match_active();
+    set_text("match-start", active ? "Restart Match" : "Start Match");
+    set_class("match-start", "running", active);
+    set_text("match-note", active ? "Changes apply at the next match. Restart applies them now." :
+                                    "Changes apply when the match starts.");
+}
+
+/* Steps a value within [lo, hi]; the denied sound at the ends. */
+bool step_value(int& value, int delta, int lo, int hi) {
+    const int next = value + delta;
+    if (next < lo || next > hi) {
+        play_sound(SOUND_DENIED);
+        return false;
+    }
+    value = next;
+    play_sound(SOUND_MOVE);
+    return true;
+}
+
+bool click_match(const std::string& id) {
+    DesktopMeleeMatchSetup& match = settings().match;
+    int minutes = match.time_seconds / 60;
+    if (id == "stocks-minus" || id == "stocks-plus") {
+        if (step_value(match.stocks, id == "stocks-plus" ? 1 : -1, 1, 99)) {
+            commit_match();
+        }
+    } else if (id == "minutes-minus" || id == "minutes-plus") {
+        if (step_value(minutes, id == "minutes-plus" ? 1 : -1, 0, 99)) {
+            match.time_seconds = minutes * 60;
+            commit_match();
+        }
+    } else if (id == "match-start") {
+        play_sound(SOUND_CONFIRM);
+        desktop_melee_request_match();
+    } else {
+        return false;
+    }
+    refresh_match();
+    return true;
+}
+
+/* ---- Players tab -------------------------------------------------------- */
+
+bool costume_taken(int player, int costume) {
+    const DesktopMeleePlayerSetup& other = settings().match.players[1 - player];
+    return other.ckind == settings().match.players[player].ckind && other.costume == costume;
+}
+
+/* Costumes in range, and two players on one character in different
+ * costumes: the edited player moves to the next free one, as Melee's select
+ * screen does (ui-guide.md section 5). */
+void fix_costumes(int mover) {
+    for (int i = 0; i < 2; i++) {
+        DesktopMeleePlayerSetup& p = settings().match.players[i];
+        const int n = costume_count(p.ckind);
+        if (n > 0 && p.costume >= n) {
+            p.costume = 0;
+        }
+    }
+    DesktopMeleePlayerSetup& p = settings().match.players[mover];
+    if (costume_taken(mover, p.costume)) {
+        const int n = std::max(1, costume_count(p.ckind));
+        for (int step = 1; step < n; step++) {
+            const int c = (p.costume + step) % n;
+            if (!costume_taken(mover, c)) {
+                p.costume = c;
+                break;
+            }
+        }
+    }
+}
+
+std::string portrait_src(int ckind, int costume) {
+    return "dmportrait://" + std::to_string(ckind) + "-" + std::to_string(costume);
+}
+
+void refresh_players() {
+    const bool ready = roster_ready();
+    for (int i = 0; i < 2; i++) {
+        const DesktopMeleePlayerSetup& p = settings().match.players[i];
+        const std::string n = i == 0 ? "p1" : "p2";
+        set_class("card-" + n, "editing", s_editing == i);
+        set_text("fighter-" + n, fighter_name(p.ckind));
+        set_class("human-" + n, "selected", p.cpu == 0);
+        set_class("cpu-" + n, "selected", p.cpu != 0);
+        set_text("level-" + n, std::to_string(p.cpu_level));
+        set_class("level-row-" + n, "disabled", p.cpu == 0);
+        if (Rml::Element* img = element("portrait-" + n)) {
+            img->SetClass("hidden", !ready);
+            if (ready) {
+                img->SetAttribute("src", portrait_src(p.ckind, p.costume));
+            }
+        }
+    }
+    set_class("roster-loading", "hidden", ready);
+    if (!ready) {
+        return;
+    }
+
+    /* The edited player's costumes; the other player's costume of the same
+     * character is taken. */
+    const DesktopMeleePlayerSetup& edited = settings().match.players[s_editing];
+    std::string costumes;
+    const int count = costume_count(edited.ckind);
+    for (int c = 0; c < count; c++) {
+        const bool taken = costume_taken(s_editing, c);
+        costumes += "<button id=\"costume-" + std::to_string(c) + "\" class=\"" +
+                    (c == edited.costume ? "selected" : "") + (taken ? " taken" : "") +
+                    "\"><img src=\"" + portrait_src(edited.ckind, c) + "\"/>" +
+                    (taken ? "<span class=\"x\">x</span>" : "") + "</button>";
+    }
+    if (Rml::Element* e = element("costumes")) {
+        e->SetInnerRML(costumes);
+    }
+
+    /* The grid, with P1/P2 badges on whoever picked each tile. */
+    std::string grid;
+    for (size_t i = 0; i < s_roster.size(); i++) {
+        const Fighter& f = s_roster[i];
+        std::string badges;
+        for (int p = 0; p < 2; p++) {
+            if (settings().match.players[p].ckind == f.ckind) {
+                badges += "<span class=\"b" + std::to_string(p + 1) + "\">P" +
+                          std::to_string(p + 1) + "</span>";
+            }
+        }
+        grid += "<button id=\"pick-" + std::to_string(i) + "\"><img src=\"dmicon://" +
+                std::to_string(f.icon) + "\"/>" +
+                (f.ckind == kSheik ? "<span class=\"sheik\">SHEIK</span>" : "") +
+                (badges.empty() ? "" : "<span class=\"badges\">" + badges + "</span>") +
+                "</button>";
+    }
+    if (Rml::Element* e = element("roster")) {
+        e->SetInnerRML(grid);
+    }
+    set_text("players-note", desktop_melee_match_active() ? "Changes apply at the next match." :
+                                                            "Changes apply when the match starts.");
+}
+
+/* Which card an id belongs to (its own controls aside), or -1. */
+int card_of(const std::string& id) {
+    for (const char* prefix : {"card-", "portrait-", "fighter-"}) {
+        if (starts_with(id, prefix)) {
+            return id.back() == '1' ? 0 : 1;
+        }
+    }
+    return -1;
+}
+
+bool click_players(const std::string& id) {
+    DesktopMeleeMatchSetup& match = settings().match;
+    if (const int card = card_of(id); card >= 0) {
+        if (card != s_editing) {
+            s_editing = card;
+            play_sound(SOUND_MOVE);
+        }
+    } else if (starts_with(id, "human-") || starts_with(id, "cpu-")) {
+        const int player = id.back() == '1' ? 0 : 1;
+        match.players[player].cpu = starts_with(id, "cpu-") ? 1 : 0;
+        play_sound(SOUND_CONFIRM);
+        commit_match();
+    } else if (starts_with(id, "level-minus-") || starts_with(id, "level-plus-")) {
+        const int player = id.back() == '1' ? 0 : 1;
+        if (match.players[player].cpu == 0) {
+            play_sound(SOUND_DENIED);
+        } else if (step_value(match.players[player].cpu_level,
+                       starts_with(id, "level-plus-") ? 1 : -1, 1, 9))
+        {
+            commit_match();
+        }
+    } else if (starts_with(id, "pick-")) {
+        const size_t index = static_cast<size_t>(id_number(id, "pick-"));
+        if (index >= s_roster.size()) {
+            return true;
+        }
+        const Fighter& f = s_roster[index];
+        match.players[s_editing].ckind = f.ckind;
+        fix_costumes(s_editing);
+        commit_match();
+        play_sound(SOUND_CONFIRM);
+        /* Not during a match: it swaps in its own sound banks. */
+        if (f.announce >= 0 && !desktop_melee_match_active()) {
+            desktop_melee_sound_announce(f.announce);
+        }
+    } else if (starts_with(id, "costume-")) {
+        const int costume = id_number(id, "costume-");
+        if (costume_taken(s_editing, costume)) {
+            play_sound(SOUND_DENIED);
+            return true;
+        }
+        match.players[s_editing].costume = costume;
+        play_sound(SOUND_CONFIRM);
+        commit_match();
+    } else {
+        return false;
+    }
+    refresh_players();
+    return true;
+}
+
+/* ---- Controls tab ------------------------------------------------------- */
+
+std::string port_device(int port) {
+    const char* device = desktop_melee_port_device(port);
+    return device != nullptr ? device : "";
+}
+
+std::string port_description(int port) {
+    const std::string device = port_device(port);
+    const std::string label = "Port " + std::to_string(port + 1) + ": ";
+    if (port == 0) {
+        return label + (device.empty() ? "keyboard" : device + " + keyboard");
+    }
+    return label + (device.empty() ? "nothing plugged in" : device);
+}
+
+void refresh_controls() {
+    const int pl = s_control_player;
+    const DesktopMeleeMatchSetup& match = settings().match;
+    const DesktopMeleePlayerSetup& p = match.players[pl];
+    set_class("ctl-p1", "selected", pl == 0);
+    set_class("ctl-p2", "selected", pl == 1);
+    if (Rml::Element* e = element("ctl-cpu-note")) {
+        e->SetClass("hidden", p.cpu == 0);
+        e->SetInnerRML(player_name(pl) + " is a CPU right now. These apply when " +
+                       player_name(pl) + " plays as Human.");
+    }
+    if (Rml::Element* ports = element("ports")) {
+        ports->SetClass("p1", pl == 0);
+        ports->SetClass("p2", pl == 1);
+    }
+    for (int port = 0; port < 4; port++) {
+        const std::string n = std::to_string(port);
+        set_class("port-" + n, "selected", p.port == port);
+        set_class("port-" + n, "other", match.players[1 - pl].port == port);
+        std::string device = port_device(port);
+        if (device.empty() && port == 0) {
+            device = "Keyboard";
+        }
+        if (match.players[1 - pl].port == port) {
+            device = player_name(1 - pl) + (device.empty() ? "" : " - " + device);
+        }
+        set_text("port-device-" + n, device.empty() ? "-" : device);
+    }
+    set_text("port-desc", port_description(p.port));
+
+    const int* map = settings().button_map[pl];
+    set_toggle("tapjump", settings().tap_jump[pl]);
+    set_toggle("zjump", map[DESKTOP_MELEE_BTN_Z] == DESKTOP_MELEE_BTN_X);
+    bool is_default = settings().tap_jump[pl];
+    for (int b = 0; b < DESKTOP_MELEE_BTN_COUNT; b++) {
+        const std::string id = "map-" + std::to_string(b);
+        const int target = map[b] >= 0 && map[b] <= DESKTOP_MELEE_BTN_NONE ? map[b] : b;
+        set_text(id, kButtonTargets[target]);
+        set_class(id, "changed", target != b);
+        is_default = is_default && target == b;
+    }
+    set_class("map-reset", "disabled", is_default);
+
+    bool ucf = false;
+    bool locked = false;
+    pc_prefs_get_ucf(&ucf, &locked);
+    set_toggle("ucf", ucf, !locked);
+    set_text("ucf-note", locked ? "Set by MELEE_UCF in the environment." :
+                                  "Fixes dashback and shield drops on any controller.");
+    set_text(
+        "controls-note", desktop_melee_match_active() ?
+                             "Buttons and jump apply now. The port applies at the next match." :
+                             "Buttons and jump apply right away.");
+}
+
+void set_button(int player, int button, int target) {
+    settings().button_map[player][button] = target;
+    desktop_melee_set_button_map(player, button, target);
+}
+
+bool click_controls(const std::string& id) {
+    const int pl = s_control_player;
+    DesktopMeleeMatchSetup& match = settings().match;
+    if (id == "ctl-p1" || id == "ctl-p2") {
+        const int next = id == "ctl-p1" ? 0 : 1;
+        if (next != s_control_player) {
+            s_control_player = next;
+            play_sound(SOUND_MOVE);
+        }
+    } else if (starts_with(id, "port-") && !starts_with(id, "port-device-") && id != "port-desc") {
+        const int port = id_number(id, "port-");
+        /* Two players never share a port: picking the other's swaps them. */
+        if (match.players[1 - pl].port == port) {
+            match.players[1 - pl].port = match.players[pl].port;
+        }
+        match.players[pl].port = port;
+        play_sound(SOUND_CONFIRM);
+        commit_match();
+    } else if (id == "tapjump") {
+        settings().tap_jump[pl] = !settings().tap_jump[pl];
+        desktop_melee_set_tap_jump(pl, settings().tap_jump[pl]);
+        play_sound(SOUND_CONFIRM);
+        desktop_melee_settings_save();
+    } else if (id == "zjump") {
+        const bool on = settings().button_map[pl][DESKTOP_MELEE_BTN_Z] == DESKTOP_MELEE_BTN_X;
+        set_button(pl, DESKTOP_MELEE_BTN_Z, on ? DESKTOP_MELEE_BTN_Z : DESKTOP_MELEE_BTN_X);
+        play_sound(SOUND_CONFIRM);
+        desktop_melee_settings_save();
+    } else if (starts_with(id, "map-") && id != "map-reset") {
+        /* Each click picks the next target, Nothing last. */
+        const int button = id_number(id, "map-");
+        const int target = (settings().button_map[pl][button] + 1) % (DESKTOP_MELEE_BTN_NONE + 1);
+        set_button(pl, button, target);
+        play_sound(SOUND_MOVE);
+        desktop_melee_settings_save();
+    } else if (id == "map-reset") {
+        settings().tap_jump[pl] = true;
+        desktop_melee_set_tap_jump(pl, true);
+        for (int b = 0; b < DESKTOP_MELEE_BTN_COUNT; b++) {
+            set_button(pl, b, b);
+        }
+        play_sound(SOUND_BACK);
+        desktop_melee_settings_save();
+    } else if (id == "ucf") {
+        bool ucf = false;
+        bool locked = false;
+        pc_prefs_get_ucf(&ucf, &locked);
+        if (locked) {
+            play_sound(SOUND_DENIED);
+            return true;
+        }
+        pc_prefs_set_ucf(!ucf);
+        pc_prefs_save();
+        play_sound(SOUND_CONFIRM);
+    } else {
+        return false;
+    }
+    refresh_controls();
+    return true;
+}
+
+/* ---- Sound tab ---------------------------------------------------------- */
+
+struct Audio {
+    float volume = 1.f;
+    float music = 1.f;
+    float sfx = 1.f;
+    bool mute = false;
+    bool reverb = true;
+};
+
+Audio read_audio() {
+    Audio a;
+    pc_prefs_get_audio(&a.volume, &a.music, &a.sfx, &a.mute, &a.reverb);
+    return a;
+}
+
+void write_audio(const Audio& a) {
+    pc_prefs_set_audio(a.volume, a.music, a.sfx, a.mute, a.reverb);
+}
+
+int percent(float v) {
+    return static_cast<int>(v * 100.f + 0.5f);
+}
+
+/* From launcher.cfg each time: melee-pc's F1 menu can change it too. */
+void refresh_sound() {
+    const Audio a = read_audio();
+    set_slider("vol-master", percent(a.volume), !a.mute);
+    set_slider("vol-music", percent(a.music));
+    set_slider("vol-sfx", percent(a.sfx));
+    set_text("vol-master-value", std::to_string(percent(a.volume)) + "%");
+    set_text("vol-music-value", std::to_string(percent(a.music)) + "%");
+    set_text("vol-sfx-value", std::to_string(percent(a.sfx)) + "%");
+    set_class("row-master", "dim", a.mute);
+    set_toggle("mute", a.mute);
+    set_toggle("reverb", a.reverb);
+    set_toggle("menu-sounds", settings().menu_sounds);
+}
+
+bool change_sound(const std::string& id, float value) {
+    Audio a = read_audio();
+    const float v = std::clamp(value / 100.f, 0.f, 1.f);
+    if (id == "vol-master") {
+        a.volume = v;
+    } else if (id == "vol-music") {
+        a.music = v;
+    } else if (id == "vol-sfx") {
+        a.sfx = v;
+    } else {
+        return false;
+    }
+    write_audio(a); /* heard at once, saved when the slider rests */
+    save_prefs_soon();
+    set_text(id + "-value", std::to_string(percent(v)) + "%");
+    return true;
+}
+
+bool click_sound(const std::string& id) {
+    Audio a = read_audio();
+    if (id == "mute") {
+        a.mute = !a.mute;
+    } else if (id == "reverb") {
+        a.reverb = !a.reverb;
+    } else if (id == "menu-sounds") {
+        settings().menu_sounds = !settings().menu_sounds;
+        desktop_melee_settings_save();
+        play_sound(SOUND_CONFIRM);
+        refresh_sound();
+        return true;
+    } else {
+        return false;
+    }
+    write_audio(a);
+    pc_prefs_save();
+    play_sound(SOUND_CONFIRM);
+    refresh_sound();
+    return true;
+}
+
+/* ---- Display tab -------------------------------------------------------- */
+
+void refresh_screens() {
+    int count = 0;
+    SDL_DisplayID* displays = SDL_GetDisplays(&count);
+    const SDL_DisplayID primary = SDL_GetPrimaryDisplay();
+    std::string rows;
+    for (int i = 0; i < count; i++) {
+        const char* raw = SDL_GetDisplayName(displays[i]);
+        const std::string name = raw != nullptr ? raw : "Display";
+        const bool is_primary = displays[i] == primary;
+        /* "" follows the primary; a saved screen that is unplugged falls
+         * back to the primary too. */
+        const std::string saved = settings().screen;
+        bool saved_present = false;
+        for (int j = 0; j < count; j++) {
+            const char* other = SDL_GetDisplayName(displays[j]);
+            saved_present = saved_present || (other != nullptr && saved == other);
+        }
+        const bool chosen = saved.empty() || !saved_present ? is_primary : name == saved;
+        rows += "<div id=\"screen-" + std::to_string(i) + "\" class=\"row" +
+                (i == count - 1 ? " last" : "") + "\"><span class=\"check\">" +
+                (chosen ? "&#10003;" : "") + "</span><span class=\"name\">" +
+                Rml::StringUtilities::EncodeRml(name) +
+                (is_primary ? "<span class=\"main-badge\">main</span>" : "") + "</span></div>";
+    }
+    SDL_free(displays);
+    s_last_display_count = count;
+    if (Rml::Element* e = element("screens")) {
+        e->SetInnerRML(rows);
+    }
+    set_text("screen-note", count <= 1 ? "Connect another display to play on it." : "");
+}
+
+void refresh_display() {
+    const bool locked = desktop_melee_fighter_size_locked();
+    const int size = static_cast<int>(settings().fighter_size + 0.5f);
+    set_slider("size", size, !locked);
+    set_text("size-value", std::to_string(size) + "%");
+    set_text("size-note",
+        locked ? "Set by DESKTOP_MELEE_SCALE in the environment." :
+                 "The screen edges are the blast zones, so bigger fighters are KO'd sooner.");
+    set_toggle("shake", settings().shake);
+    set_toggle("tags", settings().tags);
+    set_class("timer-top", "selected", settings().timer_mode == DESKTOP_MELEE_TIMER_TOP);
+    set_class("timer-hidden", "selected", settings().timer_mode == DESKTOP_MELEE_TIMER_HIDDEN);
+    /* No notch island on these systems: Island shows as Melee's own HUD,
+     * which is what the game falls back to. */
+    const bool hidden = settings().hud_mode == DESKTOP_MELEE_HUD_HIDDEN;
+    set_class("hud-bottom", "selected", !hidden);
+    set_class("hud-hidden", "selected", hidden);
+    set_text("hud-note",
+        hidden ? "No stocks or percents on screen." : "Melee's own, at the bottom of the screen.");
+    refresh_screens();
+}
+
+bool change_display(const std::string& id, float value) {
+    if (id != "size" || desktop_melee_fighter_size_locked()) {
+        return false;
+    }
+    const float size = std::clamp(value, 50.f, 200.f);
+    settings().fighter_size = size;
+    desktop_melee_set_fighter_size(size);
+    save_settings_soon();
+    set_text("size-value", std::to_string(static_cast<int>(size + 0.5f)) + "%");
+    return true;
+}
+
+bool click_display(const std::string& id) {
+    DesktopMeleeSettings& s = settings();
+    if (id == "shake") {
+        s.shake = !s.shake;
+        desktop_melee_set_shake(s.shake);
+    } else if (id == "tags") {
+        s.tags = !s.tags;
+        desktop_melee_set_tags(s.tags);
+    } else if (id == "timer-top" || id == "timer-hidden") {
+        s.timer_mode = id == "timer-top" ? DESKTOP_MELEE_TIMER_TOP : DESKTOP_MELEE_TIMER_HIDDEN;
+        desktop_melee_set_timer_mode(s.timer_mode);
+    } else if (id == "hud-bottom" || id == "hud-hidden") {
+        s.hud_mode = id == "hud-bottom" ? DESKTOP_MELEE_HUD_BOTTOM : DESKTOP_MELEE_HUD_HIDDEN;
+        desktop_melee_set_hud_mode(s.hud_mode);
+    } else if (starts_with(id, "screen-")) {
+        int count = 0;
+        SDL_DisplayID* displays = SDL_GetDisplays(&count);
+        const int index = id_number(id, "screen-");
+        if (index >= 0 && index < count) {
+            const char* name = SDL_GetDisplayName(displays[index]);
+            /* The primary is saved as "", so the overlay keeps following it. */
+            const bool primary = displays[index] == SDL_GetPrimaryDisplay();
+            snprintf(s.screen, sizeof s.screen, "%s", primary || name == nullptr ? "" : name);
+            desktop_melee_set_screen(s.screen);
+        }
+        SDL_free(displays);
+    } else {
+        return false;
+    }
+    play_sound(SOUND_CONFIRM);
+    desktop_melee_settings_save();
+    refresh_display();
+    return true;
+}
+
+/* ---- the window --------------------------------------------------------- */
+
+void refresh_all() {
+    refresh_match();
+    refresh_players();
+    refresh_controls();
+    refresh_sound();
+    refresh_display();
+}
+
+void show_tab(const std::string& tab) {
+    s_tab = tab;
+    for (const char* name : kTabs) {
+        const bool shown = tab == name;
+        set_class("tab-" + std::string(name), "selected", shown);
+        set_class("page-" + std::string(name), "shown", shown);
+    }
+    if (tab == "sound") {
+        refresh_sound();
+    }
+}
+
+class Listener : public Rml::EventListener {
+public:
+    void ProcessEvent(Rml::Event& event) override {
+        const std::string id = clicked_id(event.GetTargetElement());
+        if (event.GetId() == Rml::EventId::Change) {
+            if (!s_updating) {
+                const float value = event.GetParameter<float>("value", 0.f);
+                change_sound(id, value) || change_display(id, value);
+            }
+            return;
+        }
+        if (starts_with(id, "tab-")) {
+            if (id.substr(4) != s_tab) {
+                play_sound(SOUND_MOVE);
+                show_tab(id.substr(4));
+            }
+        } else if (id == "quit") {
+            play_sound(SOUND_BACK);
+            flush_saves(true);
+            desktop_melee_request_quit();
+        } else {
+            click_match(id) || click_players(id) || click_controls(id) || click_sound(id) ||
+                click_display(id);
+        }
+    }
+};
+Listener s_listener;
+
+/* Once a frame (aurora's window frame callback). */
+void on_frame(void*) {
+    if (s_document == nullptr) {
+        return;
+    }
+    flush_saves(false);
+    const Uint64 now = SDL_GetTicks();
+    if (now - s_last_fast_poll >= 500) {
+        s_last_fast_poll = now;
+        const bool active = desktop_melee_match_active();
+        if (active != s_last_match_active) {
+            s_last_match_active = active;
+            refresh_match();
+            refresh_players();
+            refresh_controls();
+        }
+    }
+    if (now - s_last_slow_poll >= 1000) {
+        s_last_slow_poll = now;
+        if (!roster_ready()) {
+            load_roster();
+            if (roster_ready()) {
+                for (int i = 0; i < 2; i++) {
+                    fix_costumes(i); /* costume counts are known now */
+                }
+                refresh_players();
+            }
+        }
+        std::string devices;
+        for (int port = 0; port < 4; port++) {
+            devices += port_device(port) + "|";
+        }
+        if (devices != s_last_devices) {
+            s_last_devices = devices;
+            refresh_controls();
+        }
+        int count = 0;
+        SDL_free(SDL_GetDisplays(&count));
+        if (count != s_last_display_count) {
+            refresh_screens();
+            desktop_melee_set_screen(settings().screen); /* a display came or went */
+        }
+    }
+}
+
+void on_closed(void*) {
+    flush_saves(true);
+    s_document = nullptr; /* destroyed with its context */
+}
+
+}  // namespace
+
+bool desktop_melee_settings_window_open(void) {
+    if (aurora::rmlui::get_window_context() != nullptr && s_document != nullptr) {
+        aurora::rmlui::open_window(kContextName, "Desktop Melee", 440, 680); /* raises it */
+        return true;
+    }
+    Rml::Context* context = aurora::rmlui::open_window(kContextName, "Desktop Melee", 440, 680);
+    if (context == nullptr) {
+        SDL_Log("desktop-melee: settings window: could not open");
+        return false;
+    }
+    /* The bundled free fonts (melee-pc's menu fonts): the disc's font isn't
+     * needed, so the window works before the game's assets load. RmlUi
+     * skips faces it already has. */
+    const std::string resources = resources_path();
+    Rml::LoadFontFace(resources + "menu.ttf", true);
+    Rml::LoadFontFace(resources + "menu-bold.ttf");
+    register_textures();
+    s_document = context->LoadDocument(resources + "desktop-melee/settings.rml");
+    if (s_document == nullptr) {
+        SDL_Log(
+            "desktop-melee: settings window: no %sdesktop-melee/settings.rml", resources.c_str());
+        aurora::rmlui::close_window();
+        return false;
+    }
+    s_document->AddEventListener(Rml::EventId::Click, &s_listener);
+    s_document->AddEventListener(Rml::EventId::Change, &s_listener);
+    aurora::rmlui::set_window_closed_callback(on_closed, nullptr);
+    aurora::rmlui::set_window_frame_callback(on_frame, nullptr);
+    load_roster();
+    s_last_match_active = desktop_melee_match_active();
+    s_last_devices.clear();
+    show_tab(s_tab);
+    refresh_all();
+    s_document->Show();
+    return true;
+}
+
+void desktop_melee_settings_window_close(void) {
+    flush_saves(true);
+    s_document = nullptr;
+    aurora::rmlui::close_window();
+}

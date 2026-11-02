@@ -345,9 +345,14 @@ void end_frame() noexcept {
     rmlBindGroup = std::move(rmlFrame.bindGroup);
     rmlOverlay = rmlFrame.overlay;
   }
+  // desktop-melee: the second RmlUi window (lib/rmlui_window.cpp).
+  auto rmlWindowFrame = rmlui::window_record_frame();
 #endif
 
   gfx::end_frame([rmlBindGroup = std::move(rmlBindGroup), rmlOverlay, viewport,
+#if AURORA_ENABLE_RMLUI
+                  rmlWindowFrame = std::move(rmlWindowFrame),
+#endif
                   imguiDrawData = std::move(imguiDrawData)](
                      wgpu::CommandEncoder& encoder, std::vector<gfx::AfterSubmitCallback> afterSubmitCallbacks) {
     wgpu::Texture currentTexture;
@@ -447,6 +452,9 @@ void end_frame() noexcept {
     } else {
       Log.info("Skipping present; no usable surface texture ({})", magic_enum::enum_name(surfaceStatus));
     }
+#if AURORA_ENABLE_RMLUI
+    rmlui::window_encode(rmlWindowFrame, encoder); // desktop-melee
+#endif
     webgpu::gpu_prof::frame_end(encoder);
     const wgpu::CommandBufferDescriptor cmdBufDescriptor{.label = "Redraw command buffer"};
     const auto buffer = encoder.Finish(&cmdBufDescriptor);
@@ -456,6 +464,9 @@ void end_frame() noexcept {
       g_queue.Submit(1, &buffer);
     }
     webgpu::gpu_prof::after_submit();
+#if AURORA_ENABLE_RMLUI
+    rmlui::window_present(rmlWindowFrame); // desktop-melee
+#endif
     if (canPresent && g_surface) {
       ZoneScopedN("Present");
       AndroidTraceScope trace("Surface present");
