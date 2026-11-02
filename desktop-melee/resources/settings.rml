@@ -41,6 +41,11 @@
                 </div>
             </div>
             <p class="note">When time runs out, the match ends and Desktop Melee goes back to idle.</p>
+            <div class="group-title">CONTROLLERS</div>
+            <div class="group">
+                <div class="row last"><span class="name">Start starts a match</span><button id="start-on-controller" class="toggle">Off</button></div>
+            </div>
+            <p class="note">Press Start on any controller to start a match with this setup.</p>
             <p id="match-note" class="note">Rule changes apply to the next match.</p>
         </div>
         <div id="page-players" class="page">

@@ -264,6 +264,8 @@ void refresh_match() {
     set_class("minutes-minus", "disabled", minutes <= 0);
     set_class("minutes-plus", "disabled", minutes >= 99);
 
+    set_toggle("start-on-controller", settings().start_on_controller);
+
     const bool active = desktop_melee_match_active();
     set_text("match-start", active ? "Restart Match" : "Start Match");
     set_class("match-start", "running", active);
@@ -298,6 +300,11 @@ bool click_match(const std::string& id) {
     } else if (id == "match-start") {
         play_sound(SOUND_CONFIRM);
         desktop_melee_request_match();
+    } else if (id == "start-on-controller") {
+        settings().start_on_controller = !settings().start_on_controller;
+        desktop_melee_set_start_starts_match(settings().start_on_controller);
+        play_sound(SOUND_CONFIRM);
+        desktop_melee_settings_save();
     } else {
         return false;
     }

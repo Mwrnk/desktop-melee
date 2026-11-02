@@ -30,6 +30,7 @@ typedef struct DesktopMeleeSettings {
     int hud_mode;                               /* display.hud: DESKTOP_MELEE_HUD_* */
     char screen[128];                           /* display.screen; "" = the primary */
     char pause_key[32];                         /* match.pauseKey, such as "ctrl+alt+M" */
+    bool start_on_controller;                   /* match.startOnController */
     bool menu_sounds;                           /* sound.menu */
     bool onboarding_done;                       /* onboarding.done */
     char disc_path[1024];                       /* disc.verified.path; "" = none */

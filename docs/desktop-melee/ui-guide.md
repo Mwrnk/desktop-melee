@@ -136,6 +136,7 @@ Source: [`MatchTab.swift`](../../desktop-melee/ui/MatchTab.swift).
 | Stocks | 1 to 99, steps of 1 | 4 | `match.stocks` | `desktop_melee_set_match_setup` (`stocks`) | next match |
 | Time | 0 to 99 minutes; 0 shows "None" | 7 | `match.minutes` | `desktop_melee_set_match_setup` (`time_seconds` = minutes × 60) | next match |
 | Items | always "Off" (not a control) | | | | |
+| Start starts a match | on / off | off | `match.startOnController` | `desktop_melee_set_start_starts_match(on)` (off while the welcome window listens for presses) | now |
 
 Below the rules, a "Time-out" note: when time runs out, the match ends and
 Desktop Melee goes back to idle. At the bottom: "Rule changes apply to the
@@ -483,6 +484,7 @@ macOS (`defaults read desktop-melee`):
 | `display.screen` | string; `""` = the primary | `""` | Display |
 | `match.stocks` | int, 1 to 99 | 4 | Match |
 | `match.minutes` | int, 0 to 99; 0 = no limit | 7 | Match |
+| `match.startOnController` | bool | false | Match |
 | `match.pauseKey` | `{key, mods, label}`: a macOS key code and Carbon modifiers | Control-Option-M | Match |
 | `sound.menu` | bool | true | Sound |
 | `onboarding.done` | bool | false | welcome window |

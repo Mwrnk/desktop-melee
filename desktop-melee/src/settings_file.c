@@ -157,6 +157,8 @@ static bool parse_entry(DesktopMeleeSettings* s, const char* key, const char* va
         s->match.stocks = clamp_int(n, 1, 99);
     } else if (strcmp(key, "match.minutes") == 0 && parse_long(value, &n)) {
         s->match.time_seconds = clamp_int(n, 0, 99) * 60;
+    } else if (strcmp(key, "match.startOnController") == 0 && parse_bool(value, &b)) {
+        s->start_on_controller = b;
     } else if (strcmp(key, "match.pauseKey") == 0) {
         snprintf(s->pause_key, sizeof s->pause_key, "%s", value);
     } else if (strcmp(key, "sound.menu") == 0 && parse_bool(value, &b)) {
@@ -264,6 +266,7 @@ size_t desktop_melee_settings_format(const DesktopMeleeSettings* s, char* out, s
     EMIT("display.screen = %s\n", s->screen);
     EMIT("match.stocks = %d\n", s->match.stocks);
     EMIT("match.minutes = %d\n", s->match.time_seconds / 60);
+    EMIT("match.startOnController = %s\n", bool_text(s->start_on_controller));
     EMIT("match.pauseKey = %s\n", s->pause_key);
     EMIT("sound.menu = %s\n", bool_text(s->menu_sounds));
     EMIT("onboarding.done = %s\n", bool_text(s->onboarding_done));
@@ -354,4 +357,5 @@ void desktop_melee_settings_apply(const DesktopMeleeSettings* s) {
     desktop_melee_set_tags(s->tags);
     desktop_melee_set_hud_mode(s->hud_mode);
     desktop_melee_set_screen(s->screen);
+    desktop_melee_set_start_starts_match(s->start_on_controller);
 }

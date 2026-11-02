@@ -40,6 +40,9 @@ void desktop_melee_set_hud_mode(int mode) {
 void desktop_melee_set_screen(const char* name) {
     (void)name;
 }
+void desktop_melee_set_start_starts_match(bool on) {
+    (void)on;
+}
 
 static void test_defaults(void) {
     DesktopMeleeSettings s;
@@ -55,6 +58,7 @@ static void test_defaults(void) {
     assert(s.fighter_size == 100.0f);
     assert(s.hud_mode == DESKTOP_MELEE_HUD_ISLAND);
     assert(strcmp(s.pause_key, "ctrl+alt+M") == 0);
+    assert(!s.start_on_controller);
     assert(s.menu_sounds && !s.onboarding_done && s.disc_path[0] == '\0');
 }
 
@@ -100,6 +104,7 @@ static void test_round_trip(void) {
     a.hud_mode = DESKTOP_MELEE_HUD_HIDDEN;
     snprintf(a.pause_key, sizeof a.pause_key, "%s", "ctrl+super+P");
     a.onboarding_done = true;
+    a.start_on_controller = true;
     snprintf(a.disc_path, sizeof a.disc_path, "%s", "/home/player/Melee (USA).iso");
     a.disc_size = 1459978240LL;
     a.disc_mtime = 1793636428LL;
@@ -119,6 +124,7 @@ static void test_round_trip(void) {
     assert(a.timer_mode == b.timer_mode && a.tags == b.tags && a.hud_mode == b.hud_mode);
     assert(strcmp(a.screen, b.screen) == 0 && strcmp(a.pause_key, b.pause_key) == 0);
     assert(a.menu_sounds == b.menu_sounds && a.onboarding_done == b.onboarding_done);
+    assert(a.start_on_controller == b.start_on_controller);
     assert(strcmp(a.disc_path, b.disc_path) == 0);
     assert(a.disc_size == b.disc_size && a.disc_mtime == b.disc_mtime);
 }
