@@ -554,10 +554,18 @@ display.hud = bottom
 match.pauseKey = ctrl+alt+M
 ```
 
-`desktop_melee.c` would read it at startup and call its own setters (the same
-ones the UI calls), and the settings window would write it on every change.
-With the game reading its own settings, the UI no longer has to push them in
-at launch, and the tests could set them by writing the file. macOS could move
-to the same file later, leaving UserDefaults for the Mac-only keys, but that
-would be a separate change. `match.pauseKey` would need a portable form, such
-as `ctrl+alt+M`, in place of macOS key codes.
+**Built for Linux:** [`settings_file.h`](../../desktop-melee/src/settings_file.h)
+reads and writes this file. As on macOS, the UI side owns the values:
+`platform_linux.c`'s `ui_install` calls `desktop_melee_settings_load()`,
+which reads the file and pushes each value in through the same setters the
+macOS UI calls, so `desktop_melee.c` and macOS are unchanged. The settings
+window will change `desktop_melee_settings()`, call the setter and
+`desktop_melee_settings_save()`. A missing key keeps its default, a value out
+of range is clamped, and unknown keys are logged and ignored.
+`match.pauseKey` is a portable string such as `ctrl+alt+M`, and
+`disc.verified` is three keys: `disc.verified.path`, `.size` and `.mtime`
+(seconds). `desktop-melee/tests/settings_file_test.c` tests the parser and
+writer (`ninja -C build/linux desktop_melee_settings_test`).
+
+macOS could move to the same file later, leaving UserDefaults for the
+Mac-only keys, but that would be a separate change.

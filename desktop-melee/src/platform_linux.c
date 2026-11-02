@@ -6,14 +6,17 @@
  * What runs today, with DESKTOP_MELEE_OVERLAY=1 and a disc:
  *   melee --dvd /path/to/melee.iso
  * The match plays in a normal, resizable window (not an overlay), the floor
- * is the window's bottom edge, there is no notch island, and Pause and hide
- * does nothing. Settings keep their defaults: there is no menu yet.
+ * sits a little above the window's bottom edge, there is no notch island,
+ * and Pause and hide does nothing. Settings come from settings.cfg
+ * (settings_file.h); there is no menu to change them yet.
  *
  * docs/desktop-melee/porting.md walks through each function; every TODO
  * below names what a port would use. X11 and Wayland differ for most of it:
  * check SDL_GetCurrentVideoDriver() ("x11" or "wayland") at runtime, since
  * one build runs on both. */
 #include "platform.h"
+
+#include "settings_file.h"
 
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_log.h>
@@ -144,13 +147,14 @@ void desktop_melee_platform_ui_install(SDL_Window* window) {
      *   - the menu: SDL_CreateTray (an AppIndicator / StatusNotifierItem icon;
      *     GNOME shows it only with the AppIndicator extension), with Start
      *     match, Pause and hide, Settings and Quit.
-     *   - settings: an RmlUi window, as melee-pc's launcher uses, saving a
-     *     settings file that the game reads at startup.
+     *   - settings: an RmlUi window, as melee-pc's launcher uses, saving
+     *     settings.cfg through desktop_melee_settings_save.
      *   - the Pause and hide hotkey, from any app: XGrabKey on the root window
      *     (X11), or the org.freedesktop.portal.GlobalShortcuts portal
      *     (Wayland; KDE has it, GNOME only in recent releases). It calls
      *     desktop_melee_toggle_pause_and_hide(). */
-    SDL_Log("desktop-melee: Linux skeleton: no menu yet; settings keep their defaults");
+    desktop_melee_settings_load();
+    SDL_Log("desktop-melee: Linux skeleton: no menu yet; edit settings.cfg to change settings");
 }
 
 void desktop_melee_platform_ui_focus_game(void) {
