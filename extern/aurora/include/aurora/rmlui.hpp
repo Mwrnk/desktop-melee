@@ -67,6 +67,9 @@ Rml::Context* get_window_context() noexcept;
 void set_window_closed_callback(WindowCallback callback, void* userdata) noexcept;
 /* Called once a frame while it is open, before its context updates. */
 void set_window_frame_callback(WindowCallback callback, void* userdata) noexcept;
+/* Called with the path of each file dropped onto the window. */
+using WindowDropCallback = void (*)(const char* path, void* userdata);
+void set_window_drop_callback(WindowDropCallback callback, void* userdata) noexcept;
 
 } // namespace aurora::rmlui
 

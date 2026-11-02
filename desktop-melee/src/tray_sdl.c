@@ -9,6 +9,7 @@
 #include "../ui/bridge/desktop_melee_bridge.h"
 #include "settings_file.h"
 #include "settings_window.h"
+#include "welcome_window.h"
 
 /* desktop_melee_sound_menu kinds (ui-guide.md section 1). */
 enum { SOUND_BACK = 0, SOUND_CONFIRM = 1 };
@@ -101,6 +102,13 @@ static void on_settings(void* userdata, SDL_TrayEntry* entry) {
     desktop_melee_settings_window_open();
 }
 
+static void on_how_to_play(void* userdata, SDL_TrayEntry* entry) {
+    (void)userdata;
+    (void)entry;
+    play_sound(SOUND_CONFIRM);
+    desktop_melee_welcome_how_to_play();
+}
+
 static void on_quit(void* userdata, SDL_TrayEntry* entry) {
     (void)userdata;
     (void)entry;
@@ -136,6 +144,7 @@ bool desktop_melee_tray_install(void) {
     add_entry(menu, "Pause and hide", on_pause);
     SDL_InsertTrayEntryAt(menu, -1, NULL, 0); /* separator */
     add_entry(menu, "Settings...", on_settings);
+    add_entry(menu, "How to play", on_how_to_play);
     SDL_InsertTrayEntryAt(menu, -1, NULL, 0);
     add_entry(menu, "Quit Desktop Melee", on_quit);
     SDL_Log("desktop-melee: tray: installed");

@@ -1,0 +1,79 @@
+<rml>
+<head>
+    <title>Desktop Melee</title>
+    <link type="text/rcss" href="welcome.rcss" />
+</head>
+<!-- Desktop Melee's welcome window on Windows and Linux
+     (docs/desktop-melee/ui-guide.md sections 9 to 11). One page per step;
+     desktop-melee/src/welcome_window.cpp shows one at a time, fills in the
+     values and handles every click by id. -->
+<body>
+    <div id="top">
+        <span class="title">Desktop Melee</span>
+        <span id="counter"></span>
+    </div>
+
+    <div id="body">
+        <div id="step-welcome" class="step">
+            <div id="sketch">
+                <div class="edge left"></div><div class="edge right"></div>
+                <div class="fighter p1"></div><div class="fighter p2"></div>
+                <div class="panel"></div>
+            </div>
+            <h1>Desktop Melee</h1>
+            <p class="lead">Real Melee, played right on your desktop. Your panel is the stage, and the edges of the screen are the blast zones.</p>
+        </div>
+
+        <div id="step-disc" class="step">
+            <h1 id="disc-title">Bring your own Melee</h1>
+            <p id="disc-lead" class="lead">Desktop Melee includes the game's code but none of Nintendo's data. Characters, stages and sound come from your own copy of Melee.</p>
+            <div id="drop">
+                <p class="big">Drop your disc image here</p>
+                <p class="types">Melee USA 1.02:  .iso  .gcm  .ciso  .rvz</p>
+                <button id="choose" class="secondary">Choose file...</button>
+            </div>
+            <div id="disc-status">
+                <p id="disc-line" class="line"></p>
+                <div id="disc-bar" class="bar hidden"><div id="disc-fill" class="fill"></div></div>
+                <p id="disc-name" class="name"></p>
+            </div>
+        </div>
+
+        <div id="step-loading" class="step">
+            <h1>Getting Melee ready...</h1>
+            <p id="loading-lead" class="lead">The first launch builds Melee's graphics, so matches never stutter. It takes a few minutes, once. You can use your computer in the meantime.</p>
+            <div class="bar"><div id="loading-fill" class="fill"></div></div>
+            <p id="loading-count" class="small"></p>
+        </div>
+
+        <div id="step-controls" class="step">
+            <h1>Grab a controller</h1>
+            <div id="cards">
+                <div id="card-gamecube" class="card"><p class="name">GameCube</p><p class="sub">Official adapter, or one in Wii U mode</p></div>
+                <div id="card-pad" class="card"><p class="name">Xbox, PS, Switch</p><p class="sub">USB or Bluetooth</p></div>
+                <div id="card-keyboard" class="card"><p class="name">Keyboard</p><p id="keys-toggle" class="sub">Show the keys</p></div>
+            </div>
+            <div id="keys" class="hidden"></div>
+            <p class="listen-title">PRESS ANY BUTTON</p>
+            <div id="pressed"></div>
+            <p class="small">Press a button on each controller, or a key, to see who's who. Ports can be changed in the settings window's Controls tab.</p>
+            <p class="small">The keyboard works while the game window is in front: click it before pressing keys.</p>
+        </div>
+
+        <div id="step-done" class="step">
+            <div id="tray-sketch">
+                <span class="spacer"></span>
+                <div class="icon"><div class="floor"></div><div class="f1"></div><div class="f2"></div></div>
+                <span>12:00</span>
+            </div>
+            <h1>You're set</h1>
+            <p class="lead">Desktop Melee lives in your system tray. Use it to pick characters, change controls and start a match.</p>
+        </div>
+    </div>
+
+    <div id="bottom">
+        <button id="next" class="primary">Get started</button>
+        <p id="or-start" class="hidden">or press Start on your controller</p>
+    </div>
+</body>
+</rml>

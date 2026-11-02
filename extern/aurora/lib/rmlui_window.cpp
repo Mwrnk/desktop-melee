@@ -62,6 +62,8 @@ WindowCallback s_closedCallback = nullptr;
 void* s_closedUserdata = nullptr;
 WindowCallback s_frameCallback = nullptr;
 void* s_frameUserdata = nullptr;
+WindowDropCallback s_dropCallback = nullptr;
+void* s_dropUserdata = nullptr;
 
 Rml::Vector2i pixel_size() noexcept {
   int width = 0;
@@ -187,6 +189,9 @@ Rml::Context* open_window(const char* name, const char* title, int width, int he
     return nullptr;
   }
   sync_context(size);
+  /* In front of the game window: the player opened it, or the game needs
+   * an answer (the disc) before it can go on. */
+  SDL_RaiseWindow(s_window);
   Log.info("opened \"{}\" ({}x{} px)", title, size.x, size.y);
   return s_context;
 }
@@ -205,6 +210,11 @@ void set_window_frame_callback(WindowCallback callback, void* userdata) noexcept
   s_frameUserdata = userdata;
 }
 
+void set_window_drop_callback(WindowDropCallback callback, void* userdata) noexcept {
+  s_dropCallback = callback;
+  s_dropUserdata = userdata;
+}
+
 bool window_handle_event(SDL_Event& event) noexcept {
   SDL_Window* target = SDL_GetWindowFromEvent(&event);
   if (target == nullptr) {
@@ -221,6 +231,11 @@ bool window_handle_event(SDL_Event& event) noexcept {
     begin_close();
     if (s_closedCallback != nullptr) {
       s_closedCallback(s_closedUserdata);
+    }
+    return true;
+  case SDL_EVENT_DROP_FILE:
+    if (s_dropCallback != nullptr && event.drop.data != nullptr) {
+      s_dropCallback(event.drop.data, s_dropUserdata);
     }
     return true;
   case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:

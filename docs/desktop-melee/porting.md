@@ -104,7 +104,7 @@ normal window` (or Windows), the disc check, then the idle scene, which
 draws nothing. Press Start on a controller (or the keyboard's Start key) to
 start a match.
 
-Useful environment variables, all from `desktop_melee.c`:
+Useful environment variables, from `desktop_melee.c` and the platform file:
 
 | Variable | Effect |
 |---|---|
@@ -113,6 +113,7 @@ Useful environment variables, all from `desktop_melee.c`:
 | `DESKTOP_MELEE_TRACE=1` | once-a-second trace lines the tests read (needs the platform's timer, see section 8) |
 | `DESKTOP_MELEE_INPUT_TRACE=1` | logs tap jumps and remapped buttons |
 | `DESKTOP_MELEE_DUMP=<dir>` | writes every texture found on the disc as a PNG. **Never commit these.** |
+| `DESKTOP_MELEE_WELCOME=1` | Linux: opens the welcome window as on a first run; `=disc` opens it on the disc step |
 
 ## 3. The platform interface
 

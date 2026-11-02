@@ -24,6 +24,7 @@
 extern "C" {
 #include "../ui/bridge/desktop_melee_bridge.h"
 #include "settings_file.h"
+#include "welcome_window.h"
 }
 
 namespace {
@@ -897,6 +898,14 @@ bool desktop_melee_settings_window_open(void) {
         aurora::rmlui::open_window(kContextName, "Desktop Melee", 440, 680); /* raises it */
         return true;
     }
+    /* One second window at a time: the welcome window keeps it while it
+     * picks the disc or shows the loading progress, and gives it up after. */
+    if (desktop_melee_welcome_busy()) {
+        /* Raises the welcome window. */
+        aurora::rmlui::open_window(kContextName, "Desktop Melee", 440, 680);
+        return false;
+    }
+    desktop_melee_welcome_close();
     Rml::Context* context = aurora::rmlui::open_window(kContextName, "Desktop Melee", 440, 680);
     if (context == nullptr) {
         SDL_Log("desktop-melee: settings window: could not open");
@@ -920,6 +929,7 @@ bool desktop_melee_settings_window_open(void) {
     s_document->AddEventListener(Rml::EventId::Change, &s_listener);
     aurora::rmlui::set_window_closed_callback(on_closed, nullptr);
     aurora::rmlui::set_window_frame_callback(on_frame, nullptr);
+    aurora::rmlui::set_window_drop_callback(nullptr, nullptr);
     load_roster();
     s_last_match_active = desktop_melee_match_active();
     s_last_devices.clear();
