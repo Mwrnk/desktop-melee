@@ -24,9 +24,21 @@ set(DESKTOP_MELEE_MACOS OFF)
 if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
     set(DESKTOP_MELEE_MACOS ON)
 elseif (WIN32)
-    target_sources(melee PRIVATE desktop-melee/src/platform_windows.c)
+    target_sources(melee PRIVATE desktop-melee/src/platform_windows.c
+            desktop-melee/src/settings_file.c)
 else ()
-    target_sources(melee PRIVATE desktop-melee/src/platform_linux.c)
+    target_sources(melee PRIVATE desktop-melee/src/platform_linux.c
+            desktop-melee/src/settings_file.c)
+endif ()
+
+# The settings file's parser and writer, tested on their own
+# (desktop-melee/tests/settings_file_test.c stubs the game's setters).
+if (NOT DESKTOP_MELEE_MACOS)
+    add_executable(desktop_melee_settings_test EXCLUDE_FROM_ALL
+            desktop-melee/tests/settings_file_test.c desktop-melee/src/settings_file.c)
+    target_include_directories(desktop_melee_settings_test PRIVATE desktop-melee/src)
+    target_link_libraries(desktop_melee_settings_test PRIVATE ${AURORA_SDL3_TARGET})
+    target_compile_options(desktop_melee_settings_test PRIVATE -UNDEBUG)
 endif ()
 
 if (DESKTOP_MELEE_MACOS)

@@ -57,7 +57,8 @@ The skeletons compile and run, with fallbacks:
 - **Pause and hide does nothing.** There's no hotkey and no menu to press it
   from.
 - **No settings UI.** Every setting keeps its default (Fox vs Fox, 4 stocks,
-  7 minutes).
+  7 minutes). On Linux, `settings.cfg` changes them (ui-guide.md section
+  14); the Windows skeleton doesn't read it yet.
 - **The disc comes from the command line**, and must pass the same check as
   on macOS: a clean Melee USA 1.02 image.
 
@@ -341,8 +342,9 @@ overlay usable.
 - **Logs.** macOS writes `~/Library/Logs/Desktop Melee.log` when started
   without a terminal. Windows has no console for a GUI app; use a log file in
   `SDL_GetPrefPath`.
-- **Settings.** UserDefaults is macOS only. See the settings-file proposal in
-  ui-guide.md section 14.
+- **Settings.** UserDefaults is macOS only. Use `settings_file.h`
+  (ui-guide.md section 14): call `desktop_melee_settings_load()` in
+  `ui_install`, as `platform_linux.c` does.
 
 ## 9. Suggested order
 
