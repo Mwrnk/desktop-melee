@@ -82,7 +82,9 @@ void desktop_melee_platform_overlay_set_faded(bool faded);
  * overlay changes screens, and when the player asks to measure again.
  *   macOS: NSScreen.frame for the size; the floor is how far
  *   visibleFrame's bottom sits above frame's.
- *   Skeletons: the window's own size, floor 0. */
+ *   Skeletons: the window's own size; floor 0 on Windows, 15% of the
+ *   height on Linux. The bottom blastzone is the screen's bottom edge, so a
+ *   floor of 0 KOs fighters as they land. */
 void desktop_melee_platform_screen_geometry(
     SDL_Window* window, float* width_pt, float* height_pt, float* floor_pt);
 

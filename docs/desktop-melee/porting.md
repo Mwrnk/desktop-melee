@@ -47,8 +47,10 @@ The skeletons compile and run, with fallbacks:
   would lock you out of your own desktop, so the skeletons turn overlay mode
   off (`desktop_melee_platform_configure`). The game runs in a normal,
   resizable window, with the fighters on a plain background.
-- **The floor is the window's bottom edge.** No taskbar measuring yet. The
-  window is measured once, at startup: resize it and the camera and
+- **The floor is near the window's bottom edge.** No taskbar measuring yet.
+  On Linux it sits 15% of the window's height up, since the bottom edge is
+  the bottom blastzone; the Windows skeleton still puts it at the edge, which
+  KOs fighters as they land. The window is measured once, at startup: resize it and the camera and
   blastzones keep the old size until a port watches `SDL_EVENT_WINDOW_RESIZED`
   and calls `desktop_melee_relayout()`.
 - **No notch island.** Stocks and percents stay in Melee's own HUD.
