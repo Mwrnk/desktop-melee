@@ -40,6 +40,11 @@ bool desktop_melee_welcome_busy(void);
 bool desktop_melee_welcome_is_open(void);
 void desktop_melee_welcome_close(void);
 
+/* Registers dmemblem://emblem with RmlUi: the Smash emblem the game decoded
+ * from the disc (desktop_melee_named_alpha), white, to tint. Ask for it only
+ * once the game's assets are ready; later calls do nothing. */
+void desktop_melee_emblem_texture_register(void);
+
 #ifdef __cplusplus
 }
 #endif

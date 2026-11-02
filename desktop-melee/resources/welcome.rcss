@@ -1,21 +1,9 @@
 /* Desktop Melee's welcome window on Windows and Linux
  * (docs/desktop-melee/ui-guide.md sections 9 to 11), in the macOS app's look:
- * sizes and colours from desktop-melee/ui/WelcomeSteps.swift. Text sizes are
- * about 0.85 of the Swift ones, which are in Melee's font; the bundled font
- * is Noto Sans (resources/menu*.ttf).
- *
- * Colours: the window #242424; P1 #e83b38 (the accent), P2 #3d75f5,
- * P3 #f2bf26, P4 #40b359; green #30d158, red #ff453a. Surfaces are white at
- * low alpha, as macOS's Color.primary.opacity(x) on dark: 0.04 #ffffff0a,
- * 0.06 #ffffff0f, 0.1 #ffffff1a, 0.12 #ffffff1f, 0.14 #ffffff24. Text:
- * secondary #ebebf599, tertiary #ebebf54d.
- *
- * Icons are white PNGs (resources/icons), tinted with image-color, except
- * the device.* ones, which are in colour. Dashed
- * borders are the "dashed" decorator (desktop-melee/src/rml_dashed.h), also
- * tinted with image-color. */
-
-div, p, h1, h2 { display: block; }
+ * sizes and colours from desktop-melee/ui/WelcomeSteps.swift, the accent P1
+ * red. The colours, sections and notes are in common.rcss. Dashed borders
+ * are the "dashed" decorator (desktop-melee/src/rml_dashed.h), tinted with
+ * image-color. */
 
 body {
     font-family: "Noto Sans";
@@ -31,10 +19,6 @@ body {
     display: flex;
     flex-direction: column;
 }
-
-.hidden { display: none; }
-
-img { image-color: #ffffff; }
 
 /* ---- Header: emblem, title, step dots ----------------------------------- */
 
@@ -82,25 +66,7 @@ h2 { font-size: 26dp; line-height: 1.15; margin-bottom: 12dp; }
     margin-bottom: 14dp;
 }
 .lead.big { font-size: 17dp; }
-.label {
-    font-size: 12.5dp;
-    letter-spacing: 0.5dp;
-    text-transform: uppercase;
-    color: #ebebf599;
-}
-.note {
-    font-weight: normal;
-    font-size: 12.5dp;
-    line-height: 1.3;
-    color: #ebebf599;
-}
 
-/* A rounded group, like the popover's sections. */
-.box {
-    padding: 12dp;
-    border-radius: 12dp;
-    background-color: #ffffff0f;
-}
 
 .pill {
     display: inline-block;

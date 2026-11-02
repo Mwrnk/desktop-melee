@@ -171,36 +171,6 @@ void shake(const std::string& id) {
 
 /* ---- the Smash emblem --------------------------------------------------- */
 
-/* dmemblem://emblem: the emblem the game decoded from the disc (an alpha
- * mask, desktop_melee_named_alpha), as white pixels to tint. Asked for only
- * once the assets are ready, so RmlUi never caches a missing image. */
-void register_emblem() {
-    static bool registered = false;
-    if (registered) {
-        return;
-    }
-    registered = true;
-    aurora::rmlui::register_texture_provider(
-        "dmemblem", [](std::string_view) -> std::optional<aurora::rmlui::RuntimeTexture> {
-            static std::vector<std::byte> rgba;
-            int w = 0;
-            int h = 0;
-            const uint8_t* alpha = desktop_melee_named_alpha("emblem", &w, &h);
-            if (alpha == nullptr || w <= 0 || h <= 0) {
-                return std::nullopt;
-            }
-            rgba.assign(static_cast<size_t>(w) * h * 4, std::byte{0xff});
-            for (size_t i = 0; i < static_cast<size_t>(w) * h; i++) {
-                rgba[i * 4 + 3] = static_cast<std::byte>(alpha[i]);
-            }
-            return aurora::rmlui::RuntimeTexture{
-                .width = static_cast<uint32_t>(w),
-                .height = static_cast<uint32_t>(h),
-                .rgba8 = rgba,
-            };
-        });
-}
-
 /* The tray icon's drawing until the emblem is there, as macOS shows the
  * app's icon. */
 void refresh_emblem() {
@@ -725,7 +695,7 @@ bool open_window(Step step) {
     Rml::LoadFontFace(resources + "menu-bold.ttf");
     desktop_melee_rml_dashed_register();
     desktop_melee_set_window_icons();
-    register_emblem();
+    desktop_melee_emblem_texture_register();
     s_document = context->LoadDocument(resources + "desktop-melee/welcome.rml");
     if (s_document == nullptr) {
         SDL_Log("desktop-melee: welcome window: no %sdesktop-melee/welcome.rml", resources.c_str());
@@ -742,6 +712,36 @@ bool open_window(Step step) {
 }
 
 }  // namespace
+
+/* dmemblem://emblem: the emblem the game decoded from the disc (an alpha
+ * mask, desktop_melee_named_alpha), as white pixels to tint. Asked for only
+ * once the assets are ready, so RmlUi never caches a missing image. */
+void desktop_melee_emblem_texture_register(void) {
+    static bool registered = false;
+    if (registered) {
+        return;
+    }
+    registered = true;
+    aurora::rmlui::register_texture_provider(
+        "dmemblem", [](std::string_view) -> std::optional<aurora::rmlui::RuntimeTexture> {
+            static std::vector<std::byte> rgba;
+            int w = 0;
+            int h = 0;
+            const uint8_t* alpha = desktop_melee_named_alpha("emblem", &w, &h);
+            if (alpha == nullptr || w <= 0 || h <= 0) {
+                return std::nullopt;
+            }
+            rgba.assign(static_cast<size_t>(w) * h * 4, std::byte{0xff});
+            for (size_t i = 0; i < static_cast<size_t>(w) * h; i++) {
+                rgba[i * 4 + 3] = static_cast<std::byte>(alpha[i]);
+            }
+            return aurora::rmlui::RuntimeTexture{
+                .width = static_cast<uint32_t>(w),
+                .height = static_cast<uint32_t>(h),
+                .rgba8 = rgba,
+            };
+        });
+}
 
 const char* desktop_melee_welcome_choose_disc(const char* candidate, const char* force) {
     const std::string disc = candidate != nullptr ? candidate : "";

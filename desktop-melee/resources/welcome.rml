@@ -1,6 +1,7 @@
 <rml>
 <head>
     <title>Desktop Melee</title>
+    <link type="text/rcss" href="common.rcss" />
     <link type="text/rcss" href="welcome.rcss" />
 </head>
 <!-- Desktop Melee's welcome window on Windows and Linux
