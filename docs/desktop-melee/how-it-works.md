@@ -260,6 +260,7 @@ What each hook changes, in one line:
 |---|---|
 | `src/pc/main.c` | Overlay window settings, native disc picker; the overlay stays transparent until the game starts. |
 | `src/pc/launcher.cpp` | melee-pc's launcher still waits for the shaders, but is never shown and can't be skipped; no update check. |
+| `src/pc/vi.c` | Before the frame loop calls `exit()`, Desktop Melee closes its windows (`desktop_melee_before_exit`), while RmlUi is still whole. |
 | `src/melee/gm/gmboot.c` | Boot straight into `GM_DESKTOP_MELEE`, never the title screen. |
 | `src/sysdolphin/baselib/displayfunc.c` | "Clear the screen" clears to transparent, not black. |
 | `src/melee/gr/grdisplay.c`, `src/melee/gr/ground.c` | Don't draw the stage or background models. |

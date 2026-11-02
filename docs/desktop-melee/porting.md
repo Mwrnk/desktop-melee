@@ -146,6 +146,7 @@ does, and what's required of a port. In short:
 | `ui_loading_begin` / `_end` | a small progress window | a progress window | same | same |
 | `ui_choose_disc` | the welcome window | welcome window, `SDL_ShowOpenFileDialog` | same (xdg-desktop-portal) | same |
 | `ui_assets_ready` | builds the UI's images | the UI may draw portraits | same | same |
+| `ui_before_exit` | nothing | close the RmlUi windows and tray (`platform_linux.c` does) | same | same |
 | `write_png` | ImageIO | `SDL_SavePNG` (done) | `SDL_SavePNG` (done) | `SDL_SavePNG` (done) |
 
 The macOS-only Accessibility calls (`desktop_melee_ax_trusted`,

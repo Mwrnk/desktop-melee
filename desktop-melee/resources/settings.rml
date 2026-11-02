@@ -233,5 +233,7 @@
         <span class="spacer"></span>
         <div id="quit" class="link">Quit</div>
     </div>
+    <!-- The button map's target list, put by the clicked target. -->
+    <div id="map-menu" class="hidden"></div>
 </body>
 </rml>

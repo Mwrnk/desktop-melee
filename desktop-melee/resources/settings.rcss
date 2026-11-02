@@ -5,7 +5,7 @@
  * sections and notes are in common.rcss. */
 
 body {
-    font-family: "Noto Sans";
+    font-family: "Melee";
     font-weight: bold;
     font-size: 15dp;
     color: #ffffff;
@@ -88,7 +88,7 @@ body {
 .row .name.short { flex: 0 0 62dp; }
 .row .state { font-size: 16dp; color: #ebebf599; }
 .row .text { flex: 1; font-size: 14dp; }
-.row .desc { flex: 1; font-size: 14dp; color: #ebebf599; white-space: nowrap; overflow: hidden; }
+.row .desc { flex: 1; font-family: "Noto Sans"; font-size: 14dp; color: #ebebf599; white-space: nowrap; overflow: hidden; }
 .row.dim { opacity: 0.45; }
 
 /* A switch, as macOS's. */
@@ -396,6 +396,39 @@ input.range.disabled sliderprogress { background-color: #ffffff40; }
 .badge.b4 { background-color: #6b52d9; }
 .badge.b7 { background-color: #ffffff26; }
 #map-reset { font-size: 13.5dp; }
+.map.open { background-color: #ffffff26; }
+
+/* The target list: a small menu by the target clicked, as macOS's popover. */
+#map-menu {
+    position: absolute;
+    z-index: 10;
+    width: 150dp;
+    padding: 6dp;
+    border: 1dp #ffffff1f;
+    border-radius: 10dp;
+    background-color: #323232;
+    box-shadow: #00000080 0 6dp 18dp 0;
+}
+#map-menu.hidden { display: none; }
+#map-menu .item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 2dp 6dp;
+    margin-bottom: 2dp;
+    border-radius: 6dp;
+    cursor: pointer;
+}
+#map-menu .item:last-child { margin-bottom: 0; }
+#map-menu .item:hover { background-color: #0a84ff; }
+#map-menu .item .name { flex: 1; margin-left: 8dp; font-size: 13.5dp; }
+#map-menu .item .check { width: 10dp; height: 10dp; visibility: hidden; }
+#map-menu .item.current .check { visibility: visible; }
+@keyframes menu-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+#map-menu.shown { animation: 0.12s cubic-out menu-in; }
 #map-target { margin-top: 2dp; }
 
 /* ---- Display ------------------------------------------------------------ */
@@ -412,7 +445,7 @@ input.range.disabled sliderprogress { background-color: #ffffff40; }
 .screen:hover { background-color: #ffffff0f; }
 .screen.selected { background-color: #ffffff1a; }
 .screen .icon { width: 16dp; height: 16dp; margin-right: 10dp; image-color: #ebebf599; }
-.screen .name { flex: 1; font-size: 14.5dp; white-space: nowrap; overflow: hidden; }
+.screen .name { flex: 1; font-family: "Noto Sans"; font-size: 14.5dp; white-space: nowrap; overflow: hidden; }
 .screen .main {
     margin: 0 6dp;
     padding: 1dp 5dp;

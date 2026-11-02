@@ -9,6 +9,11 @@
  * 0.06 #ffffff0f, 0.08 #ffffff14, 0.1 #ffffff1a, 0.12 #ffffff1f,
  * 0.14 #ffffff24. Text: secondary #ebebf599, tertiary #ebebf54d.
  *
+ * Text is in Melee's font, the family "Melee" (desktop-melee/src/
+ * melee_font.h; Noto Sans until the game has read it from the disc). Names
+ * from elsewhere (controllers, files, screens) are in Noto Sans, which has
+ * every character.
+ *
  * Icons are PNGs (resources/icons), white unless in colour, tinted with
  * image-color. */
 

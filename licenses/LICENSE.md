@@ -57,7 +57,7 @@ change is tagged `desktop-melee` in a comment and listed in
 
 - Build: `CMakeLists.txt` (includes `desktop-melee/desktop-melee.cmake`), `.gitignore`,
   `cmake/MeleeToolchainCheck.cmake` and `tools/preflight.py` (doc path only).
-- Port code: `src/pc/main.c`, `src/pc/launcher.cpp`.
+- Port code: `src/pc/main.c`, `src/pc/launcher.cpp`, `src/pc/vi.c`.
 - Repository: `.github/workflows/build.yml` (manual only, release job removed),
   `.github/ISSUE_TEMPLATE/`; `.github/RELEASE_NOTES.md` and
   `.github/workflows/pages.yml` removed; melee-pc's `README.md` is now

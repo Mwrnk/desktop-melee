@@ -23,6 +23,7 @@
 
 extern "C" {
 #include "../ui/bridge/desktop_melee_bridge.h"
+#include "melee_font.h"
 #include "settings_file.h"
 #include "welcome_window.h"
 #include "window_icon.h"
@@ -43,6 +44,8 @@ constexpr const char* kNames[0x1A] = {"Captain Falcon", "Donkey Kong", "Fox", "M
     "Dr. Mario", "Roy", "Pichu", "Ganondorf"};
 constexpr const char* kButtonBadges[DESKTOP_MELEE_BTN_COUNT + 1] = {
     "A", "B", "X", "Y", "Z", "L", "R", "-"};
+constexpr const char* kButtonTargets[DESKTOP_MELEE_BTN_COUNT + 1] = {
+    "A", "B", "X (jump)", "Y (jump)", "Z (grab)", "L (shield)", "R (shield)", "Nothing"};
 constexpr Uint64 kSaveDelayMs = 400;
 
 struct Fighter {
@@ -67,6 +70,7 @@ Uint64 s_save_prefs_at = 0;
 bool s_last_hidden = false;
 bool s_emblem_shown = false;
 bool s_how_to_play = false; /* clicked: opened on the next frame */
+int s_menu_button = -1;     /* the button whose target list is open */
 
 DesktopMeleeSettings& settings() {
     return *desktop_melee_settings();
@@ -302,8 +306,15 @@ bool step_value(int& value, int delta, int lo, int hi) {
     return true;
 }
 
-bool click_match(const std::string& id) {
+bool click_match(const std::string& clicked) {
     DesktopMeleeMatchSetup& match = settings().match;
+    /* The buttons' icons and labels have ids of their own. */
+    std::string id = clicked;
+    for (const char* button : {"match-start", "pause-hide"}) {
+        if (starts_with(clicked, button)) {
+            id = button;
+        }
+    }
     int minutes = match.time_seconds / 60;
     if (id == "stocks-minus" || id == "stocks-plus") {
         if (step_value(match.stocks, id == "stocks-plus" ? 1 : -1, 1, 99)) {
@@ -593,6 +604,56 @@ void set_button(int player, int button, int target) {
     desktop_melee_set_button_map(player, button, target);
 }
 
+/* ---- the target list ---------------------------------------------------- */
+
+void close_map_menu() {
+    if (s_menu_button >= 0) {
+        set_class("map-" + std::to_string(s_menu_button), "open", false);
+    }
+    s_menu_button = -1;
+    set_class("map-menu", "hidden", true);
+    set_class("map-menu", "shown", false);
+}
+
+/* Opens the target list by button's target: under it, or over it when the
+ * window's bottom is too close, and inside the window's sides. */
+void open_map_menu(int button) {
+    Rml::Element* anchor = element("map-" + std::to_string(button));
+    Rml::Element* menu = element("map-menu");
+    if (anchor == nullptr || menu == nullptr || s_document == nullptr) {
+        return;
+    }
+    close_map_menu();
+    s_menu_button = button;
+    anchor->SetClass("open", true);
+    const int current = settings().button_map[s_control_player][button];
+    std::string items;
+    for (int t = 0; t <= DESKTOP_MELEE_BTN_NONE; t++) {
+        items += "<div id=\"map-pick-" + std::to_string(t) + "\" class=\"item" +
+                 (t == current ? " current" : "") + "\"><span class=\"badge b" + std::to_string(t) +
+                 "\">" + kButtonBadges[t] + "</span><span class=\"name\">" +
+                 Rml::StringUtilities::EncodeRml(kButtonTargets[t]) +
+                 "</span><img class=\"check\" src=\"icons/checkmark.png\"/></div>";
+    }
+    menu->SetInnerRML(items);
+    menu->SetClass("hidden", false);
+    s_document->UpdateDocument(); /* lays the menu out, to measure it */
+
+    const Rml::Vector2f at = anchor->GetAbsoluteOffset(Rml::BoxArea::Border);
+    const Rml::Vector2f size = anchor->GetBox().GetSize(Rml::BoxArea::Border);
+    const Rml::Vector2f menu_size = menu->GetBox().GetSize(Rml::BoxArea::Border);
+    const Rml::Vector2f window = s_document->GetBox().GetSize(Rml::BoxArea::Border);
+    const float gap = 4.f;
+    float top = at.y + size.y + gap;
+    if (top + menu_size.y > window.y - gap) {
+        top = std::max(gap, at.y - menu_size.y - gap);
+    }
+    const float left = std::clamp(at.x, gap, std::max(gap, window.x - menu_size.x - gap));
+    menu->SetProperty("left", std::to_string(left) + "px");
+    menu->SetProperty("top", std::to_string(top) + "px");
+    menu->SetClass("shown", true);
+}
+
 bool click_controls(const std::string& id) {
     const int pl = s_control_player;
     DesktopMeleeMatchSetup& match = settings().match;
@@ -622,15 +683,27 @@ bool click_controls(const std::string& id) {
         set_button(pl, DESKTOP_MELEE_BTN_Z, on ? DESKTOP_MELEE_BTN_Z : DESKTOP_MELEE_BTN_X);
         play_sound(SOUND_CONFIRM);
         desktop_melee_settings_save();
+    } else if (starts_with(id, "map-pick-")) {
+        const int target = id_number(id, "map-pick-");
+        const int button = s_menu_button;
+        close_map_menu();
+        if (button >= 0 && target >= 0 && target <= DESKTOP_MELEE_BTN_NONE) {
+            set_button(pl, button, target);
+            play_sound(SOUND_CONFIRM);
+            desktop_melee_settings_save();
+        }
     } else if (starts_with(id, "map-") && id != "map-reset" && id != "map-grid" &&
-               id != "map-target")
+               id != "map-target" && id != "map-menu")
     {
-        /* Each click picks the next target, Nothing last. */
+        /* A target: its list opens, or closes on a second click. */
         const int button = id_number(id, starts_with(id, "map-badge-") ? "map-badge-" : "map-");
-        const int target = (settings().button_map[pl][button] + 1) % (DESKTOP_MELEE_BTN_NONE + 1);
-        set_button(pl, button, target);
+        if (button == s_menu_button) {
+            close_map_menu();
+        } else {
+            open_map_menu(button);
+        }
         play_sound(SOUND_MOVE);
-        desktop_melee_settings_save();
+        return true;
     } else if (id == "map-reset") {
         if (element("map-reset") != nullptr && element("map-reset")->IsClassSet("disabled")) {
             play_sound(SOUND_DENIED);
@@ -898,6 +971,22 @@ public:
             }
             return;
         }
+        if (event.GetId() == Rml::EventId::Scroll) {
+            close_map_menu(); /* it would stay put while the page moves */
+            return;
+        }
+        if (event.GetId() == Rml::EventId::Keydown) {
+            if (event.GetParameter<int>("key_identifier", 0) == Rml::Input::KI_ESCAPE) {
+                close_map_menu();
+            }
+            return;
+        }
+        /* A click anywhere else closes the target list. */
+        const bool on_target =
+            starts_with(id, "map-") && id != "map-reset" && id != "map-grid" && id != "map-target";
+        if (s_menu_button >= 0 && !on_target) {
+            close_map_menu();
+        }
         if (starts_with(id, "tab-")) {
             if (id.substr(4) != s_tab) {
                 play_sound(SOUND_MOVE);
@@ -1007,6 +1096,7 @@ bool desktop_melee_settings_window_open(void) {
     const std::string resources = resources_path();
     Rml::LoadFontFace(resources + "menu.ttf", true);
     Rml::LoadFontFace(resources + "menu-bold.ttf");
+    desktop_melee_font_install();
     register_textures();
     s_document = context->LoadDocument(resources + "desktop-melee/settings.rml");
     if (s_document == nullptr) {
@@ -1017,6 +1107,11 @@ bool desktop_melee_settings_window_open(void) {
     }
     s_document->AddEventListener(Rml::EventId::Click, &s_listener);
     s_document->AddEventListener(Rml::EventId::Change, &s_listener);
+    s_document->AddEventListener(Rml::EventId::Keydown, &s_listener);
+    if (Rml::Element* body = element("body")) {
+        body->AddEventListener(Rml::EventId::Scroll, &s_listener);
+    }
+    s_menu_button = -1;
     aurora::rmlui::set_window_closed_callback(on_closed, nullptr);
     aurora::rmlui::set_window_frame_callback(on_frame, nullptr);
     aurora::rmlui::set_window_drop_callback(nullptr, nullptr);

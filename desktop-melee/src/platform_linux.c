@@ -20,6 +20,7 @@
 #include "settings_file.h"
 #include "settings_window.h"
 #include "tray_sdl.h"
+#include "melee_font.h"
 #include "welcome_window.h"
 #include "window_icon.h"
 
@@ -189,8 +190,16 @@ const char* desktop_melee_platform_ui_choose_disc(const char* candidate) {
 }
 
 void desktop_melee_platform_ui_assets_ready(void) {
+    desktop_melee_font_assets_ready(); /* the windows' text in Melee's font */
     desktop_melee_tray_assets_ready();
     desktop_melee_welcome_assets_ready();
+}
+
+/* The RmlUi windows close while RmlUi is whole (platform.h). */
+void desktop_melee_platform_ui_before_exit(void) {
+    desktop_melee_welcome_close();
+    desktop_melee_settings_window_close();
+    desktop_melee_tray_remove();
 }
 
 /* ---- files -------------------------------------------------------------- */

@@ -22,6 +22,7 @@ extern void browser_yield(void);
 #include <stdlib.h>
 #include <string.h>
 
+#include "desktop_melee.h" /* desktop-melee: desktop_melee_before_exit */
 #include "pc/pc.h"
 #include "pc/launcher.h"
 #include "pc/touch.h"
@@ -249,6 +250,7 @@ void pc_frame_boundary(void) {
         pc_net_match_stop();
         pc_net_disconnect();
         pc_lan_stop();
+        desktop_melee_before_exit(); /* desktop-melee: its windows close first */
         exit(0);
     }
 
@@ -329,6 +331,7 @@ void pc_frame_boundary(void) {
                 pc_net_match_stop();
                 pc_net_disconnect();
                 pc_lan_stop();
+                desktop_melee_before_exit(); /* desktop-melee: its windows close first */
                 exit(0);
             }
             ++event;

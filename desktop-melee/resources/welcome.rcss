@@ -6,7 +6,7 @@
  * image-color. */
 
 body {
-    font-family: "Noto Sans";
+    font-family: "Melee";
     font-weight: bold;
     font-size: 15dp;
     color: #ffffff;
@@ -138,6 +138,7 @@ h2 { font-size: 26dp; line-height: 1.15; margin-bottom: 12dp; }
 /* ---- Your disc ---------------------------------------------------------- */
 
 #old-disc {
+    font-family: "Noto Sans";
     font-weight: normal;
     font-size: 11dp;
     color: #ebebf54d;
@@ -168,6 +169,7 @@ h2 { font-size: 26dp; line-height: 1.15; margin-bottom: 12dp; }
 #disc-status .text { flex: 1; }
 #disc-status .line { font-size: 15dp; line-height: 1.25; }
 #disc-status .name {
+    font-family: "Noto Sans";
     font-size: 12.5dp;
     color: #ebebf599;
     margin-top: 2dp;
@@ -314,7 +316,7 @@ h2 { font-size: 26dp; line-height: 1.15; margin-bottom: 12dp; }
     image-color: #ffffff24;
 }
 .slot .tag { font-size: 18dp; margin-right: 8dp; }
-.slot .who { display: none; flex: 1; font-size: 15dp; white-space: nowrap; overflow: hidden; }
+.slot .who { display: none; flex: 1; font-family: "Noto Sans"; font-size: 15dp; white-space: nowrap; overflow: hidden; }
 .slot .waiting { flex: 1; font-size: 13dp; color: #ebebf54d; }
 .slot img { display: none; width: 16dp; height: 16dp; image-color: #30d158; }
 .slot.filled .who { display: block; }

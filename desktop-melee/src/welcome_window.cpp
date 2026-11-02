@@ -32,6 +32,7 @@
 #include <string>
 #include <vector>
 
+#include "melee_font.h"
 #include "rml_dashed.h"
 #include "window_icon.h"
 
@@ -693,6 +694,7 @@ bool open_window(Step step) {
     const std::string resources = resources_path();
     Rml::LoadFontFace(resources + "menu.ttf", true);
     Rml::LoadFontFace(resources + "menu-bold.ttf");
+    desktop_melee_font_install();
     desktop_melee_rml_dashed_register();
     desktop_melee_set_window_icons();
     desktop_melee_emblem_texture_register();
