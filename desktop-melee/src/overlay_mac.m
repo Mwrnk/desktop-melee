@@ -442,3 +442,5 @@ const char* desktop_melee_platform_ui_choose_disc(const char* candidate) {
 }
 
 void desktop_melee_platform_ui_assets_ready(void) { desktop_melee_ui_assets_ready(); }
+
+void desktop_melee_platform_ui_before_exit(void) {}

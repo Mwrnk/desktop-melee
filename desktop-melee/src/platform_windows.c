@@ -178,6 +178,11 @@ void desktop_melee_platform_ui_assets_ready(void) {
     /* TODO: the settings window may draw portraits and the font now. */
 }
 
+void desktop_melee_platform_ui_before_exit(void) {
+    /* Nothing yet: the skeleton opens no RmlUi windows. Once it does, close
+     * them here, as platform_linux.c does. */
+}
+
 /* ---- files -------------------------------------------------------------- */
 
 void desktop_melee_platform_write_png(

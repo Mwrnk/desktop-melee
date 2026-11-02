@@ -1,0 +1,50 @@
+/* What Desktop Melee's welcome and settings windows share on Windows and
+ * Linux, in the macOS app's dark look (desktop-melee/ui/Panel.swift,
+ * WelcomeSteps.swift). Text sizes are about 0.85 of the Swift ones, which
+ * are in Melee's font; the bundled font is Noto Sans (resources/menu*.ttf).
+ *
+ * Colours: P1 #e83b38, P2 #3d75f5, P3 #f2bf26, P4 #40b359; the system blue
+ * #0a84ff; green #30d158, red #ff453a, orange #ff9f0a. Surfaces are white at
+ * low alpha, as macOS's Color.primary.opacity(x) on dark: 0.04 #ffffff0a,
+ * 0.06 #ffffff0f, 0.08 #ffffff14, 0.1 #ffffff1a, 0.12 #ffffff1f,
+ * 0.14 #ffffff24. Text: secondary #ebebf599, tertiary #ebebf54d.
+ *
+ * Text is in Melee's font, the family "Melee" (desktop-melee/src/
+ * melee_font.h; Noto Sans until the game has read it from the disc). Names
+ * from elsewhere (controllers, files, screens) are in Noto Sans, which has
+ * every character.
+ *
+ * Icons are PNGs (resources/icons), white unless in colour, tinted with
+ * image-color. */
+
+div, p, h1, h2 { display: block; }
+
+.hidden { display: none; }
+
+img { image-color: #ffffff; }
+
+scrollbarvertical { width: 8dp; margin: 2dp 0; }
+scrollbarvertical slidertrack { background-color: #00000000; }
+scrollbarvertical sliderbar { background-color: #ffffff33; border-radius: 4dp; min-height: 32dp; }
+scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { height: 0; }
+scrollbarhorizontal { height: 0; }
+
+/* A section: a small-capitals title over a rounded group. */
+.label {
+    font-size: 12.5dp;
+    letter-spacing: 0.5dp;
+    text-transform: uppercase;
+    color: #ebebf599;
+}
+.box {
+    padding: 12dp;
+    border-radius: 12dp;
+    background-color: #ffffff0f;
+}
+.note {
+    font-weight: normal;
+    font-size: 12.5dp;
+    line-height: 1.3;
+    color: #ebebf599;
+}
+.note.faint { color: #ebebf54d; }

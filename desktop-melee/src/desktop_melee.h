@@ -16,6 +16,8 @@ void desktop_melee_configure(AuroraConfig* config);
 void desktop_melee_window_created(SDL_Window* window);
 /* After the launcher applies saved preferences (pc_menu_init). */
 void desktop_melee_after_menu_init(void);
+/* Just before melee-pc's frame loop calls exit() (src/pc/vi.c). */
+void desktop_melee_before_exit(void);
 /* Around the disc choice and melee-pc's launcher (its shader-cache wait):
  * the overlay stays fully transparent, so melee-pc's screen is never seen,
  * and the menu bar app shows the progress

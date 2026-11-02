@@ -57,7 +57,7 @@ change is tagged `desktop-melee` in a comment and listed in
 
 - Build: `CMakeLists.txt` (includes `desktop-melee/desktop-melee.cmake`), `.gitignore`,
   `cmake/MeleeToolchainCheck.cmake` and `tools/preflight.py` (doc path only).
-- Port code: `src/pc/main.c`, `src/pc/launcher.cpp`.
+- Port code: `src/pc/main.c`, `src/pc/launcher.cpp`, `src/pc/vi.c`.
 - Repository: `.github/workflows/build.yml` (manual only, release job removed),
   `.github/ISSUE_TEMPLATE/`; `.github/RELEASE_NOTES.md` and
   `.github/workflows/pages.yml` removed; melee-pc's `README.md` is now
@@ -97,6 +97,9 @@ change is tagged `desktop-melee` in a comment and listed in
 - `extern/dht/sha1.c`, `extern/dht/sha1.h` — Steve Reid's SHA-1, public domain.
 - `extern/monocypher/` — Monocypher 4.0.3, BSD-2-Clause or CC0 (notice in the
   files).
+- `desktop-melee/resources/icons/` — Phosphor Icons 2.1.1, MIT. See
+  `desktop-melee/resources/icons/PHOSPHOR-LICENSE.txt`. All of them except
+  `device.*` and `emblem.standin`, which are Desktop Melee's own (section 2).
 - Dawn, SDL3, nod, RmlUi and the other dependencies are fetched at build time
   under their own licenses.
 

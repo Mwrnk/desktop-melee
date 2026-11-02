@@ -20,6 +20,9 @@
 #include "settings_file.h"
 #include "settings_window.h"
 #include "tray_sdl.h"
+#include "melee_font.h"
+#include "welcome_window.h"
+#include "window_icon.h"
 
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_log.h>
@@ -75,7 +78,7 @@ bool desktop_melee_platform_window_covers_screen(void) {
 
 void desktop_melee_platform_overlay_set_hidden(bool hidden) {
     /* TODO: SDL_HideWindow / SDL_ShowWindow, then click-through again.
-     * Only the welcome window calls this, and there is none yet. */
+     * Only the macOS welcome window calls this so far. */
     (void)hidden;
 }
 
@@ -151,12 +154,12 @@ void desktop_melee_platform_ui_install(SDL_Window* window) {
      * opens the settings window (settings_window.cpp, an RmlUi document in
      * aurora's second window).
      * TODO (docs/desktop-melee/ui-guide.md):
-     *   - the welcome window and "How to play".
      *   - the Pause and hide hotkey, from any app: XGrabKey on the root window
      *     (X11), or the org.freedesktop.portal.GlobalShortcuts portal
      *     (Wayland; KDE has it, GNOME only in recent releases). It calls
      *     desktop_melee_toggle_pause_and_hide(). */
     desktop_melee_settings_load();
+    desktop_melee_set_window_icons();
     /* Without a tray (GNOME without the AppIndicator extension) the menu is
      * unreachable: open the settings window instead, which can start
      * matches and quit too. */
@@ -171,34 +174,32 @@ void desktop_melee_platform_ui_focus_game(void) {
 }
 
 void desktop_melee_platform_ui_loading_begin(void) {
-    /* TODO: show progress while desktop_melee_pipelines_pending() > 0. */
     SDL_Log("desktop-melee: building graphics pipelines (the first run takes a while)");
+    desktop_melee_welcome_loading_begin();
 }
 
-void desktop_melee_platform_ui_loading_end(void) {}
+void desktop_melee_platform_ui_loading_end(void) {
+    desktop_melee_welcome_loading_end();
+}
 
+/* The welcome window (welcome_window.cpp): the disc step, or nothing when the
+ * disc passed the check before (settings.cfg's disc.verified).
+ * DESKTOP_MELEE_WELCOME=1 forces the first run, =disc the disc step. */
 const char* desktop_melee_platform_ui_choose_disc(const char* candidate) {
-    /* TODO: the welcome window's disc step, with SDL_ShowOpenFileDialog
-     * (xdg-desktop-portal), and remembering a disc that passed the check so
-     * the next launch skips the hash. */
-    if (candidate == NULL || candidate[0] == '\0') {
-        SDL_Log("desktop-melee: no disc: start the game with --dvd /path/to/melee.iso");
-        return NULL;
-    }
-    SDL_Log("desktop-melee: checking %s (a few seconds)", candidate);
-    char message[256];
-    const DesktopMeleeDiscState state =
-        desktop_melee_disc_check_wait(candidate, message, (int)sizeof message);
-    if (state != DESKTOP_MELEE_DISC_VERIFIED) {
-        SDL_Log("desktop-melee: disc refused: %s", message);
-        return NULL;
-    }
-    return candidate;
+    return desktop_melee_welcome_choose_disc(candidate, SDL_getenv("DESKTOP_MELEE_WELCOME"));
 }
 
 void desktop_melee_platform_ui_assets_ready(void) {
-    /* TODO: the settings window may draw portraits and the font now. */
+    desktop_melee_font_assets_ready(); /* the windows' text in Melee's font */
     desktop_melee_tray_assets_ready();
+    desktop_melee_welcome_assets_ready();
+}
+
+/* The RmlUi windows close while RmlUi is whole (platform.h). */
+void desktop_melee_platform_ui_before_exit(void) {
+    desktop_melee_welcome_close();
+    desktop_melee_settings_window_close();
+    desktop_melee_tray_remove();
 }
 
 /* ---- files -------------------------------------------------------------- */

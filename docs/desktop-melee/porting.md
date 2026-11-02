@@ -104,7 +104,7 @@ normal window` (or Windows), the disc check, then the idle scene, which
 draws nothing. Press Start on a controller (or the keyboard's Start key) to
 start a match.
 
-Useful environment variables, all from `desktop_melee.c`:
+Useful environment variables, from `desktop_melee.c` and the platform file:
 
 | Variable | Effect |
 |---|---|
@@ -113,6 +113,7 @@ Useful environment variables, all from `desktop_melee.c`:
 | `DESKTOP_MELEE_TRACE=1` | once-a-second trace lines the tests read (needs the platform's timer, see section 8) |
 | `DESKTOP_MELEE_INPUT_TRACE=1` | logs tap jumps and remapped buttons |
 | `DESKTOP_MELEE_DUMP=<dir>` | writes every texture found on the disc as a PNG. **Never commit these.** |
+| `DESKTOP_MELEE_WELCOME=1` | Linux: opens the welcome window as on a first run; `=disc` opens it on the disc step |
 
 ## 3. The platform interface
 
@@ -145,6 +146,7 @@ does, and what's required of a port. In short:
 | `ui_loading_begin` / `_end` | a small progress window | a progress window | same | same |
 | `ui_choose_disc` | the welcome window | welcome window, `SDL_ShowOpenFileDialog` | same (xdg-desktop-portal) | same |
 | `ui_assets_ready` | builds the UI's images | the UI may draw portraits | same | same |
+| `ui_before_exit` | nothing | close the RmlUi windows and tray (`platform_linux.c` does) | same | same |
 | `write_png` | ImageIO | `SDL_SavePNG` (done) | `SDL_SavePNG` (done) | `SDL_SavePNG` (done) |
 
 The macOS-only Accessibility calls (`desktop_melee_ax_trusted`,

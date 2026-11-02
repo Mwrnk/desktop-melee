@@ -565,6 +565,12 @@ unsigned desktop_melee_pipelines_pending(void) {
     return aurora_wait_pipelines(0);
 }
 
+void desktop_melee_before_exit(void) {
+    if (desktop_melee_overlay_enabled()) {
+        desktop_melee_platform_ui_before_exit();
+    }
+}
+
 void desktop_melee_after_menu_init(void) {
     if (!desktop_melee_overlay_enabled()) {
         return;

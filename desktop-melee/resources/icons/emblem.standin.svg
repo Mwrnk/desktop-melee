@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- The stand-in Smash emblem, until the game has Melee's own from the
+       disc: a small stage, three floating platforms over a floor. The same
+       drawing as desktop-melee/ui/Emblem.swift and tray_sdl.c. -->
+  <g fill="currentColor">
+    <rect x="36" y="18" width="28" height="11" rx="5.5"/>
+    <rect x="10" y="40" width="28" height="11" rx="5.5"/>
+    <rect x="62" y="40" width="28" height="11" rx="5.5"/>
+    <path d="M4 62H96V73H82L64 90H36L18 73H4Z"/>
+  </g>
+</svg>

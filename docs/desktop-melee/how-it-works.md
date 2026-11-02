@@ -260,6 +260,7 @@ What each hook changes, in one line:
 |---|---|
 | `src/pc/main.c` | Overlay window settings, native disc picker; the overlay stays transparent until the game starts. |
 | `src/pc/launcher.cpp` | melee-pc's launcher still waits for the shaders, but is never shown and can't be skipped; no update check. |
+| `src/pc/vi.c` | Before the frame loop calls `exit()`, Desktop Melee closes its windows (`desktop_melee_before_exit`), while RmlUi is still whole. |
 | `src/melee/gm/gmboot.c` | Boot straight into `GM_DESKTOP_MELEE`, never the title screen. |
 | `src/sysdolphin/baselib/displayfunc.c` | "Clear the screen" clears to transparent, not black. |
 | `src/melee/gr/grdisplay.c`, `src/melee/gr/ground.c` | Don't draw the stage or background models. |
@@ -273,7 +274,7 @@ What each hook changes, in one line:
 | `src/melee/ft/kinds/ftCommon/ftCo_Jump*.c` | Tap jump on or off per player. |
 | `src/melee/gm/gmvs.c`, `src/melee/gm/gmscdata.c`, `src/melee/gm/forward.h` | Register `GM_DESKTOP_MELEE`, restart a running match. |
 | `extern/aurora/` (several files) | Transparent, borderless, always-on-top window; coverage alpha; premultiplied presentation. |
-| `extern/aurora/lib/rmlui_window.cpp` (new), `rmlui.cpp`, `rmlui.hpp`, `include/aurora/rmlui.hpp`, `aurora.cpp`, `window.cpp`, `cmake/aurora_core.cmake` | A second, normal window with its own RmlUi context, for the Windows and Linux settings window. |
+| `extern/aurora/lib/rmlui_window.cpp` (new), `rmlui.cpp`, `rmlui.hpp`, `include/aurora/rmlui.hpp`, `aurora.cpp`, `window.cpp`, `cmake/aurora_core.cmake` | A second, normal window with its own RmlUi context, for the Windows and Linux settings and welcome windows, with files dropped on it passed to a callback. |
 
 ---
 

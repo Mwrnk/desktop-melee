@@ -8,8 +8,9 @@
 #include <stdbool.h>
 
 /* Creates the icon and its menu: Start or restart match, Pause and hide,
- * Settings... (settings_window.h) and Quit. Returns false (and logs) when the
- * desktop has no tray, such as GNOME without the AppIndicator extension. */
+ * Settings... (settings_window.h), How to play (welcome_window.h) and Quit.
+ * Returns false (and logs) when the desktop has no tray, such as GNOME
+ * without the AppIndicator extension. */
 bool desktop_melee_tray_install(void);
 
 /* The game's assets are loaded: the menu may play Melee's menu sounds. */

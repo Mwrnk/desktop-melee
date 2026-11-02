@@ -1,0 +1,546 @@
+/* Desktop Melee's welcome window on Windows and Linux
+ * (docs/desktop-melee/ui-guide.md sections 9 to 11), in the macOS app's look:
+ * sizes and colours from desktop-melee/ui/WelcomeSteps.swift, the accent P1
+ * red. The colours, sections and notes are in common.rcss. Dashed borders
+ * are the "dashed" decorator (desktop-melee/src/rml_dashed.h), tinted with
+ * image-color. */
+
+body {
+    font-family: "Melee";
+    font-weight: bold;
+    font-size: 15dp;
+    color: #ffffff;
+    background-color: #242424;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 34dp 24dp 32dp;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---- Header: emblem, title, step dots ----------------------------------- */
+
+#header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 34dp;
+    margin-bottom: 18dp;
+}
+#header .title { flex: 1; font-size: 20dp; margin-left: 10dp; }
+#emblem { position: relative; width: 34dp; height: 34dp; }
+#emblem-img { width: 30dp; height: 30dp; margin: 2dp; }
+
+/* The app icon (macos/icon/AppIcon-dark.svg) until the game has the Smash
+ * emblem, as macOS shows it. */
+#app-icon { position: absolute; left: 0; top: 0; width: 34dp; height: 34dp; }
+.ready #app-icon, .ready #tray-app-icon { display: none; }
+
+#dots { display: flex; flex-direction: row; align-items: center; }
+#dots .dot {
+    width: 6dp;
+    height: 6dp;
+    margin-left: 5dp;
+    border-radius: 3dp;
+    background-color: #ffffff2e;
+    transition: width background-color 0.25s cubic-out;
+}
+#dots .dot.done { background-color: #ffffff8c; }
+#dots .dot.now { width: 18dp; background-color: #e83b38; }
+
+/* ---- Steps -------------------------------------------------------------- */
+
+#steps { flex: 1; min-height: 0; }
+.step { display: none; }
+.step.shown { display: block; }
+
+h1 { font-size: 36dp; line-height: 1.1; margin: 14dp 0 10dp; }
+h2 { font-size: 26dp; line-height: 1.15; margin-bottom: 12dp; }
+.lead {
+    font-weight: normal;
+    font-size: 16dp;
+    line-height: 1.3;
+    color: #ebebf599;
+    margin-bottom: 14dp;
+}
+.lead.big { font-size: 17dp; }
+
+
+.pill {
+    display: inline-block;
+    padding: 6dp 14dp;
+    border-radius: 14dp;
+    background-color: #ffffff24;
+    cursor: pointer;
+    transition: transform background-color 0.1s cubic-out;
+}
+.pill:hover { background-color: #ffffff38; }
+.pill:active { transform: scale(0.97); }
+
+.bar {
+    height: 5dp;
+    border-radius: 2.5dp;
+    background-color: #ffffff1f;
+}
+.bar .fill {
+    height: 5dp;
+    min-width: 5dp;
+    width: 0%;
+    border-radius: 2.5dp;
+    background-color: #30d158;
+}
+
+/* ---- Buttons: Back, then the step's main one ---------------------------- */
+
+#buttons { display: flex; flex-direction: row; }
+#next {
+    flex: 1;
+    padding: 10dp 0;
+    text-align: center;
+    font-size: 20dp;
+    color: #ffffff;
+    background-color: #e83b38;
+    border-radius: 10dp;
+    cursor: pointer;
+    transition: transform background-color color 0.15s cubic-out;
+}
+#next:hover { background-color: #ee4c49; }
+#next:active { transform: scale(0.97); }
+#next.disabled { color: #ebebf599; background-color: #ffffff1f; cursor: arrow; }
+#next.disabled:active { transform: none; }
+#back {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 16dp;
+    margin-right: 8dp;
+    font-size: 18dp;
+    border-radius: 10dp;
+    background-color: #ffffff1a;
+    cursor: pointer;
+    transition: transform background-color 0.1s cubic-out;
+}
+#back.hidden { display: none; }
+#back:hover { background-color: #ffffff26; }
+#back:active { transform: scale(0.97); }
+#back img { width: 12dp; height: 12dp; margin-right: 5dp; }
+#nav.hidden { display: none; }
+#or-start {
+    margin-top: 8dp;
+    text-align: center;
+    font-size: 13dp;
+    color: #ebebf599;
+}
+#or-start.hidden { display: none; }
+
+/* ---- Your disc ---------------------------------------------------------- */
+
+#old-disc {
+    font-family: "Noto Sans";
+    font-weight: normal;
+    font-size: 11dp;
+    color: #ebebf54d;
+    margin: -4dp 0 12dp;
+    white-space: nowrap;
+    overflow: hidden;
+}
+#old-disc.hidden { display: none; }
+#old-disc img { width: 11dp; height: 11dp; margin-right: 4dp; image-color: #ebebf54d; }
+
+#drop {
+    padding: 10dp 0;
+    margin-bottom: 14dp;
+    text-align: center;
+    border-radius: 12dp;
+    background-color: #ffffff0a;
+    decorator: dashed(1.5dp 6dp 5dp);
+    image-color: #ffffff40;
+}
+#drop img { width: 28dp; height: 28dp; image-color: #ebebf599; }
+#drop .big { font-size: 17dp; margin-top: 3dp; }
+#drop .types { font-size: 12.5dp; color: #ebebf599; margin: 3dp 0 9dp; white-space: pre; }
+#choose { font-size: 16dp; }
+
+#disc-status.hidden { display: none; }
+#disc-status .row { display: flex; flex-direction: row; }
+#disc-icon { width: 16dp; height: 16dp; margin: 2dp 10dp 0 0; image-color: #ebebf599; }
+#disc-status .text { flex: 1; }
+#disc-status .line { font-size: 15dp; line-height: 1.25; }
+#disc-status .name {
+    font-family: "Noto Sans";
+    font-size: 12.5dp;
+    color: #ebebf599;
+    margin-top: 2dp;
+    white-space: nowrap;
+    overflow: hidden;
+}
+#disc-status .bar { margin-top: 8dp; }
+#disc-status .bar.hidden { display: none; }
+#disc-status.ok #disc-icon { image-color: #30d158; }
+#disc-status.bad #disc-icon { image-color: #ff453a; }
+#disc-status { position: relative; }
+
+/* ---- Getting Melee ready ------------------------------------------------ */
+
+#step-loading.shown { text-align: center; padding-top: 70dp; }
+#loading-disc { width: 44dp; height: 44dp; image-color: #ebebf599; }
+.loading-title { font-size: 22dp; margin: 14dp 0; }
+.loading-lead {
+    font-weight: normal;
+    font-size: 14dp;
+    line-height: 1.3;
+    color: #ebebf599;
+    margin: 0 26dp 20dp;
+}
+#step-loading .bar { margin: 0 26dp; }
+.loading-count { font-size: 12.5dp; color: #ebebf599; margin-top: 8dp; }
+
+/* ---- Welcome: a desktop drawn with shapes ------------------------------- */
+
+#sketch {
+    position: relative;
+    height: 200dp;
+    border-radius: 12dp;
+    background-color: #171717;
+    decorator: dashed(1.5dp 6dp 5dp);
+    image-color: #e83b38cc;
+}
+#sketch .menubar {
+    position: absolute;
+    left: 0; top: 0; right: 0;
+    height: 14dp;
+    border-radius: 12dp 12dp 0 0;
+    background-color: #333333;
+}
+#sketch .window { position: absolute; border-radius: 6dp; }
+#sketch .w1 { left: 12%; top: 22%; width: 42%; height: 42%; background-color: #383838; }
+#sketch .w2 { left: 56%; top: 14%; width: 32%; height: 34%; background-color: #2e2e2e; }
+#sketch .stage {
+    position: absolute;
+    left: 25%; width: 50%; bottom: 10dp;
+    height: 16dp;
+    border-radius: 6dp;
+    background-color: #525252;
+}
+#sketch .fighter {
+    position: absolute;
+    bottom: 27dp;
+    width: 16dp;
+    height: 16dp;
+    border-radius: 8dp;
+}
+#sketch .p1 { left: 36%; background-color: #e83b38; }
+#sketch .p2 { left: 60%; background-color: #3d75f5; }
+
+/* ---- Grab a controller -------------------------------------------------- */
+
+#cards { display: flex; flex-direction: row; margin-bottom: 12dp; }
+.card {
+    flex: 1;
+    min-height: 100dp;
+    padding: 8dp 6dp;
+    margin-right: 8dp;
+    text-align: center;
+    border: 2dp #00000000;
+    border-radius: 12dp;
+    background-color: #ffffff0f;
+    transition: background-color border-color 0.2s cubic-out;
+}
+#card-keyboard { margin-right: 0; cursor: pointer; }
+#card-keyboard:hover { background-color: #ffffff17; }
+/* The device icons are in colour: a little dimmed until a player's press
+ * lights the card. */
+.card img {
+    height: 40dp;
+    width: auto;
+    margin-bottom: 5dp;
+    image-color: #ffffffb3;
+    transition: image-color 0.2s cubic-out;
+}
+.card.lit img { image-color: #ffffff; }
+.card .name { font-size: 14.5dp; }
+.card .sub {
+    font-weight: normal;
+    font-size: 12dp;
+    line-height: 1.25;
+    color: #ebebf599;
+    margin-top: 5dp;
+}
+.card .pill.small {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    font-size: 12.5dp;
+    padding: 4dp 10dp;
+    margin-top: 6dp;
+}
+#keys-chevron { width: 11dp; height: 11dp; margin-left: 5dp; transition: transform 0.2s cubic-out; }
+#keys-toggle.open { background-color: #ffffff38; }
+#keys-toggle.open #keys-chevron { transform: rotate(180deg); }
+
+.card.lit-p1 { border-color: #e83b38; background-color: #e83b381f; }
+.card.lit-p2 { border-color: #3d75f5; background-color: #3d75f51f; }
+.card.lit-p3 { border-color: #f2bf26; background-color: #f2bf261f; }
+.card.lit-p4 { border-color: #40b359; background-color: #40b3591f; }
+
+#players .label { display: flex; flex-direction: row; align-items: center; margin-bottom: 8dp; }
+.listening {
+    position: relative;
+    width: 7dp;
+    height: 7dp;
+    margin: 0 11dp 0 3dp;
+    border-radius: 3.5dp;
+    background-color: #e83b38;
+}
+#slots {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-bottom: 4dp;
+}
+.slot {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 192dp;
+    height: 40dp;
+    padding: 0 10dp;
+    margin-bottom: 8dp;
+    box-sizing: border-box;
+    border-radius: 10dp;
+    background-color: #ffffff0a;
+    decorator: dashed(1.5dp 5dp 4dp);
+    image-color: #ffffff24;
+}
+.slot .tag { font-size: 18dp; margin-right: 8dp; }
+.slot .who { display: none; flex: 1; font-family: "Noto Sans"; font-size: 15dp; white-space: nowrap; overflow: hidden; }
+.slot .waiting { flex: 1; font-size: 13dp; color: #ebebf54d; }
+.slot img { display: none; width: 16dp; height: 16dp; image-color: #30d158; }
+.slot.filled .who { display: block; }
+.slot.filled img { display: inline-block; }
+.slot.filled .waiting { display: none; }
+.slot.p1 .tag { color: #e83b3873; }
+.slot.p2 .tag { color: #3d75f573; }
+.slot.p3 .tag { color: #f2bf2673; }
+.slot.p4 .tag { color: #40b35973; }
+.slot.next.p1 { image-color: #e83b38b3; }
+.slot.next.p2 { image-color: #3d75f5b3; }
+.slot.next.p3 { image-color: #f2bf26b3; }
+.slot.next.p4 { image-color: #40b359b3; }
+.slot.filled { decorator: none; border-width: 1.5dp; }
+.slot.filled.p1 { border-color: #e83b38e6; background-color: #e83b3829; }
+.slot.filled.p2 { border-color: #3d75f5e6; background-color: #3d75f529; }
+.slot.filled.p3 { border-color: #f2bf26e6; background-color: #f2bf2629; }
+.slot.filled.p4 { border-color: #40b359e6; background-color: #40b35929; }
+.slot.filled.p1 .tag { color: #e83b38; }
+.slot.filled.p2 .tag { color: #3d75f5; }
+.slot.filled.p3 .tag { color: #f2bf26; }
+.slot.filled.p4 .tag { color: #40b359; }
+
+/* The keyboard card shows the keys in place of the players. */
+#step-controls.keys #players { display: none; }
+#step-controls.players #keys { display: none; }
+#key-grid { display: flex; flex-direction: row; flex-wrap: wrap; }
+#key-grid .key { display: flex; flex-direction: row; align-items: center; width: 50%; margin-bottom: 4dp; }
+#key-grid .key.wide { width: 100%; }
+#key-grid .what { width: 58dp; font-size: 13dp; color: #ebebf599; }
+.cap {
+    display: inline-block;
+    min-width: 10dp;
+    padding: 2dp 6dp 3dp;
+    margin-right: 4dp;
+    text-align: center;
+    font-size: 13dp;
+    border: 1dp #ffffff2e;
+    box-shadow: #00000059 0 2dp 0 0;
+    border-radius: 5dp;
+    background-color: #ffffff1a;
+}
+#keys .note { margin-top: 6dp; }
+
+/* ---- You're set: the tray, with an arrow at the icon -------------------- */
+
+#tray-sketch {
+    position: relative;
+    height: 120dp;
+    border-radius: 12dp;
+    background-color: #171717;
+}
+#tray-sketch .panel {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    height: 30dp;
+    padding-right: 14dp;
+    border-radius: 12dp 12dp 0 0;
+    background-color: #333333;
+}
+#tray-sketch .item {
+    width: 18dp;
+    height: 8dp;
+    margin-left: 10dp;
+    border-radius: 4dp;
+    background-color: #595959;
+}
+#tray-emblem { position: relative; width: 22dp; height: 22dp; margin-left: 10dp; }
+#tray-emblem-img { width: 22dp; height: 22dp; }
+#tray-app-icon { position: absolute; left: 0; top: 0; width: 22dp; height: 22dp; }
+#tray-arrow {
+    position: absolute;
+    right: 45dp;
+    top: 38dp;
+    width: 30dp;
+    height: 30dp;
+    image-color: #e83b38;
+}
+#tray-sketch .caption {
+    position: absolute;
+    right: 90dp;
+    top: 74dp;
+    font-size: 15dp;
+    color: #ebebf599;
+}
+
+#tray-glow {
+    position: absolute;
+    left: -7dp;
+    top: -7dp;
+    width: 36dp;
+    height: 36dp;
+    decorator: radial-gradient(circle closest-side, #e83b3880, #e83b3800);
+}
+
+/* ---- Motion, from desktop-melee/ui/WelcomeMotion.swift -----------------
+ * A step slides in 28dp in 0.32s (from the left going back); its parts
+ * arrive 0.06s apart, rising 10dp in 0.5s; things that appear pop with a
+ * bounce (back-out). Each animation starts when its rule starts to apply. */
+
+@keyframes step-in {
+    from { opacity: 0; transform: translateX(28dp); }
+    to { opacity: 1; transform: translateX(0dp); }
+}
+@keyframes step-back {
+    from { opacity: 0; transform: translateX(-28dp); }
+    to { opacity: 1; transform: translateX(0dp); }
+}
+.step.shown { animation: 0.32s cubic-out step-in; }
+#steps.backward .step.shown { animation: 0.32s cubic-out step-back; }
+
+/* The entrance: held still for the stagger, then up into place. */
+@keyframes enter0 {
+    from { opacity: 0; transform: translateY(10dp); }
+    to { opacity: 1; transform: translateY(0dp); }
+}
+@keyframes enter1 {
+    0% { opacity: 0; transform: translateY(10dp); }
+    10.7% { opacity: 0; transform: translateY(10dp); }
+    100% { opacity: 1; transform: translateY(0dp); }
+}
+@keyframes enter2 {
+    0% { opacity: 0; transform: translateY(10dp); }
+    19.4% { opacity: 0; transform: translateY(10dp); }
+    100% { opacity: 1; transform: translateY(0dp); }
+}
+.step.shown .e0 { animation: 0.5s cubic-out enter0; }
+.step.shown .e1 { animation: 0.56s cubic-out enter1; }
+.step.shown .e2 { animation: 0.62s cubic-out enter2; }
+
+@keyframes pop-in {
+    from { opacity: 0; transform: scale(0.3); }
+    to { opacity: 1; transform: scale(1); }
+}
+@keyframes rise-in {
+    from { opacity: 0; transform: translateY(8dp); }
+    to { opacity: 1; transform: translateY(0dp); }
+}
+@keyframes fall-in {
+    from { opacity: 0; transform: translateY(-8dp); }
+    to { opacity: 1; transform: translateY(0dp); }
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* The disc status rises in for each new state; the check pops; the disc
+ * spins while it is checked. Three names, so each state starts it again. */
+@keyframes rise-checking { from { opacity: 0; transform: translateY(8dp); } to { opacity: 1; transform: translateY(0dp); } }
+@keyframes rise-ok { from { opacity: 0; transform: translateY(8dp); } to { opacity: 1; transform: translateY(0dp); } }
+@keyframes rise-bad { from { opacity: 0; transform: translateY(8dp); } to { opacity: 1; transform: translateY(0dp); } }
+#disc-status.checking { animation: 0.32s cubic-out rise-checking; }
+#disc-status.ok { animation: 0.32s cubic-out rise-ok; }
+#disc-status.bad { animation: 0.32s cubic-out rise-bad; }
+#disc-status.checking #disc-icon { animation: 1.2s linear infinite spin; }
+#disc-status.ok #disc-icon { animation: 0.45s back-out pop-in; }
+.step.shown #loading-disc { animation: 2.4s linear infinite spin; }
+
+/* A lit card: its icon hops once. */
+@keyframes icon-hop {
+    50% { transform: scale(1.25); }
+}
+.card.lit img { animation: 0.32s cubic-out icon-hop; }
+
+/* Keys or players, rising in from their side. */
+#step-controls.keys #keys { animation: 0.32s cubic-out fall-in; }
+#step-controls.players #players { animation: 0.32s cubic-out rise-in; }
+
+/* A player joins: the slot pulses, the name rises, the check pops. */
+@keyframes slot-pulse {
+    50% { transform: scale(1.05); }
+}
+.slot.filled { animation: 0.28s cubic-out slot-pulse; }
+.slot.filled .who { animation: 0.32s cubic-out rise-in; }
+.slot.filled img { animation: 0.45s back-out pop-in; }
+
+/* The next free slot's dashed border breathes in its player's colour. */
+@keyframes breathe-p1 { from { image-color: #e83b38b3; } to { image-color: #e83b382d; } }
+@keyframes breathe-p2 { from { image-color: #3d75f5b3; } to { image-color: #3d75f52d; } }
+@keyframes breathe-p3 { from { image-color: #f2bf26b3; } to { image-color: #f2bf262d; } }
+@keyframes breathe-p4 { from { image-color: #40b359b3; } to { image-color: #40b3592d; } }
+.slot.next.p1 { animation: 0.8s sine-in-out infinite alternate breathe-p1; }
+.slot.next.p2 { animation: 0.8s sine-in-out infinite alternate breathe-p2; }
+.slot.next.p3 { animation: 0.8s sine-in-out infinite alternate breathe-p3; }
+.slot.next.p4 { animation: 0.8s sine-in-out infinite alternate breathe-p4; }
+
+/* Listening: a ring keeps spreading from the red dot. */
+.listening .ring {
+    position: absolute;
+    left: -0.6dp;
+    top: -0.6dp;
+    width: 7dp;
+    height: 7dp;
+    border: 1.2dp #e83b38;
+    border-radius: 4.7dp;
+    box-sizing: content-box;
+}
+@keyframes ripple {
+    from { opacity: 0.8; transform: scale(1); }
+    to { opacity: 0; transform: scale(2.6); }
+}
+.listening .ring { animation: 1.4s cubic-out infinite ripple; }
+
+/* Welcome: P1 and P2 hop on the stage, out of step. */
+@keyframes fighter-hop {
+    0% { transform: translateY(0dp); }
+    25% { transform: translateY(-16dp); }
+    50% { transform: translateY(0dp); }
+    100% { transform: translateY(0dp); }
+}
+#sketch .p1 { animation: 1.5s sine-in-out infinite fighter-hop; }
+#sketch .p2 { animation: 1.8s 0.72s sine-in-out infinite fighter-hop; }
+
+/* You're set: the arrow bobs at the tray icon, the glow behind it breathes. */
+@keyframes bob {
+    from { transform: translateY(-4dp); }
+    to { transform: translateY(4dp); }
+}
+@keyframes glow {
+    from { opacity: 1; }
+    to { opacity: 0.4; }
+}
+#tray-arrow { animation: 0.65s sine-in-out infinite alternate bob; }
+#tray-glow { animation: 0.65s sine-in-out infinite alternate glow; }

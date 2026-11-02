@@ -165,6 +165,13 @@ const char* desktop_melee_platform_ui_choose_disc(const char* candidate);
  *   macOS: desktop-melee/ui/GameAssets.swift builds its images. */
 void desktop_melee_platform_ui_assets_ready(void);
 
+/* The game is about to exit: melee-pc's frame loop calls exit(), whose
+ * handlers shut aurora and RmlUi down only after C++ has destroyed some of
+ * RmlUi's own statics. Close the UI's windows now, while all is whole.
+ *   macOS: nothing (no RmlUi windows).
+ *   Windows and Linux: the settings and welcome windows, and the tray. */
+void desktop_melee_platform_ui_before_exit(void);
+
 /* ---- files -------------------------------------------------------------- */
 
 /* Writes straight (not premultiplied) RGBA8 pixels, rows top to bottom, as

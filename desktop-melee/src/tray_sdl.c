@@ -3,12 +3,12 @@
 #include "tray_sdl.h"
 
 #include <SDL3/SDL.h>
-#include <math.h>
 #include <stdio.h>
 
 #include "../ui/bridge/desktop_melee_bridge.h"
 #include "settings_file.h"
 #include "settings_window.h"
+#include "welcome_window.h"
 
 /* desktop_melee_sound_menu kinds (ui-guide.md section 1). */
 enum { SOUND_BACK = 0, SOUND_CONFIRM = 1 };
@@ -18,36 +18,48 @@ static bool s_assets_ready = false;
 
 /* ---- the icon ----------------------------------------------------------- */
 
-/* Drawn from scratch, never from the disc: a floor with two fighters on it,
- * in the player colours (P1 #E83B38, P2 #3D75F5). */
-enum { ICON_SIZE = 64 };
+/* The Smash emblem, as on macOS (ui/Emblem.swift, ui/MenuBar.swift): a
+ * stand-in drawn here until the game has decoded Melee's own from the
+ * player's disc, so the repository holds no game artwork. White, for a dark
+ * panel. */
+enum { ICON_SIZE = 64, ICON_SAMPLES = 4 };
 
-/* Coverage of a pixel by a rounded rectangle, as a smooth edge. */
-static float rounded_rect(float x, float y, float cx, float cy, float hw, float hh, float r) {
-    const float qx = fabsf(x - cx) - (hw - r);
-    const float qy = fabsf(y - cy) - (hh - r);
-    const float ox = qx > 0.0f ? qx : 0.0f;
-    const float oy = qy > 0.0f ? qy : 0.0f;
-    const float inside = qx > qy ? (qx < 0.0f ? qx : 0.0f) : (qy < 0.0f ? qy : 0.0f);
-    const float distance = sqrtf(ox * ox + oy * oy) + inside - r;
-    const float coverage = 0.5f - distance;
-    return coverage < 0.0f ? 0.0f : coverage > 1.0f ? 1.0f : coverage;
+static bool in_rounded_rect(float x, float y, float left, float top, float w, float h) {
+    const float r = h / 2.0f;
+    if (x < left || x > left + w || y < top || y > top + h) {
+        return false;
+    }
+    const float cx = x < left + r ? left + r : x > left + w - r ? left + w - r : x;
+    const float dx = x - cx;
+    const float dy = y - (top + r);
+    return dx * dx + dy * dy <= r * r;
 }
 
-static void blend(Uint8* px, float coverage, Uint8 r, Uint8 g, Uint8 b) {
-    if (coverage <= 0.0f) {
-        return;
+/* Even-odd point in polygon. */
+static bool in_polygon(float x, float y, const float (*points)[2], int count) {
+    bool inside = false;
+    for (int i = 0, j = count - 1; i < count; j = i++) {
+        const float xi = points[i][0], yi = points[i][1];
+        const float xj = points[j][0], yj = points[j][1];
+        if ((yi > y) != (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) {
+            inside = !inside;
+        }
     }
-    /* Straight alpha: "over" onto what is there. */
-    const float under = px[3] / 255.0f;
-    const float out = coverage + under * (1.0f - coverage);
-    const Uint8 color[3] = {r, g, b};
+    return inside;
+}
+
+/* A small stage in a unit square: three floating platforms over a floor. */
+static bool in_stand_in(float x, float y) {
+    const float bar = 0.11f;
+    const float platforms[3][2] = {{0.36f, 0.18f}, {0.10f, 0.40f}, {0.62f, 0.40f}};
     for (int i = 0; i < 3; i++) {
-        const float mixed =
-            (color[i] * coverage + px[i] * under * (1.0f - coverage)) / (out > 0.0f ? out : 1.0f);
-        px[i] = (Uint8)(mixed + 0.5f);
+        if (in_rounded_rect(x, y, platforms[i][0], platforms[i][1], 0.28f, bar)) {
+            return true;
+        }
     }
-    px[3] = (Uint8)(out * 255.0f + 0.5f);
+    static const float floor[8][2] = {{0.04f, 0.62f}, {0.96f, 0.62f}, {0.96f, 0.73f},
+        {0.82f, 0.73f}, {0.64f, 0.90f}, {0.36f, 0.90f}, {0.18f, 0.73f}, {0.04f, 0.73f}};
+    return in_polygon(x, y, floor, 8);
 }
 
 static SDL_Surface* make_icon(void) {
@@ -55,18 +67,48 @@ static SDL_Surface* make_icon(void) {
     if (icon == NULL) {
         return NULL;
     }
-    SDL_memset(icon->pixels, 0, (size_t)icon->pitch * ICON_SIZE);
     for (int y = 0; y < ICON_SIZE; y++) {
         Uint8* row = (Uint8*)icon->pixels + (size_t)y * icon->pitch;
         for (int x = 0; x < ICON_SIZE; x++) {
+            int hits = 0;
+            for (int sy = 0; sy < ICON_SAMPLES; sy++) {
+                for (int sx = 0; sx < ICON_SAMPLES; sx++) {
+                    const float fx = (x + (sx + 0.5f) / ICON_SAMPLES) / ICON_SIZE;
+                    const float fy = (y + (sy + 0.5f) / ICON_SAMPLES) / ICON_SIZE;
+                    hits += in_stand_in(fx, fy);
+                }
+            }
             Uint8* px = row + x * 4;
-            const float fx = x + 0.5f;
-            const float fy = y + 0.5f;
-            /* The floor: a wide bar near the bottom. */
-            blend(px, rounded_rect(fx, fy, 32.0f, 51.0f, 29.0f, 6.0f, 4.0f), 0xEE, 0xEE, 0xF2);
-            /* P1 and P2: rounded bodies standing on it. */
-            blend(px, rounded_rect(fx, fy, 19.0f, 31.0f, 8.0f, 14.0f, 7.0f), 0xE8, 0x3B, 0x38);
-            blend(px, rounded_rect(fx, fy, 45.0f, 31.0f, 8.0f, 14.0f, 7.0f), 0x3D, 0x75, 0xF5);
+            px[0] = px[1] = px[2] = 0xff;
+            px[3] = (Uint8)(hits * 255 / (ICON_SAMPLES * ICON_SAMPLES));
+        }
+    }
+    return icon;
+}
+
+/* Melee's emblem (desktop_melee_named_alpha, an alpha mask), white and
+ * centred in a square. */
+static SDL_Surface* make_emblem_icon(void) {
+    int w = 0;
+    int h = 0;
+    const Uint8* alpha = desktop_melee_named_alpha("emblem", &w, &h);
+    if (alpha == NULL || w <= 0 || h <= 0) {
+        return NULL;
+    }
+    const int side = w > h ? w : h;
+    SDL_Surface* icon = SDL_CreateSurface(side, side, SDL_PIXELFORMAT_RGBA32);
+    if (icon == NULL) {
+        return NULL;
+    }
+    SDL_memset(icon->pixels, 0, (size_t)icon->pitch * side);
+    const int left = (side - w) / 2;
+    const int top = (side - h) / 2;
+    for (int y = 0; y < h; y++) {
+        Uint8* row = (Uint8*)icon->pixels + (size_t)(y + top) * icon->pitch;
+        for (int x = 0; x < w; x++) {
+            Uint8* px = row + (x + left) * 4;
+            px[0] = px[1] = px[2] = 0xff;
+            px[3] = alpha[(size_t)y * w + x];
         }
     }
     return icon;
@@ -99,6 +141,13 @@ static void on_settings(void* userdata, SDL_TrayEntry* entry) {
     (void)entry;
     play_sound(SOUND_CONFIRM);
     desktop_melee_settings_window_open();
+}
+
+static void on_how_to_play(void* userdata, SDL_TrayEntry* entry) {
+    (void)userdata;
+    (void)entry;
+    play_sound(SOUND_CONFIRM);
+    desktop_melee_welcome_how_to_play();
 }
 
 static void on_quit(void* userdata, SDL_TrayEntry* entry) {
@@ -136,6 +185,7 @@ bool desktop_melee_tray_install(void) {
     add_entry(menu, "Pause and hide", on_pause);
     SDL_InsertTrayEntryAt(menu, -1, NULL, 0); /* separator */
     add_entry(menu, "Settings...", on_settings);
+    add_entry(menu, "How to play", on_how_to_play);
     SDL_InsertTrayEntryAt(menu, -1, NULL, 0);
     add_entry(menu, "Quit Desktop Melee", on_quit);
     SDL_Log("desktop-melee: tray: installed");
@@ -144,6 +194,12 @@ bool desktop_melee_tray_install(void) {
 
 void desktop_melee_tray_assets_ready(void) {
     s_assets_ready = true;
+    /* Swap the stand-in for Melee's own emblem, as macOS does. */
+    SDL_Surface* emblem = s_tray != NULL ? make_emblem_icon() : NULL;
+    if (emblem != NULL) {
+        SDL_SetTrayIcon(s_tray, emblem);
+        SDL_DestroySurface(emblem);
+    }
 }
 
 void desktop_melee_tray_remove(void) {
