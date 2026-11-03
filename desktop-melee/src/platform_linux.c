@@ -1,20 +1,19 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Linux skeleton of desktop-melee/src/platform.h (issue #12). Nothing here is
- * Linux-specific yet: it is plain SDL, so CMake also builds it for any other
- * system without a port of its own.
+/* Linux's desktop-melee/src/platform.h (issue #12). Plain SDL apart from the
+ * overlay (overlay_x11.c) and the hotkey (hotkey_portal.c), which CMake adds
+ * only where X11 and D-Bus are found, so it also builds for any other system
+ * without a port of its own.
  *
- * What runs today, with DESKTOP_MELEE_OVERLAY=1 and a disc:
- *   melee --dvd /path/to/melee.iso
- * The match plays in a normal, resizable window (not an overlay), the floor
- * sits a little above the window's bottom edge, there is no notch island,
- * and Pause and hide only pauses. Settings come from settings.cfg
- * (settings_file.h); a tray icon (tray_sdl.h) starts matches, pauses, quits
- * and opens the settings window (settings_window.h).
+ * With DESKTOP_MELEE_OVERLAY=1 and a disc (melee --dvd /path/to/melee.iso)
+ * the game is a transparent, click-through X11 overlay over the desktop,
+ * through XWayland on Wayland desktops, with the floor on the panel; without
+ * X11, a compositor or a 32-bit visual it is a normal window, the floor a
+ * little above its bottom edge. There is no notch island. Settings come from
+ * settings.cfg (settings_file.h); a tray icon (tray_sdl.h) starts matches,
+ * pauses, quits and opens the settings window (settings_window.h).
  *
  * docs/desktop-melee/porting.md walks through each function; every TODO
- * below names what a port would use. X11 and Wayland differ for most of it:
- * check SDL_GetCurrentVideoDriver() ("x11" or "wayland") at runtime, since
- * one build runs on both. */
+ * below names what a port would use. */
 #include "platform.h"
 
 #include "settings_file.h"
@@ -23,6 +22,9 @@
 #include "desktop_entry.h"
 #include "hotkey_portal.h"
 #include "melee_font.h"
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+#include "overlay_x11.h"
+#endif
 #include "welcome_window.h"
 #include "window_icon.h"
 
@@ -36,66 +38,69 @@
 
 /* ---- the overlay window ------------------------------------------------- */
 
+/* The overlay window (overlay_x11.h), or a normal window when it can't be. */
+static bool s_overlay = false;
+static SDL_Window* s_window = NULL;
+
 void desktop_melee_platform_configure(AuroraConfig* config) {
-    /* TODO: keep overlayWindow on once desktop_melee_platform_overlay_setup
-     * makes the window click-through. Until then, a borderless window that
-     * covers the screen and takes every click locks the player out. */
-    config->overlayWindow = false;
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    s_overlay = desktop_melee_x11_overlay_prepare();
+#endif
+    config->overlayWindow = s_overlay;
 #ifdef DESKTOP_MELEE_HOTKEY_PORTAL
     /* Wayland's app_id and X11's WM_CLASS: the desktop finds the .desktop
      * file, and the taskbar its icon, by it. */
     SDL_SetHint(SDL_HINT_APP_ID, DESKTOP_MELEE_APP_ID);
 #endif
-    SDL_Log("desktop-melee: Linux skeleton: a normal window, not an overlay "
-            "(docs/desktop-melee/porting.md)");
+    if (!s_overlay) {
+        SDL_Log("desktop-melee: Linux: a normal window, not an overlay "
+                "(docs/desktop-melee/porting.md)");
+    }
 }
 
 void desktop_melee_platform_overlay_setup(SDL_Window* window) {
-    (void)window;
-    /* TODO, X11:
-     *   - transparency: SDL picks an ARGB (32-bit) visual for
-     *     SDL_WINDOW_TRANSPARENT; it only shows through with a compositor
-     *     running (an owner for the _NET_WM_CM_S<screen> selection). Without
-     *     one, say so and stay a normal window.
-     *   - click-through: an empty input shape, XShapeCombineRectangles(dpy,
-     *     win, ShapeInput, 0, 0, NULL, 0, ShapeSet, Unsorted) (libXext), or
-     *     XFixesSetWindowShapeRegion with an empty region.
-     *   - stacking: _NET_WM_STATE_ABOVE, _NET_WM_STATE_STICKY (every desktop),
-     *     _NET_WM_STATE_SKIP_TASKBAR and _NET_WM_STATE_SKIP_PAGER, and
-     *     _NET_WM_WINDOW_TYPE_DOCK or _NOTIFICATION so it never takes focus.
-     *   Get the Display* and Window from SDL_PROP_WINDOW_X11_DISPLAY_POINTER
-     *   and SDL_PROP_WINDOW_X11_WINDOW_NUMBER.
-     * TODO, Wayland:
-     *   - a wlr-layer-shell surface (zwlr_layer_shell_v1) on the OVERLAY
-     *     layer, anchored to all four edges, keyboard interactivity none;
-     *     KDE Plasma and wlroots compositors (Sway, Hyprland) have it, GNOME
-     *     does not, so GNOME stays a normal window.
-     *   - click-through: wl_surface_set_input_region with an empty
-     *     wl_region (SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER).
-     *   SDL creates its own xdg_toplevel, so the layer surface likely needs
-     *   SDL_PROP_WINDOW_CREATE_WAYLAND_SURFACE_ROLE_CUSTOM_BOOLEAN, set
-     *   before aurora creates the window.
+    s_window = window;
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    if (s_overlay) {
+        desktop_melee_x11_overlay_setup(window);
+    }
+#endif
+    /* TODO, Wayland: a native overlay through wlr-layer-shell
+     * (zwlr_layer_shell_v1) for KDE and wlroots, sharper at fractional
+     * scales and above panels; needs SDL's custom-role window, set where
+     * aurora creates it (porting.md section 6).
      * TODO: the once-a-second desktop_melee_trace_tick() the tests use, from
      * the main loop. */
 }
 
 bool desktop_melee_platform_window_covers_screen(void) {
-    /* TODO: true once the window is an overlay. */
-    return false;
+    return s_overlay;
 }
 
 void desktop_melee_platform_overlay_set_hidden(bool hidden) {
-    /* TODO: SDL_HideWindow / SDL_ShowWindow, then click-through again.
-     * Only the macOS welcome window calls this so far. */
-    (void)hidden;
+    /* Only the macOS welcome window calls this so far. */
+    if (s_overlay && s_window != NULL) {
+        if (hidden) {
+            SDL_HideWindow(s_window);
+        } else {
+            SDL_ShowWindow(s_window);
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+            desktop_melee_x11_overlay_setup(s_window); /* a new window maps without them */
+#endif
+        }
+    }
 }
 
 void desktop_melee_platform_overlay_set_faded(bool faded) {
-    /* TODO: Pause and hide. SDL_SetWindowOpacity(window, 0 or 1)
-     * (_NET_WM_WINDOW_OPACITY, needs the compositor) keeps the game
-     * drawing; hiding or minimising the window may stall presentation. On
-     * Wayland, unmap the layer surface's buffer or draw nothing instead. */
+    /* Pause and hide: transparent, still drawing, since a hidden window may
+     * stall presentation and with it the game loop. */
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    if (s_overlay && s_window != NULL) {
+        desktop_melee_x11_overlay_set_faded(s_window, faded);
+    }
+#else
     (void)faded;
+#endif
 }
 
 /* ---- the screen --------------------------------------------------------- */
@@ -111,6 +116,21 @@ void desktop_melee_platform_screen_geometry(
      * monitors, so check each panel's _NET_WM_STRUT_PARTIAL for multi-monitor
      * setups); Wayland has no work area, so use the layer-shell exclusive
      * zones the compositor reports, or 0. */
+    if (s_overlay) {
+        /* The overlay's screen; the floor is the panel along its bottom, from
+         * the work area (X11's _NET_WORKAREA, which SDL reads). */
+        const SDL_DisplayID display = SDL_GetDisplayForWindow(window);
+        SDL_Rect bounds;
+        SDL_Rect usable;
+        if (SDL_GetDisplayBounds(display, &bounds) && SDL_GetDisplayUsableBounds(display, &usable))
+        {
+            *width_pt = (float)bounds.w;
+            *height_pt = (float)bounds.h;
+            const int gap = (bounds.y + bounds.h) - (usable.y + usable.h);
+            *floor_pt = gap > 0 ? (float)gap : 0.0f;
+            return;
+        }
+    }
     int w = 0, h = 0;
     SDL_GetWindowSize(window, &w, &h);
     *width_pt = (float)w;

@@ -46,6 +46,37 @@ else ()
         target_link_libraries(melee PRIVATE PkgConfig::DESKTOP_MELEE_DBUS)
         target_compile_definitions(melee PRIVATE DESKTOP_MELEE_HOTKEY_PORTAL=1)
     endif ()
+
+    # The overlay window on X11 (overlay_x11.c), with its Vulkan layer
+    # (vk_overlay_alpha.c) built next to the game: aurora's Dawn makes opaque
+    # Vulkan swap chains, the layer makes them transparent. It uses the Vulkan
+    # headers SDL bundles. Without X11 or them, the game stays a normal window.
+    if (PKG_CONFIG_FOUND)
+        pkg_check_modules(DESKTOP_MELEE_X11 QUIET IMPORTED_TARGET x11)
+    endif ()
+    FetchContent_GetProperties(SDL)
+    set(_desktop_melee_vulkan_headers "")
+    foreach (_dir "${sdl_SOURCE_DIR}" "${SDL3_SOURCE_DIR}")
+        if (_dir AND EXISTS "${_dir}/src/video/khronos/vulkan/vk_layer.h")
+            set(_desktop_melee_vulkan_headers "${_dir}/src/video/khronos")
+            break ()
+        endif ()
+    endforeach ()
+    if (DESKTOP_MELEE_X11_FOUND AND _desktop_melee_vulkan_headers)
+        add_library(desktop_melee_overlay_alpha SHARED desktop-melee/src/vk_overlay_alpha.c)
+        target_include_directories(desktop_melee_overlay_alpha PRIVATE "${_desktop_melee_vulkan_headers}")
+        set_target_properties(desktop_melee_overlay_alpha PROPERTIES
+                C_VISIBILITY_PRESET hidden
+                LIBRARY_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:melee>")
+        file(GENERATE OUTPUT "$<TARGET_FILE_DIR:melee>/desktop_melee_overlay_alpha.json"
+                INPUT "${CMAKE_CURRENT_SOURCE_DIR}/desktop-melee/src/vk_overlay_alpha.json")
+        add_dependencies(melee desktop_melee_overlay_alpha)
+        target_sources(melee PRIVATE desktop-melee/src/overlay_x11.c)
+        target_link_libraries(melee PRIVATE PkgConfig::DESKTOP_MELEE_X11)
+        target_compile_definitions(melee PRIVATE DESKTOP_MELEE_X11_OVERLAY=1)
+    else ()
+        message(STATUS "desktop-melee: no X11 or Vulkan headers: the Linux overlay is off")
+    endif ()
 endif ()
 
 # The settings window's documents (settings_window.cpp), next to melee-pc's

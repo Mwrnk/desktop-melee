@@ -1,0 +1,11 @@
+{
+    "file_format_version": "1.2.0",
+    "layer": {
+        "name": "VK_LAYER_DESKTOP_MELEE_overlay_alpha",
+        "type": "GLOBAL",
+        "library_path": "./libdesktop_melee_overlay_alpha.so",
+        "api_version": "1.3.0",
+        "implementation_version": "1",
+        "description": "Desktop Melee: a transparent swap chain for its overlay window"
+    }
+}
