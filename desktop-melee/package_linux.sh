@@ -31,8 +31,14 @@ esac
 echo "=== Building Desktop Melee ${VERSION} (Linux ${ARCH}) ==="
 # The same dependency providers as the CI builds and melee-pc's own Linux
 # packages: SDL from source (shipped beside the game), prebuilt Dawn and nod.
+# Source paths (__FILE__ in asserts) relative to the checkout in every
+# target, the fetched SDL too, so the AppImage doesn't name the builder's
+# home folder; CMakeLists.txt does it only for the game and aurora.
+PREFIX_MAP="-ffile-prefix-map=${ROOT}/="
 cmake -B "${BUILD}" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS="${CFLAGS:-} ${PREFIX_MAP}" \
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS:-} ${PREFIX_MAP}" \
     -DAURORA_SDL3_PROVIDER=vendor \
     -DAURORA_SDL3_LINKAGE=shared \
     -DAURORA_DAWN_PROVIDER="${AURORA_DAWN_PROVIDER:-package}" \
