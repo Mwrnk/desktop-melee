@@ -5,12 +5,14 @@
 
 #include "platform.h"
 
-/* The windows bottom to top, relative to (origin_x, origin_y), the overlay's
- * top left on the desktop. KDE: KWin's list, which a small KWin script sends
- * over D-Bus (it alone sees native Wayland windows). Elsewhere: X11's
- * _NET_CLIENT_LIST_STACKING. */
+/* The windows bottom to top, in the overlay's coordinates (top left 0,0).
+ * `overlay` is the overlay's frame on the desktop in SDL's coordinates
+ * (X11's). KDE: KWin's list, which a small KWin script sends over D-Bus (it
+ * alone sees native Wayland windows), mapped through the overlay's frame as
+ * KWin sees it, so display scaling doesn't shift it. Elsewhere: X11's
+ * _NET_CLIENT_LIST_STACKING, read again only after a change. */
 int desktop_melee_linux_windows(
-    DesktopMeleeWindow* out, int max, float origin_x, float origin_y);
+    DesktopMeleeWindow* out, int max, const DesktopMeleeWindow* overlay);
 
 /* Unloads the KWin script (desktop_melee_platform_ui_before_exit). */
 void desktop_melee_linux_windows_stop(void);

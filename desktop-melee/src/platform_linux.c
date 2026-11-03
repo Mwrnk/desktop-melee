@@ -283,8 +283,12 @@ int desktop_melee_platform_windows(DesktopMeleeWindow* out, int max) {
     if (s_overlay && s_window != NULL) {
         int x = 0;
         int y = 0;
+        int w = 0;
+        int h = 0;
         SDL_GetWindowPosition(s_window, &x, &y);
-        return desktop_melee_linux_windows(out, max, (float)x, (float)y);
+        SDL_GetWindowSize(s_window, &w, &h);
+        const DesktopMeleeWindow overlay = {(float)x, (float)y, (float)w, (float)h, 0};
+        return desktop_melee_linux_windows(out, max, &overlay);
     }
 #endif
     (void)out;

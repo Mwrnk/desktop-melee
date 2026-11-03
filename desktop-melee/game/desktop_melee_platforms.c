@@ -27,8 +27,7 @@ static int s_first_joint = -1; /* the platforms' joints, lines and vertices */
 static int s_first_line = -1;
 static bool s_shown[PLATFORMS];
 
-MapCollData* desktop_melee_platforms_extend(MapCollData* coll_data, float scale)
-{
+MapCollData* desktop_melee_platforms_extend(MapCollData* coll_data, float scale) {
     s_first_joint = -1;
     if (coll_data == NULL || !desktop_melee_overlay_enabled() || scale == 0.0f) {
         return coll_data;
@@ -112,8 +111,7 @@ MapCollData* desktop_melee_platforms_extend(MapCollData* coll_data, float scale)
     return &s_coll;
 }
 
-static void place(int i, float left, float right, float y)
-{
+static void place(int i, float left, float right, float y) {
     const int joint_id = s_first_joint + i;
     const int line_id = s_first_line + i;
     float old_x0, old_y0, old_x1, old_y1;
@@ -137,8 +135,7 @@ static void place(int i, float left, float right, float y)
     mpJointUpdateBounding(joint_id);
 }
 
-void desktop_melee_platforms_frame(void)
-{
+void desktop_melee_platforms_frame(void) {
     if (s_first_joint < 0) {
         return;
     }

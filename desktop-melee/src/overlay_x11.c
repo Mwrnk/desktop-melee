@@ -194,6 +194,12 @@ static void consider(DockSearch* search, Window window) {
     search->best.h = attributes.height;
 }
 
+static int ignore_x_error(Display* display, XErrorEvent* error) {
+    (void)display;
+    (void)error;
+    return 0;
+}
+
 bool desktop_melee_x11_dock_frame(SDL_Window* window, float* left, float* right, float* top) {
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
     Display* display = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
@@ -208,11 +214,15 @@ bool desktop_melee_x11_dock_frame(SDL_Window* window, float* left, float* right,
     search.dock_atom = XInternAtom(display, "_NET_WM_WINDOW_TYPE_DOCK", False);
 
     /* Panels are usually children of the root; a reparenting window manager
-     * puts some inside a frame, so look one level down too. */
+     * puts some inside a frame, so look one level down too. A window that
+     * closes mid-search answers BadWindow, which Xlib's default handler
+     * would end the game on: ignored here. */
     Window parent = None;
     Window* children = NULL;
     unsigned int count = 0;
+    int (*old_handler)(Display*, XErrorEvent*) = XSetErrorHandler(ignore_x_error);
     if (!XQueryTree(display, search.root, &search.root, &parent, &children, &count)) {
+        XSetErrorHandler(old_handler);
         return false;
     }
     for (unsigned int i = 0; i < count; i++) {
@@ -232,6 +242,8 @@ bool desktop_melee_x11_dock_frame(SDL_Window* window, float* left, float* right,
     if (children != NULL) {
         XFree(children);
     }
+    XSync(display, False); /* this search's errors arrive before the swap back */
+    XSetErrorHandler(old_handler);
     if (search.best.w <= 0) {
         return false;
     }

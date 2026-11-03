@@ -561,8 +561,8 @@ bool desktop_melee_blastzones(float* left, float* right, float* top, float* bott
  * for platform i; the windows are read about 30 times a second. */
 #define PLATFORMS 8 /* DESKTOP_MELEE_WINDOW_PLATFORMS */
 #define MAX_WINDOWS 64
-#define MIN_WINDOW_PT 120.0f  /* narrower windows are no platform */
-#define MIN_SEGMENT_PT 60.0f  /* nor shorter visible pieces of a top */
+#define MIN_WINDOW_PT 120.0f /* narrower windows are no platform */
+#define MIN_SEGMENT_PT 60.0f /* nor shorter visible pieces of a top */
 #define POLL_MS 33
 
 typedef struct {
@@ -577,8 +577,23 @@ static Uint64 s_platforms_polled = 0;
 
 /* The visible pieces of window k's top edge: [left, right) minus what the
  * windows above it (later in the list) cover at that height. */
-static int visible_pieces(const DesktopMeleeWindow* w, int count, int k, float* lefts, float* rights,
-    int max) {
+#define MAX_PIECES 16
+
+/* Adds [left, right) to a piece list that holds at most MAX_PIECES: more
+ * pieces than that are dropped, never written past the end. */
+static void add_piece(float* lefts, float* rights, int* n, float left, float right) {
+    if (*n < MAX_PIECES) {
+        lefts[*n] = left;
+        rights[*n] = right;
+        (*n)++;
+    }
+}
+
+/* The visible pieces of window k's top edge: [left, right) minus what the
+ * windows above it (later in the list) cover at that height. `lefts` and
+ * `rights` hold MAX_PIECES. */
+static int visible_pieces(
+    const DesktopMeleeWindow* w, int count, int k, float* lefts, float* rights) {
     int n = 1;
     lefts[0] = w[k].x;
     rights[0] = w[k].x + w[k].w;
@@ -590,24 +605,22 @@ static int visible_pieces(const DesktopMeleeWindow* w, int count, int k, float* 
         const float cl = w[j].x;
         const float cr = w[j].x + w[j].w;
         int m = 0;
-        float nl[16], nr[16];
+        float nl[MAX_PIECES], nr[MAX_PIECES];
         for (int p = 0; p < n; p++) {
             if (cr <= lefts[p] || cl >= rights[p]) {
-                nl[m] = lefts[p], nr[m] = rights[p], m++;
+                add_piece(nl, nr, &m, lefts[p], rights[p]);
                 continue;
             }
-            if (cl > lefts[p] && m < 16) {
-                nl[m] = lefts[p], nr[m] = cl, m++;
+            if (cl > lefts[p]) {
+                add_piece(nl, nr, &m, lefts[p], cl);
             }
-            if (cr < rights[p] && m < 16) {
-                nl[m] = cr, nr[m] = rights[p], m++;
+            if (cr < rights[p]) {
+                add_piece(nl, nr, &m, cr, rights[p]);
             }
         }
-        n = m < max ? m : max;
-        for (int p = 0; p < n; p++) {
-            lefts[p] = nl[p];
-            rights[p] = nr[p];
-        }
+        n = m;
+        memcpy(lefts, nl, sizeof(float) * (size_t)n);
+        memcpy(rights, nr, sizeof(float) * (size_t)n);
     }
     return n;
 }
@@ -625,8 +638,8 @@ static void poll_window_platforms(void) {
         if (w->w < MIN_WINDOW_PT || w->y <= 1.0f || w->y >= floor_top - 8.0f) {
             continue;
         }
-        float lefts[16], rights[16];
-        const int pieces = visible_pieces(windows, count, k, lefts, rights, 16);
+        float lefts[MAX_PIECES], rights[MAX_PIECES];
+        const int pieces = visible_pieces(windows, count, k, lefts, rights);
         for (int p = 0; p < pieces && nfound < PLATFORMS * 4; p++) {
             const float l = lefts[p] < 0.0f ? 0.0f : lefts[p];
             const float r = rights[p] > s_screen_w ? s_screen_w : rights[p];
@@ -708,7 +721,8 @@ bool desktop_melee_floor_ledges(void) {
 
 bool desktop_melee_window_platform(int index, float* left, float* right, float* y, bool* ledges) {
     if (!desktop_melee_overlay_enabled() || index < 0 || index >= PLATFORMS || s_screen_w <= 0.0f ||
-        !desktop_melee_platform_window_covers_screen()) {
+        !desktop_melee_platform_window_covers_screen())
+    {
         return false;
     }
     const Uint64 now = SDL_GetTicks();
