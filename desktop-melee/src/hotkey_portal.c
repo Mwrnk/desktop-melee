@@ -37,6 +37,7 @@ static SDL_Mutex* s_mutex = NULL;
 static char s_session[256] = "";
 static char s_label[64] = "";
 static int s_token = 0;
+static void (*s_unavailable)(void) = NULL;
 
 /* ---- messages ------------------------------------------------------------ */
 
@@ -284,11 +285,19 @@ static bool bind_shortcut(void) {
     return call(m) && wait_for(path, on_bound);
 }
 
+static void SDLCALL fallback_on_main_thread(void* userdata) {
+    (void)userdata;
+    s_unavailable();
+}
+
 static int SDLCALL run(void* userdata) {
     (void)userdata;
     register_app();
     if (!create_session()) {
         SDL_Log("desktop-melee: hotkey: no GlobalShortcuts session");
+        if (s_unavailable != NULL && !SDL_GetAtomicInt(&s_stop)) {
+            SDL_RunOnMainThread(fallback_on_main_thread, NULL, false);
+        }
         return 0;
     }
     if (!bind_shortcut()) {
@@ -301,10 +310,11 @@ static int SDLCALL run(void* userdata) {
 
 /* ---- the interface ------------------------------------------------------ */
 
-bool desktop_melee_hotkey_install(void) {
+bool desktop_melee_hotkey_install(void (*unavailable)(void)) {
     if (s_thread != NULL) {
         return true;
     }
+    s_unavailable = unavailable;
     dbus_threads_init_default(); /* ConfigureShortcuts calls from the main thread */
     DBusError error;
     dbus_error_init(&error);

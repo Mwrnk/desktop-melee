@@ -2,10 +2,15 @@
 /* The Linux overlay window on X11 (overlay_x11.h). */
 #include "overlay_x11.h"
 
+#include <X11/XKBlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/keysym.h>
+#include <poll.h>
 #include <stdlib.h>
+
+#include "desktop_melee_game.h"
 
 #define LAYER_NAME "VK_LAYER_DESKTOP_MELEE_overlay_alpha"
 #define LAYER_MANIFEST "desktop_melee_overlay_alpha.json"
@@ -117,4 +122,243 @@ void desktop_melee_x11_overlay_setup(SDL_Window* window) {
 void desktop_melee_x11_overlay_set_faded(SDL_Window* window, bool faded) {
     /* _NET_WM_WINDOW_OPACITY, which the compositor honours. */
     SDL_SetWindowOpacity(window, faded ? 0.f : 1.f);
+}
+
+/* ---- the panel ---------------------------------------------------------- */
+
+/* Whether `window`'s _NET_WM_WINDOW_TYPE lists _NET_WM_WINDOW_TYPE_DOCK. */
+static bool is_dock(Display* display, Window window, Atom type_atom, Atom dock_atom) {
+    Atom actual = None;
+    int format = 0;
+    unsigned long count = 0;
+    unsigned long after = 0;
+    unsigned char* data = NULL;
+    if (XGetWindowProperty(display, window, type_atom, 0, 16, False, XA_ATOM, &actual, &format,
+            &count, &after, &data) != Success ||
+        data == NULL)
+    {
+        return false;
+    }
+    bool dock = false;
+    if (actual == XA_ATOM && format == 32) {
+        const Atom* types = (const Atom*)data;
+        for (unsigned long i = 0; i < count; i++) {
+            dock = dock || types[i] == dock_atom;
+        }
+    }
+    XFree(data);
+    return dock;
+}
+
+typedef struct DockSearch {
+    Display* display;
+    Window root;
+    Atom type_atom;
+    Atom dock_atom;
+    SDL_Rect screen;
+    SDL_Rect best;
+} DockSearch;
+
+/* Keeps `window` as the panel if it is a visible dock along the bottom of the
+ * screen, wider than tall, and wider than the panel kept so far. */
+static void consider(DockSearch* search, Window window) {
+    if (!is_dock(search->display, window, search->type_atom, search->dock_atom)) {
+        return;
+    }
+    XWindowAttributes attributes;
+    int x = 0;
+    int y = 0;
+    Window child = None;
+    if (!XGetWindowAttributes(search->display, window, &attributes) ||
+        attributes.map_state != IsViewable ||
+        !XTranslateCoordinates(search->display, window, search->root, 0, 0, &x, &y, &child))
+    {
+        return;
+    }
+    const SDL_Rect* s = &search->screen;
+    const int bottom = y + attributes.height;
+    const int left = SDL_max(x, s->x);
+    const int right = SDL_min(x + attributes.width, s->x + s->w);
+    /* A few pixels of slack: docks like Plank float just above the edge.
+     * Under 16 pixels tall it is an auto-hidden panel's sliver, and a floor
+     * that low is the bottom blastzone. */
+    const bool along_bottom = SDL_abs(bottom - (s->y + s->h)) <= 8 && y > s->y + s->h / 2;
+    if (!along_bottom || attributes.width <= attributes.height || attributes.height < 16 ||
+        right - left <= search->best.w)
+    {
+        return;
+    }
+    search->best.x = left;
+    search->best.y = y;
+    search->best.w = right - left;
+    search->best.h = attributes.height;
+}
+
+bool desktop_melee_x11_dock_frame(SDL_Window* window, float* left, float* right, float* top) {
+    SDL_PropertiesID props = SDL_GetWindowProperties(window);
+    Display* display = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+    DockSearch search;
+    SDL_zero(search);
+    if (display == NULL || !SDL_GetDisplayBounds(SDL_GetDisplayForWindow(window), &search.screen)) {
+        return false;
+    }
+    search.display = display;
+    search.root = DefaultRootWindow(display);
+    search.type_atom = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
+    search.dock_atom = XInternAtom(display, "_NET_WM_WINDOW_TYPE_DOCK", False);
+
+    /* Panels are usually children of the root; a reparenting window manager
+     * puts some inside a frame, so look one level down too. */
+    Window parent = None;
+    Window* children = NULL;
+    unsigned int count = 0;
+    if (!XQueryTree(display, search.root, &search.root, &parent, &children, &count)) {
+        return false;
+    }
+    for (unsigned int i = 0; i < count; i++) {
+        consider(&search, children[i]);
+        Window* inner = NULL;
+        unsigned int inner_count = 0;
+        Window inner_root = None;
+        if (XQueryTree(display, children[i], &inner_root, &parent, &inner, &inner_count)) {
+            for (unsigned int j = 0; j < inner_count; j++) {
+                consider(&search, inner[j]);
+            }
+            if (inner != NULL) {
+                XFree(inner);
+            }
+        }
+    }
+    if (children != NULL) {
+        XFree(children);
+    }
+    if (search.best.w <= 0) {
+        return false;
+    }
+    *left = (float)(search.best.x - search.screen.x);
+    *right = (float)(search.best.x + search.best.w - search.screen.x);
+    *top = (float)(search.screen.y + search.screen.h - search.best.y);
+    return true;
+}
+
+/* ---- the hotkey --------------------------------------------------------- */
+
+static Display* s_hotkey_display = NULL;
+static SDL_Thread* s_hotkey_thread = NULL;
+static SDL_AtomicInt s_hotkey_stop;
+static KeyCode s_hotkey_code = 0;
+static bool s_grab_failed = false;
+
+/* Num Lock (Mod2) and Caps Lock count as modifiers on X11: grab the key with
+ * each of them on and off. */
+static const unsigned int kLockMasks[] = {0, LockMask, Mod2Mask, LockMask | Mod2Mask};
+#define HOTKEY_MODIFIERS (ControlMask | Mod1Mask)
+
+static int on_grab_error(Display* display, XErrorEvent* error) {
+    (void)display;
+    if (error->error_code == BadAccess) {
+        s_grab_failed = true;
+    }
+    return 0;
+}
+
+static void SDLCALL toggle_on_main_thread(void* userdata) {
+    (void)userdata;
+    desktop_melee_toggle_pause_and_hide();
+}
+
+static int SDLCALL hotkey_run(void* userdata) {
+    (void)userdata;
+    struct pollfd fd = {ConnectionNumber(s_hotkey_display), POLLIN, 0};
+    bool held = false;
+    while (!SDL_GetAtomicInt(&s_hotkey_stop)) {
+        if (XPending(s_hotkey_display) == 0) {
+            poll(&fd, 1, 200);
+            continue;
+        }
+        XEvent event;
+        XNextEvent(s_hotkey_display, &event);
+        /* A held key repeats its presses; with detectable auto-repeat there
+         * are no releases in between, so one toggle per press. */
+        if (event.type == KeyRelease && event.xkey.keycode == s_hotkey_code) {
+            held = false;
+        } else if (event.type == KeyPress && event.xkey.keycode == s_hotkey_code &&
+                   (event.xkey.state & HOTKEY_MODIFIERS) == HOTKEY_MODIFIERS && !held)
+        {
+            held = true;
+            SDL_RunOnMainThread(toggle_on_main_thread, NULL, false);
+        }
+    }
+    return 0;
+}
+
+static bool wayland_session(void) {
+    const char* type = SDL_getenv("XDG_SESSION_TYPE");
+    const char* wayland = SDL_getenv("WAYLAND_DISPLAY");
+    return (type != NULL && SDL_strcasecmp(type, "wayland") == 0) ||
+           (wayland != NULL && wayland[0] != '\0');
+}
+
+bool desktop_melee_x11_hotkey_install(void) {
+    if (s_hotkey_thread != NULL) {
+        return true;
+    }
+    if (wayland_session()) {
+        SDL_Log("desktop-melee: hotkey: a Wayland session without the GlobalShortcuts "
+                "portal: no Pause and hide shortcut");
+        return false;
+    }
+    Display* display = XOpenDisplay(NULL);
+    if (display == NULL) {
+        return false;
+    }
+    const Window root = DefaultRootWindow(display);
+    s_hotkey_code = XKeysymToKeycode(display, XK_m);
+    if (s_hotkey_code == 0) {
+        XCloseDisplay(display);
+        return false;
+    }
+    XkbSetDetectableAutoRepeat(display, True, NULL);
+
+    /* Another app holding the key answers BadAccess, which Xlib's default
+     * handler would exit on. Error handlers are process-wide, so swap it in
+     * only around the grab, on the main thread. */
+    s_grab_failed = false;
+    int (*old_handler)(Display*, XErrorEvent*) = XSetErrorHandler(on_grab_error);
+    for (size_t i = 0; i < SDL_arraysize(kLockMasks); i++) {
+        XGrabKey(display, s_hotkey_code, HOTKEY_MODIFIERS | kLockMasks[i], root, True,
+            GrabModeAsync, GrabModeAsync);
+    }
+    XSync(display, False);
+    XSetErrorHandler(old_handler);
+    if (s_grab_failed) {
+        SDL_Log("desktop-melee: hotkey: another app holds Ctrl+Alt+M: no Pause and hide shortcut");
+        XCloseDisplay(display); /* closing releases any grabs that did take */
+        return false;
+    }
+    s_hotkey_display = display;
+    SDL_SetAtomicInt(&s_hotkey_stop, 0);
+    s_hotkey_thread = SDL_CreateThread(hotkey_run, "desktop-melee X11 hotkey", NULL);
+    if (s_hotkey_thread == NULL) {
+        XCloseDisplay(display);
+        s_hotkey_display = NULL;
+        return false;
+    }
+    SDL_Log("desktop-melee: hotkey: Pause and hide is Ctrl+Alt+M (X11 key grab)");
+    return true;
+}
+
+const char* desktop_melee_x11_hotkey_label(void) {
+    return s_hotkey_thread != NULL ? "Ctrl+Alt+M" : "";
+}
+
+void desktop_melee_x11_hotkey_remove(void) {
+    if (s_hotkey_thread == NULL) {
+        return;
+    }
+    SDL_SetAtomicInt(&s_hotkey_stop, 1);
+    SDL_WaitThread(s_hotkey_thread, NULL);
+    s_hotkey_thread = NULL;
+    XCloseDisplay(s_hotkey_display);
+    s_hotkey_display = NULL;
 }

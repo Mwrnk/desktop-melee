@@ -57,7 +57,8 @@ compile and run with fallbacks:
 - **No notch island.** Stocks and percents stay in Melee's own HUD.
 - **Pause and hide only pauses** on Windows: the window doesn't hide yet, and
   there's no hotkey. Linux fades its overlay, with Ctrl+Alt+M through the
-  GlobalShortcuts portal (section 6).
+  GlobalShortcuts portal (section 6), or an X11 key grab on X11 sessions
+  without it (section 5).
 - **Settings.** On Linux, a tray icon (`tray_sdl.c`) starts matches, pauses,
   quits and opens the settings window (`settings_window.cpp`), which saves
   `settings.cfg` (ui-guide.md section 14). The Windows skeleton builds the
@@ -248,8 +249,17 @@ Click-through is `SDL_SetWindowShape` with a fully transparent surface, which
 SDL turns into an empty `ShapeInput` shape; `_NET_WM_STATE_SKIP_TASKBAR`,
 `_SKIP_PAGER` and `_STICKY` keep it out of the taskbar and on every desktop;
 Pause and hide is `SDL_SetWindowOpacity` (`_NET_WM_WINDOW_OPACITY`). The floor
-is the bottom gap of `SDL_GetDisplayUsableBounds`. The rest of this section is
-the reasoning it started from.
+is the bottom gap of `SDL_GetDisplayUsableBounds`, replaced by the panel's
+own frame when the panel is an X11 window (`desktop_melee_x11_dock_frame`: a
+viewable `_NET_WM_WINDOW_TYPE_DOCK` window, among the root's children and
+one level down, touching the screen's bottom edge within 8 pixels, wider than
+tall and at least 16 pixels tall; the widest wins). A dock like Plank then
+leaves gaps to fall through, as the macOS Dock does. On Wayland desktops the
+panels aren't X11 windows, so the work area's floor stays. On X11 sessions
+without the GlobalShortcuts portal, Ctrl+Alt+M is an `XGrabKey` on the root
+window (`desktop_melee_x11_hotkey_install`), read on a thread with its own X
+connection; Wayland sessions skip it, since XWayland only sees keys typed into
+X11 windows. The rest of this section is the reasoning it started from.
 
 Check `SDL_GetCurrentVideoDriver()`: one Linux build runs on both X11 and
 Wayland. Get the X11 handles with `SDL_PROP_WINDOW_X11_DISPLAY_POINTER` and

@@ -16,8 +16,10 @@ extern "C" {
 /* Asks the portal for the shortcut (Control-Alt-M by default, as on macOS)
  * on a thread of its own; when it is pressed,
  * desktop_melee_toggle_pause_and_hide() runs on the main thread. False when
- * there is no session bus. */
-bool desktop_melee_hotkey_install(void);
+ * there is no session bus. If the desktop turns out to have no
+ * GlobalShortcuts portal, `unavailable` (when not NULL) runs on the main
+ * thread, for another way to the shortcut. */
+bool desktop_melee_hotkey_install(void (*unavailable)(void));
 
 /* What the desktop bound, for the settings window ("Ctrl+Alt+M"), or "" while
  * it hasn't answered, or if there's no portal. Main thread. */

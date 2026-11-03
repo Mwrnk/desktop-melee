@@ -27,3 +27,24 @@ void desktop_melee_x11_overlay_setup(SDL_Window* window);
 
 /* Pause and hide: fully transparent, still drawing. */
 void desktop_melee_x11_overlay_set_faded(SDL_Window* window, bool faded);
+
+/* The panel or dock along the bottom of the window's screen: an X11 window
+ * of type _NET_WM_WINDOW_TYPE_DOCK touching the screen's bottom edge. Its
+ * left and right edges from the screen's left edge, and its top as a height
+ * above the screen's bottom edge, in SDL's coordinates. False when there is
+ * none, when it hides, or when the panels aren't X11 windows (Wayland
+ * desktops, through XWayland). */
+bool desktop_melee_x11_dock_frame(SDL_Window* window, float* left, float* right, float* top);
+
+/* Pause and hide on X11 sessions without the GlobalShortcuts portal:
+ * Control-Alt-M grabbed on the root window (XGrabKey), read on a thread with
+ * its own X connection; a press runs desktop_melee_toggle_pause_and_hide() on
+ * the main thread. False on Wayland sessions, where XWayland only sees keys
+ * typed into X11 windows, or when another app holds the key. Main thread. */
+bool desktop_melee_x11_hotkey_install(void);
+
+/* "Ctrl+Alt+M" while the grab holds, else "". Main thread. */
+const char* desktop_melee_x11_hotkey_label(void);
+
+/* Ungrabs and stops the thread. */
+void desktop_melee_x11_hotkey_remove(void);

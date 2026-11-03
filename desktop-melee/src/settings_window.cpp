@@ -25,6 +25,9 @@ extern "C" {
 #include "../ui/bridge/desktop_melee_bridge.h"
 #include "hotkey_portal.h"
 #include "melee_font.h"
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+#include "overlay_x11.h"
+#endif
 #include "settings_file.h"
 #include "welcome_window.h"
 #include "window_icon.h"
@@ -275,10 +278,22 @@ const char* fighter_name(int ckind) {
 /* The Pause and hide shortcut, as the desktop bound it (hotkey_portal.h). */
 std::string s_pause_key;
 
-void refresh_pause_key() {
+/* The portal's shortcut, or the X11 key grab's when there is no portal. */
+std::string pause_key_label() {
+    std::string label;
 #ifdef DESKTOP_MELEE_HOTKEY_PORTAL
-    s_pause_key = desktop_melee_hotkey_label();
+    label = desktop_melee_hotkey_label();
 #endif
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    if (label.empty()) {
+        label = desktop_melee_x11_hotkey_label();
+    }
+#endif
+    return label;
+}
+
+void refresh_pause_key() {
+    s_pause_key = pause_key_label();
     set_text("pause-key", s_pause_key);
     set_class("pause-key", "hidden", s_pause_key.empty());
 }
@@ -1050,11 +1065,9 @@ void on_frame(void*) {
         if (desktop_melee_hidden() != s_last_hidden) {
             refresh_match();
         }
-#ifdef DESKTOP_MELEE_HOTKEY_PORTAL
-        if (s_pause_key != desktop_melee_hotkey_label()) {
+        if (s_pause_key != pause_key_label()) {
             refresh_pause_key(); /* the desktop answered, or the player changed it */
         }
-#endif
     }
     if (now - s_last_slow_poll >= 1000) {
         s_last_slow_poll = now;

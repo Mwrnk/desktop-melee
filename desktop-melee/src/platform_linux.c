@@ -6,11 +6,14 @@
  *
  * With DESKTOP_MELEE_OVERLAY=1 and a disc (melee --dvd /path/to/melee.iso)
  * the game is a transparent, click-through X11 overlay over the desktop,
- * through XWayland on Wayland desktops, with the floor on the panel; without
+ * through XWayland on Wayland desktops, with the floor on the panel (its
+ * exact span when the panel is an X11 window); without
  * X11, a compositor or a 32-bit visual it is a normal window, the floor a
  * little above its bottom edge. There is no notch island. Settings come from
  * settings.cfg (settings_file.h); a tray icon (tray_sdl.h) starts matches,
- * pauses, quits and opens the settings window (settings_window.h).
+ * pauses, quits and opens the settings window (settings_window.h). Pause and
+ * hide is Ctrl+Alt+M, through the GlobalShortcuts portal or, on X11 sessions
+ * without it, an X11 key grab.
  *
  * docs/desktop-melee/porting.md walks through each function; every TODO
  * below names what a port would use. */
@@ -109,13 +112,11 @@ void desktop_melee_platform_screen_geometry(
     SDL_Window* window, float* width_pt, float* height_pt, float* floor_pt) {
     /* A normal window: it is the screen. The floor sits a little above its
      * bottom edge, because the bottom edge is the bottom blastzone: a floor
-     * at 0 would KO fighters as soon as they land.
-     * TODO, overlay: SDL_GetDisplayBounds of SDL_GetDisplayForWindow for the
-     * size. The floor is how far SDL_GetDisplayUsableBounds stops above the
-     * bottom: on X11 that comes from _NET_WORKAREA (one rectangle for all
-     * monitors, so check each panel's _NET_WM_STRUT_PARTIAL for multi-monitor
-     * setups); Wayland has no work area, so use the layer-shell exclusive
-     * zones the compositor reports, or 0. */
+     * at 0 would KO fighters as soon as they land. The overlay: its screen,
+     * with the floor where the usable area stops. An X11 panel's own frame
+     * (desktop_melee_platform_dock_frame) replaces that floor when found.
+     * TODO, Wayland's panels: no work area reaches XWayland, so the floor is
+     * 0 unless a layer-shell overlay reads the exclusive zones. */
     if (s_overlay) {
         /* The overlay's screen; the floor is the panel along its bottom, from
          * the work area (X11's _NET_WORKAREA, which SDL reads). */
@@ -140,18 +141,23 @@ void desktop_melee_platform_screen_geometry(
 
 bool desktop_melee_platform_dock_frame(
     float screen_w, float screen_h, float* left, float* right, float* top, bool* exact) {
-    /* TODO: the bottom panel's frame. X11: find the window with
-     * _NET_WM_WINDOW_TYPE_DOCK along the bottom edge (XQueryTree on the
-     * root, then XGetWindowAttributes) and use its geometry, exact. A
-     * full-width panel makes the whole bottom edge a floor, which is fine.
-     * Wayland: other clients' surfaces are not visible to us; the most a
-     * port can do is assume a full-width floor at the usable bounds. */
+    /* The X11 window of type _NET_WM_WINDOW_TYPE_DOCK along the bottom edge
+     * (overlay_x11.c), exact. A full-width panel makes the whole bottom edge
+     * a floor; a dock like Plank leaves gaps to fall through. Wayland's
+     * panels aren't X11 windows, so there the floor stays the work area's. */
     (void)screen_w;
     (void)screen_h;
+    *exact = false;
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    if (s_overlay && s_window != NULL && desktop_melee_x11_dock_frame(s_window, left, right, top)) {
+        *exact = true;
+        return true;
+    }
+#else
     (void)left;
     (void)right;
     (void)top;
-    *exact = false;
+#endif
     return false;
 }
 
@@ -175,6 +181,13 @@ void desktop_melee_platform_island_place(float left, float right, float height) 
 
 /* ---- the settings UI ---------------------------------------------------- */
 
+/* Pause and hide without the GlobalShortcuts portal. */
+static void hotkey_fallback(void) {
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    desktop_melee_x11_hotkey_install();
+#endif
+}
+
 void desktop_melee_platform_ui_install(SDL_Window* window) {
     (void)window;
     /* The settings file, then the tray (tray_sdl.c: a StatusNotifierItem;
@@ -182,14 +195,17 @@ void desktop_melee_platform_ui_install(SDL_Window* window) {
      * opens the settings window (settings_window.cpp, an RmlUi document in
      * aurora's second window). The Pause and hide hotkey comes from the
      * GlobalShortcuts portal (hotkey_portal.c), which wants an installed
-     * .desktop file (desktop_entry.c).
-     * TODO: XGrabKey on the root window for X11 sessions without the portal
-     * (porting.md section 5). */
+     * .desktop file (desktop_entry.c). X11 sessions without the portal get
+     * an X11 key grab instead (overlay_x11.c). */
     desktop_melee_settings_load();
     desktop_melee_set_window_icons();
 #ifdef DESKTOP_MELEE_HOTKEY_PORTAL
     desktop_melee_desktop_entry_install(); /* before the portal: it asks for it */
-    desktop_melee_hotkey_install();
+    if (!desktop_melee_hotkey_install(hotkey_fallback)) {
+        hotkey_fallback();
+    }
+#else
+    hotkey_fallback();
 #endif
     /* Without a tray (GNOME without the AppIndicator extension) the menu is
      * unreachable: open the settings window instead, which can start
@@ -200,8 +216,12 @@ void desktop_melee_platform_ui_install(SDL_Window* window) {
 }
 
 void desktop_melee_platform_ui_focus_game(void) {
-    /* TODO: SDL_RaiseWindow on the game window. On Wayland a client cannot
-     * take focus by itself; xdg-activation needs a token from the hotkey. */
+    /* _NET_ACTIVE_WINDOW on X11, which the window manager may refuse to
+     * steal focus. TODO, Wayland: a client cannot take focus by itself;
+     * xdg-activation needs a token from the hotkey. */
+    if (s_window != NULL) {
+        SDL_RaiseWindow(s_window);
+    }
 }
 
 void desktop_melee_platform_ui_loading_begin(void) {
@@ -233,6 +253,9 @@ void desktop_melee_platform_ui_before_exit(void) {
     desktop_melee_tray_remove();
 #ifdef DESKTOP_MELEE_HOTKEY_PORTAL
     desktop_melee_hotkey_remove();
+#endif
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    desktop_melee_x11_hotkey_remove();
 #endif
 }
 
