@@ -7,7 +7,7 @@ play.
 
 ![Desktop Melee on a Mac desktop](docs/desktop-melee/images/overlay.svg)
 
-**Beta (0.1.1), macOS only for now.** Windows and Linux are in progress.
+**Beta (0.1.2), for macOS and Linux.** Windows is in progress.
 
 **You need your own Melee disc image (USA 1.02). No game data is included.**
 Desktop Melee is a fan project. It is not affiliated with or endorsed by
@@ -46,10 +46,18 @@ into Melee's world, the menu bar app, and every file.
 
 ## Download
 
-Each [release](https://github.com/Mwrnk/desktop-melee/releases) has a
-`Desktop-Melee-<version>-macOS-arm64.zip`: a Mac with Apple silicon and
-**macOS 27 or later**. It contains no game data; you still need your own disc
-(see [Requirements](#requirements)).
+Each [release](https://github.com/Mwrnk/desktop-melee/releases) has:
+
+- `Desktop-Melee-<version>-macOS-arm64.zip`: a Mac with Apple silicon and
+  **macOS 27 or later**.
+- `Desktop-Melee-<version>-linux-x86_64.AppImage`: a 64-bit PC with Linux,
+  as new as Ubuntu 22.04 or newer (Debian 12, Mint 21, Fedora, Arch...). See
+  [On Linux](#on-linux).
+
+Neither contains game data; you still need your own disc (see
+[Requirements](#requirements)).
+
+### On macOS
 
 The app isn't notarized by Apple, so macOS stops it the first time:
 
@@ -61,6 +69,23 @@ The app isn't notarized by Apple, so macOS stops it the first time:
 You only do this once per version. If you granted Accessibility (see
 [Permissions](#permissions)), macOS forgets it with each new version: remove
 Desktop Melee from the Accessibility list and add it again.
+
+### On Linux
+
+Make the AppImage executable and run it:
+
+```bash
+chmod +x Desktop-Melee-*-linux-x86_64.AppImage
+./Desktop-Melee-*-linux-x86_64.AppImage
+```
+
+The fighters play over your desktop in a transparent, click-through window,
+on the panel at the bottom of the screen, and the tops of your other windows
+are platforms. That needs a compositor (KDE Plasma, GNOME and most desktops
+run one); without it the game plays in a normal window. A tray icon starts
+matches, pauses and opens the settings; GNOME shows it only with the
+AppIndicator extension, and otherwise the settings window opens instead.
+Pause and hide is **Ctrl+Alt+M**: the desktop may ask you to confirm it once.
 
 ### Disc setup
 
@@ -76,6 +101,10 @@ lives in the menu bar:
   yourself, it runs on the macOS of the Mac that built it; older versions and
   Intel Macs are untested. Building needs Xcode 26 or later, for the Icon
   Composer app icon.
+- Or a 64-bit PC with Linux, as new as Ubuntu 22.04 or newer, with Vulkan
+  graphics drivers. Tested on KDE Plasma 6.8 (Wayland) with an AMD GPU only;
+  GNOME, X11 sessions and NVIDIA are untested. Building on Linux is in
+  [porting.md section 2](docs/desktop-melee/porting.md).
 - Xcode (for Swift, `actool` and the macOS SDK) and these
   [Homebrew](https://brew.sh) packages:
   `brew install gcc cmake ninja sdl3 zstd libpng freetype`. GCC is required:
@@ -181,8 +210,8 @@ Desktop Melee stands on the work of:
 
 ## Status
 
-Version 0.1.1, a beta: [download the app](#download) or build it
-yourself. macOS only for now; Windows and Linux are in progress.
+Version 0.1.2, a beta: [download the app](#download) or build it
+yourself. macOS and Linux; Windows is in progress.
 
 Works: two-player VS matches (human or CPU) on the Dock, every character and
 costume, the menu bar app, the welcome window, the notch island and
