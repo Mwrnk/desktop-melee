@@ -31,7 +31,10 @@
     <div id="body">
         <div id="page-match" class="page shown">
             <div id="match-start" class="start"><img id="match-start-icon" src="icons/play.fill.png" /><span id="match-start-label">Start Match</span></div>
-            <div id="pause-hide" class="wide-button"><img id="pause-hide-icon" src="icons/eye.slash.png" /><span id="pause-hide-label">Pause and hide</span></div>
+            <div id="pause-row">
+                <div id="pause-hide" class="wide-button"><img id="pause-hide-icon" src="icons/eye.slash.png" /><span id="pause-hide-label">Pause and hide</span></div>
+                <div id="pause-key" class="key-cap hidden"></div>
+            </div>
 
             <p class="label">Rules</p>
             <div class="box">

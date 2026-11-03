@@ -209,6 +209,20 @@ input.range.disabled sliderprogress { background-color: #ffffff40; }
 .start:active { transform: scale(0.97); }
 .start.running { background-color: #ff9f0a; }
 .start.running:hover { background-color: #ffad2a; }
+#pause-row { display: flex; flex-direction: row; margin-top: 10dp; }
+#pause-row .wide-button { flex: 1; margin-top: 0; }
+/* The shortcut, as the desktop bound it; a click opens its own dialog. */
+.key-cap {
+    margin-left: 10dp;
+    padding: 6dp 10dp;
+    font-family: "Noto Sans";
+    font-size: 14dp;
+    border: 1.5dp #ffffff40;
+    border-radius: 8dp;
+    cursor: pointer;
+}
+.key-cap:hover { border-color: #0a84ff; }
+.key-cap.hidden { display: none; }
 .wide-button {
     display: flex;
     flex-direction: row;

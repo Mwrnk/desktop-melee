@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Desktop Melee
+Comment=Super Smash Bros. Melee on your desktop
+Exec=env DESKTOP_MELEE_OVERLAY=1 @EXEC@
+Icon=@ICON@
+Terminal=false
+Categories=Game;
+StartupWMClass=io.github.mwrnk.DesktopMelee

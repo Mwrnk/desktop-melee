@@ -20,11 +20,14 @@
 #include "settings_file.h"
 #include "settings_window.h"
 #include "tray_sdl.h"
+#include "desktop_entry.h"
+#include "hotkey_portal.h"
 #include "melee_font.h"
 #include "welcome_window.h"
 #include "window_icon.h"
 
 #include <SDL3/SDL_error.h>
+#include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_pixels.h>
 #include <SDL3/SDL_surface.h>
@@ -38,6 +41,11 @@ void desktop_melee_platform_configure(AuroraConfig* config) {
      * makes the window click-through. Until then, a borderless window that
      * covers the screen and takes every click locks the player out. */
     config->overlayWindow = false;
+#ifdef DESKTOP_MELEE_HOTKEY_PORTAL
+    /* Wayland's app_id and X11's WM_CLASS: the desktop finds the .desktop
+     * file, and the taskbar its icon, by it. */
+    SDL_SetHint(SDL_HINT_APP_ID, DESKTOP_MELEE_APP_ID);
+#endif
     SDL_Log("desktop-melee: Linux skeleton: a normal window, not an overlay "
             "(docs/desktop-melee/porting.md)");
 }
@@ -152,14 +160,17 @@ void desktop_melee_platform_ui_install(SDL_Window* window) {
     /* The settings file, then the tray (tray_sdl.c: a StatusNotifierItem;
      * GNOME shows it only with the AppIndicator extension), whose Settings...
      * opens the settings window (settings_window.cpp, an RmlUi document in
-     * aurora's second window).
-     * TODO (docs/desktop-melee/ui-guide.md):
-     *   - the Pause and hide hotkey, from any app: XGrabKey on the root window
-     *     (X11), or the org.freedesktop.portal.GlobalShortcuts portal
-     *     (Wayland; KDE has it, GNOME only in recent releases). It calls
-     *     desktop_melee_toggle_pause_and_hide(). */
+     * aurora's second window). The Pause and hide hotkey comes from the
+     * GlobalShortcuts portal (hotkey_portal.c), which wants an installed
+     * .desktop file (desktop_entry.c).
+     * TODO: XGrabKey on the root window for X11 sessions without the portal
+     * (porting.md section 5). */
     desktop_melee_settings_load();
     desktop_melee_set_window_icons();
+#ifdef DESKTOP_MELEE_HOTKEY_PORTAL
+    desktop_melee_desktop_entry_install(); /* before the portal: it asks for it */
+    desktop_melee_hotkey_install();
+#endif
     /* Without a tray (GNOME without the AppIndicator extension) the menu is
      * unreachable: open the settings window instead, which can start
      * matches and quit too. */
@@ -200,6 +211,9 @@ void desktop_melee_platform_ui_before_exit(void) {
     desktop_melee_welcome_close();
     desktop_melee_settings_window_close();
     desktop_melee_tray_remove();
+#ifdef DESKTOP_MELEE_HOTKEY_PORTAL
+    desktop_melee_hotkey_remove();
+#endif
 }
 
 /* ---- files -------------------------------------------------------------- */

@@ -34,6 +34,18 @@ else ()
             desktop-melee/src/settings_window.cpp desktop-melee/src/welcome_window.cpp
             desktop-melee/src/rml_dashed.cpp desktop-melee/src/window_icon.c
             desktop-melee/src/melee_font.cpp)
+    # The Pause and hide shortcut through the GlobalShortcuts portal, where
+    # there is a session bus (desktop Linux; not Android or iOS).
+    find_package(PkgConfig QUIET)
+    if (PKG_CONFIG_FOUND)
+        pkg_check_modules(DESKTOP_MELEE_DBUS QUIET IMPORTED_TARGET dbus-1)
+    endif ()
+    if (DESKTOP_MELEE_DBUS_FOUND)
+        target_sources(melee PRIVATE desktop-melee/src/hotkey_portal.c
+                desktop-melee/src/desktop_entry.c)
+        target_link_libraries(melee PRIVATE PkgConfig::DESKTOP_MELEE_DBUS)
+        target_compile_definitions(melee PRIVATE DESKTOP_MELEE_HOTKEY_PORTAL=1)
+    endif ()
 endif ()
 
 # The settings window's documents (settings_window.cpp), next to melee-pc's
