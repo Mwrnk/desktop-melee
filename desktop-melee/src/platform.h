@@ -172,6 +172,23 @@ void desktop_melee_platform_ui_assets_ready(void);
  *   Windows and Linux: the settings and welcome windows, and the tray. */
 void desktop_melee_platform_ui_before_exit(void);
 
+/* ---- window platforms ---------------------------------------------------- */
+
+/* One of the player's windows, in points, relative to the overlay's screen
+ * (top left 0,0, y down), with an id that stays the same while it lives. */
+typedef struct DesktopMeleeWindow {
+    float x, y, w, h;
+    unsigned long long id;
+} DesktopMeleeWindow;
+
+/* The player's windows, bottom to top, for desktop_melee.c to turn their
+ * tops into platforms: normal app windows on the current desktop, not
+ * minimized, never Desktop Melee's own. Returns how many it wrote (at most
+ * max), 0 when the system doesn't say. Called about 30 times a second.
+ *   macOS, Windows: not yet (0).
+ *   Linux: KWin's window list on KDE, else X11's _NET_CLIENT_LIST_STACKING. */
+int desktop_melee_platform_windows(DesktopMeleeWindow* out, int max);
+
 /* ---- files -------------------------------------------------------------- */
 
 /* Writes straight (not premultiplied) RGBA8 pixels, rows top to bottom, as

@@ -47,6 +47,7 @@
 
 #ifdef TARGET_PC
 #include "desktop_melee_game.h"
+#include "desktop_melee_platforms.h"
 #endif
 
 #define LINEID_CHECK(line, line_id)                                           \
@@ -947,6 +948,10 @@ void mpLibLoad(MapCollData* coll_data)
             }
         }
     }
+    /* desktop-melee overlay: drop-through platforms for the tops of the
+     * player's windows (desktop_melee_platforms.c), added after the stretch
+     * is measured, so their parked vertices don't change it. */
+    coll_data = desktop_melee_platforms_extend(coll_data, scale);
 #define DESKTOP_MELEE_X(x) (desktop_melee_c + desktop_melee_k * (x))
 #else
 #define DESKTOP_MELEE_X(x) (x)

@@ -254,8 +254,11 @@ own frame when the panel is an X11 window (`desktop_melee_x11_dock_frame`: a
 viewable `_NET_WM_WINDOW_TYPE_DOCK` window, among the root's children and
 one level down, touching the screen's bottom edge within 8 pixels, wider than
 tall and at least 16 pixels tall; the widest wins). A dock like Plank then
-leaves gaps to fall through, as the macOS Dock does. On Wayland desktops the
-panels aren't X11 windows, so the work area's floor stays. On X11 sessions
+leaves gaps to fall through, as the macOS Dock does. Otherwise, or for a
+panel as wide as the screen, the floor runs the whole width less 40 points
+on each side, the stage loses its own ledges and the bottom blastzone drops
+below the floor. On Wayland desktops the panels aren't X11 windows, but KWin
+gives XWayland the work area, so the floor still sits on the panel. On X11 sessions
 without the GlobalShortcuts portal, Ctrl+Alt+M is an `XGrabKey` on the root
 window (`desktop_melee_x11_hotkey_install`), read on a thread with its own X
 connection; Wayland sessions skip it, since XWayland only sees keys typed into

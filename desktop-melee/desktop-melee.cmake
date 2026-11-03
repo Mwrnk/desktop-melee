@@ -14,7 +14,7 @@ target_include_directories(melee PRIVATE desktop-melee/src)
 # includes our game mode (GM_DESKTOP_MELEE), which is built as game code too.
 target_include_directories(melee_game PRIVATE desktop-melee/src desktop-melee/game)
 target_sources(melee_game PRIVATE desktop-melee/game/gmdesktopmelee.c
-        desktop-melee/game/desktop_melee_assets.c)
+        desktop-melee/game/desktop_melee_assets.c desktop-melee/game/desktop_melee_platforms.c)
 
 # One implementation of desktop-melee/src/platform.h per system
 # (docs/desktop-melee/porting.md). Windows and Linux are skeletons that run
@@ -71,7 +71,8 @@ else ()
         file(GENERATE OUTPUT "$<TARGET_FILE_DIR:melee>/desktop_melee_overlay_alpha.json"
                 INPUT "${CMAKE_CURRENT_SOURCE_DIR}/desktop-melee/src/vk_overlay_alpha.json")
         add_dependencies(melee desktop_melee_overlay_alpha)
-        target_sources(melee PRIVATE desktop-melee/src/overlay_x11.c)
+        target_sources(melee PRIVATE desktop-melee/src/overlay_x11.c
+                desktop-melee/src/window_list_linux.c)
         target_link_libraries(melee PRIVATE PkgConfig::DESKTOP_MELEE_X11)
         target_compile_definitions(melee PRIVATE DESKTOP_MELEE_X11_OVERLAY=1)
     else ()

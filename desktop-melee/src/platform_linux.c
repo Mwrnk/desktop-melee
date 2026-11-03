@@ -27,6 +27,7 @@
 #include "melee_font.h"
 #ifdef DESKTOP_MELEE_X11_OVERLAY
 #include "overlay_x11.h"
+#include "window_list_linux.h"
 #endif
 #include "welcome_window.h"
 #include "window_icon.h"
@@ -115,8 +116,9 @@ void desktop_melee_platform_screen_geometry(
      * at 0 would KO fighters as soon as they land. The overlay: its screen,
      * with the floor where the usable area stops. An X11 panel's own frame
      * (desktop_melee_platform_dock_frame) replaces that floor when found.
-     * TODO, Wayland's panels: no work area reaches XWayland, so the floor is
-     * 0 unless a layer-shell overlay reads the exclusive zones. */
+     * On Wayland desktops the panels aren't X11 windows, but KWin still
+     * gives XWayland the work area, so the floor sits on the panel there
+     * too. */
     if (s_overlay) {
         /* The overlay's screen; the floor is the panel along its bottom, from
          * the work area (X11's _NET_WORKAREA, which SDL reads). */
@@ -141,24 +143,38 @@ void desktop_melee_platform_screen_geometry(
 
 bool desktop_melee_platform_dock_frame(
     float screen_w, float screen_h, float* left, float* right, float* top, bool* exact) {
-    /* The X11 window of type _NET_WM_WINDOW_TYPE_DOCK along the bottom edge
-     * (overlay_x11.c), exact. A full-width panel makes the whole bottom edge
-     * a floor; a dock like Plank leaves gaps to fall through. Wayland's
-     * panels aren't X11 windows, so there the floor stays the work area's. */
-    (void)screen_w;
+    /* The overlay: the bottom panel's own frame when it is an X11 window
+     * (overlay_x11.c), so a dock like Plank leaves gaps to fall through.
+     * Otherwise, and for a panel as wide as the screen, the floor runs the
+     * whole width, a little inside the sides, where the blastzones are: a
+     * fighter at the very edge would already be past one. Its top stays
+     * where screen_geometry put it (*top comes in as that floor) unless the
+     * panel is measured. */
     (void)screen_h;
-    *exact = false;
+    if (!s_overlay) {
+        *exact = false;
+        return false;
+    }
+    const float margin = 40.0f;
 #ifdef DESKTOP_MELEE_X11_OVERLAY
-    if (s_overlay && s_window != NULL && desktop_melee_x11_dock_frame(s_window, left, right, top)) {
+    float dock_left = 0.0f;
+    float dock_right = 0.0f;
+    float dock_top = 0.0f;
+    if (s_window != NULL &&
+        desktop_melee_x11_dock_frame(s_window, &dock_left, &dock_right, &dock_top))
+    {
+        const bool full_width = dock_right - dock_left >= 0.9f * screen_w;
+        *left = full_width ? SDL_max(dock_left, margin) : dock_left;
+        *right = full_width ? SDL_min(dock_right, screen_w - margin) : dock_right;
+        *top = dock_top;
         *exact = true;
         return true;
     }
-#else
-    (void)left;
-    (void)right;
-    (void)top;
 #endif
-    return false;
+    *left = margin;
+    *right = screen_w - margin;
+    *exact = true;
+    return true;
 }
 
 void desktop_melee_platform_notch(float* left, float* right, float* height) {
@@ -256,7 +272,24 @@ void desktop_melee_platform_ui_before_exit(void) {
 #endif
 #ifdef DESKTOP_MELEE_X11_OVERLAY
     desktop_melee_x11_hotkey_remove();
+    desktop_melee_linux_windows_stop(); /* unloads the KWin script */
 #endif
+}
+
+/* ---- window platforms ---------------------------------------------------- */
+
+int desktop_melee_platform_windows(DesktopMeleeWindow* out, int max) {
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    if (s_overlay && s_window != NULL) {
+        int x = 0;
+        int y = 0;
+        SDL_GetWindowPosition(s_window, &x, &y);
+        return desktop_melee_linux_windows(out, max, (float)x, (float)y);
+    }
+#endif
+    (void)out;
+    (void)max;
+    return 0;
 }
 
 /* ---- files -------------------------------------------------------------- */

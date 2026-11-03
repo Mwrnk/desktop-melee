@@ -10,6 +10,7 @@
 #include "pc/widescreen.h"
 
 #include <aurora/gfx.h>
+#include <dolphin/gx/GXAurora.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -515,6 +516,12 @@ bool desktop_melee_camera(float* eye_x, float* eye_y, float* eye_z, float* inter
     return true;
 }
 
+/* The floor runs (nearly) the whole width of the screen: a panel, not a Dock
+ * with gaps beside it (Linux and Windows). */
+static bool floor_across_screen(void) {
+    return s_screen_w > 0.0f && s_dock_right - s_dock_left >= 0.9f * s_screen_w;
+}
+
 bool desktop_melee_dock_span(float* left, float* right) {
     if (!desktop_melee_overlay_enabled() || s_screen_w <= 0.0f || s_dock_right <= s_dock_left) {
         return false;
@@ -536,8 +543,189 @@ bool desktop_melee_blastzones(float* left, float* right, float* top, float* bott
     *right = 0.5f * screen_units();
     *top = (s_screen_h - s_floor) * units_per_pt;
     *bottom = -s_floor * units_per_pt;
+    if (floor_across_screen()) {
+        /* Nobody falls past a floor as wide as the screen, so the bottom
+         * blastzone goes well under it: a spiked fighter bounces on the
+         * ground instead of being KO'd just under the panel. */
+        *bottom -= 0.5f * screen_units();
+    }
     SDL_Log("desktop-melee: blastzones x %.0f..%.0f, y %.0f..%.0f units (screen edges)", *left,
         *right, *bottom, *top);
+    return true;
+}
+
+/* ---- window platforms ------------------------------------------------------ */
+
+/* The tops of the player's windows as drop-through platforms (the game side
+ * is desktop-melee/game/desktop_melee_platforms.c): each frame the game asks
+ * for platform i; the windows are read about 30 times a second. */
+#define PLATFORMS 8 /* DESKTOP_MELEE_WINDOW_PLATFORMS */
+#define MAX_WINDOWS 64
+#define MIN_WINDOW_PT 120.0f  /* narrower windows are no platform */
+#define MIN_SEGMENT_PT 60.0f  /* nor shorter visible pieces of a top */
+#define POLL_MS 33
+
+typedef struct {
+    bool on;
+    unsigned long long id;  /* the window it is the top of */
+    float left, right, top; /* points, y down */
+    bool ledges;            /* both ends are the window's corners */
+} WindowPlatform;
+
+static WindowPlatform s_platforms[PLATFORMS];
+static Uint64 s_platforms_polled = 0;
+
+/* The visible pieces of window k's top edge: [left, right) minus what the
+ * windows above it (later in the list) cover at that height. */
+static int visible_pieces(const DesktopMeleeWindow* w, int count, int k, float* lefts, float* rights,
+    int max) {
+    int n = 1;
+    lefts[0] = w[k].x;
+    rights[0] = w[k].x + w[k].w;
+    const float y = w[k].y;
+    for (int j = k + 1; j < count && n > 0; j++) {
+        if (!(w[j].y <= y && y < w[j].y + w[j].h)) {
+            continue;
+        }
+        const float cl = w[j].x;
+        const float cr = w[j].x + w[j].w;
+        int m = 0;
+        float nl[16], nr[16];
+        for (int p = 0; p < n; p++) {
+            if (cr <= lefts[p] || cl >= rights[p]) {
+                nl[m] = lefts[p], nr[m] = rights[p], m++;
+                continue;
+            }
+            if (cl > lefts[p] && m < 16) {
+                nl[m] = lefts[p], nr[m] = cl, m++;
+            }
+            if (cr < rights[p] && m < 16) {
+                nl[m] = cr, nr[m] = rights[p], m++;
+            }
+        }
+        n = m < max ? m : max;
+        for (int p = 0; p < n; p++) {
+            lefts[p] = nl[p];
+            rights[p] = nr[p];
+        }
+    }
+    return n;
+}
+
+static void poll_window_platforms(void) {
+    DesktopMeleeWindow windows[MAX_WINDOWS];
+    const int count = desktop_melee_platform_windows(windows, MAX_WINDOWS);
+    WindowPlatform found[PLATFORMS * 4];
+    int nfound = 0;
+    const float floor_top = s_screen_h - s_floor;
+    for (int k = 0; k < count; k++) {
+        const DesktopMeleeWindow* w = &windows[k];
+        /* Maximized or fullscreen windows reach the top of the screen, and
+         * windows whose top is behind the panel have nothing to stand on. */
+        if (w->w < MIN_WINDOW_PT || w->y <= 1.0f || w->y >= floor_top - 8.0f) {
+            continue;
+        }
+        float lefts[16], rights[16];
+        const int pieces = visible_pieces(windows, count, k, lefts, rights, 16);
+        for (int p = 0; p < pieces && nfound < PLATFORMS * 4; p++) {
+            const float l = lefts[p] < 0.0f ? 0.0f : lefts[p];
+            const float r = rights[p] > s_screen_w ? s_screen_w : rights[p];
+            if (r - l >= MIN_SEGMENT_PT) {
+                const bool corners = l == w->x && r == w->x + w->w;
+                found[nfound++] = (WindowPlatform){true, w->id, l, r, w->y, corners};
+            }
+        }
+    }
+    /* The highest on screen first, when there are more than the platforms. */
+    for (int i = 1; i < nfound; i++) {
+        for (int j = i; j > 0 && found[j].top < found[j - 1].top; j--) {
+            const WindowPlatform t = found[j];
+            found[j] = found[j - 1];
+            found[j - 1] = t;
+        }
+    }
+    if (nfound > PLATFORMS) {
+        nfound = PLATFORMS;
+    }
+    /* Each piece keeps the slot it had (the same window, the nearest piece of
+     * it), so a platform never swaps under a fighter. */
+    WindowPlatform next[PLATFORMS] = {0};
+    bool used[PLATFORMS * 4] = {false};
+    for (int i = 0; i < PLATFORMS; i++) {
+        if (!s_platforms[i].on) {
+            continue;
+        }
+        int best = -1;
+        float best_d = 0.0f;
+        for (int f = 0; f < nfound; f++) {
+            if (used[f] || found[f].id != s_platforms[i].id) {
+                continue;
+            }
+            const float d = fabsf(found[f].left - s_platforms[i].left) +
+                            fabsf(found[f].right - s_platforms[i].right) +
+                            fabsf(found[f].top - s_platforms[i].top);
+            if (best < 0 || d < best_d) {
+                best = f;
+                best_d = d;
+            }
+        }
+        if (best >= 0) {
+            next[i] = found[best];
+            used[best] = true;
+        }
+    }
+    for (int f = 0; f < nfound; f++) {
+        for (int i = 0; i < PLATFORMS && !used[f]; i++) {
+            if (!next[i].on) {
+                next[i] = found[f];
+                used[f] = true;
+            }
+        }
+    }
+    memcpy(s_platforms, next, sizeof s_platforms);
+}
+
+float desktop_melee_onscreen_widen(void) {
+    u32 width = 0;
+    u32 height = 0;
+    if (!desktop_melee_overlay_enabled()) {
+        return 1.0f;
+    }
+    AuroraGetRenderSize(&width, &height);
+    if (width == 0 || height == 0) {
+        return 1.0f;
+    }
+    /* melee-pc's widescreen scale (pc_widescreen_scale), outside a render
+     * pass too: the frame's aspect over Melee's 73:60. */
+    const float scale = ((float)width / (float)height) / (73.0f / 60.0f);
+    return scale > 1.0f ? scale : 1.0f;
+}
+
+bool desktop_melee_floor_ledges(void) {
+    /* Its ledges would sit by the side blastzones. */
+    return !floor_across_screen();
+}
+
+bool desktop_melee_window_platform(int index, float* left, float* right, float* y, bool* ledges) {
+    if (!desktop_melee_overlay_enabled() || index < 0 || index >= PLATFORMS || s_screen_w <= 0.0f ||
+        !desktop_melee_platform_window_covers_screen()) {
+        return false;
+    }
+    const Uint64 now = SDL_GetTicks();
+    if (index == 0 && now - s_platforms_polled >= POLL_MS) {
+        s_platforms_polled = now;
+        poll_window_platforms();
+    }
+    const WindowPlatform* p = &s_platforms[index];
+    if (!p->on) {
+        return false;
+    }
+    /* The camera maps x = 0 to the screen's middle and y = 0 to the floor. */
+    const float units_per_pt = screen_units() / s_screen_w;
+    *left = (p->left - 0.5f * s_screen_w) * units_per_pt;
+    *right = (p->right - 0.5f * s_screen_w) * units_per_pt;
+    *y = (s_screen_h - s_floor - p->top) * units_per_pt;
+    *ledges = p->ledges;
     return true;
 }
 
