@@ -51,7 +51,7 @@ Each [release](https://github.com/Mwrnk/desktop-melee/releases) has:
 - `Desktop-Melee-<version>-macOS-arm64.zip`: a Mac with Apple silicon and
   **macOS 27 or later**.
 - `Desktop-Melee-<version>-linux-x86_64.AppImage`: a 64-bit PC with Linux,
-  as new as Ubuntu 22.04 or newer (Debian 12, Mint 21, Fedora, Arch...). See
+  Ubuntu 24.04 or newer (Debian 13, Mint 22, Fedora 40, Arch...). See
   [On Linux](#on-linux).
 
 Neither contains game data; you still need your own disc (see
@@ -101,7 +101,7 @@ lives in the menu bar:
   yourself, it runs on the macOS of the Mac that built it; older versions and
   Intel Macs are untested. Building needs Xcode 26 or later, for the Icon
   Composer app icon.
-- Or a 64-bit PC with Linux, as new as Ubuntu 22.04 or newer, with Vulkan
+- Or a 64-bit PC with Linux, Ubuntu 24.04 or newer (glibc 2.39), with Vulkan
   graphics drivers. Tested on KDE Plasma 6.8 (Wayland) with an AMD GPU only;
   GNOME, X11 sessions and NVIDIA are untested. Building on Linux is in
   [porting.md section 2](docs/desktop-melee/porting.md).

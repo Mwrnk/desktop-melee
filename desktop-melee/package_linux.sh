@@ -3,8 +3,9 @@
 # Builds Desktop Melee for Linux as an AppImage, one file that runs on most
 # distributions (Arch, Debian, Ubuntu, Mint, Fedora...) as long as they are
 # at least as new as the system it was built on. Releases are built by
-# .github/workflows/linux-appimage.yml on an older Ubuntu for that reason;
-# built on a rolling distribution, the AppImage only runs on new ones.
+# .github/workflows/linux-appimage.yml on Ubuntu 24.04, the oldest that
+# aurora's prebuilt Dawn links on; built on a rolling distribution, the
+# AppImage only runs on new ones.
 #
 #   desktop-melee/package_linux.sh      ->  dist/Desktop-Melee-<version>-linux-<arch>.AppImage
 #
@@ -142,11 +143,23 @@ if [[ -n "${GAME_DATA}" ]]; then
     echo "${GAME_DATA}" >&2
     exit 1
 fi
-if grep -rlq -- "${HOME}" "${APPDIR}"; then
-    echo "error: the AppImage names ${HOME}:" >&2
-    grep -rl -- "${HOME}" "${APPDIR}" >&2
-    exit 1
+# Nor paths of the machine that built it: this checkout (source paths are
+# mapped away, so any left are a leak), and on a personal machine anything
+# under the builder's home folder. Not the home folder on CI: it names nobody,
+# and aurora's prebuilt Dawn, built on GitHub's runners too, carries
+# /home/runner/... paths of its own. The trailing slash skips a bare "/root",
+# which system libraries mention.
+LEAKS=("${ROOT}/")
+if [[ -z "${CI:-}" ]]; then
+    LEAKS+=("${HOME}/")
 fi
+for leak in "${LEAKS[@]}"; do
+    if grep -rlqF -- "${leak}" "${APPDIR}"; then
+        echo "error: the AppImage names ${leak}:" >&2
+        grep -rlF -- "${leak}" "${APPDIR}" >&2
+        exit 1
+    fi
+done
 
 echo "=== Making the AppImage ==="
 OUT="${DIST}/Desktop-Melee-${VERSION}-linux-${ARCH}.AppImage"
