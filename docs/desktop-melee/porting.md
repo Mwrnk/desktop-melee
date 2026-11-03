@@ -151,6 +151,7 @@ does, and what's required of a port. In short:
 | `ui_assets_ready` | builds the UI's images | the UI may draw portraits | same | same |
 | `ui_before_exit` | nothing | close the RmlUi windows and tray (`platform_linux.c` does) | same | same |
 | `write_png` | ImageIO | `SDL_SavePNG` (done) | `SDL_SavePNG` (done) | `SDL_SavePNG` (done) |
+| `windows` (window platforms) | not yet: `CGWindowListCopyWindowInfo` | not yet: `EnumWindows`, `DWMWA_CLOAKED`, `DWMWA_EXTENDED_FRAME_BOUNDS` | `_NET_CLIENT_LIST_STACKING`, re-read on `PropertyNotify` / `ConfigureNotify` (done) | KDE: a KWin script over D-Bus (done); others: not visible to clients |
 
 The macOS-only Accessibility calls (`desktop_melee_ax_trusted`,
 `desktop_melee_ax_request`) are not part of the interface: only the Swift UI
@@ -262,7 +263,25 @@ gives XWayland the work area, so the floor still sits on the panel. On X11 sessi
 without the GlobalShortcuts portal, Ctrl+Alt+M is an `XGrabKey` on the root
 window (`desktop_melee_x11_hotkey_install`), read on a thread with its own X
 connection; Wayland sessions skip it, since XWayland only sees keys typed into
-X11 windows. The rest of this section is the reasoning it started from.
+X11 windows.
+
+**Window platforms** (`window_list_linux.c`): the tops of the player's other
+windows are drop-through platforms (how-it-works.md section 9.4).
+`desktop_melee_platform_windows` lists them bottom to top in the overlay's
+points. On KDE, X11 or Wayland, a KWin script sends KWin's stacking order
+over D-Bus whenever a window moves, opens, closes or is activated: it alone
+sees native Wayland windows. The script also sends the overlay's own frame,
+and the windows are mapped through it, since KWin's coordinates are logical
+and the overlay's are XWayland's pixels. Elsewhere `_NET_CLIENT_LIST_STACKING`
+is read again only after a `PropertyNotify` that matters (the list, the
+desktop, a window's state, desktop or frame extents) or a `ConfigureNotify`,
+map or unmap, and at least 4 times a second. The top is the visible window's:
+`_NET_FRAME_EXTENTS` adds the window manager's title bar and
+`_GTK_FRAME_EXTENTS` takes off a GTK app's invisible shadow. Reads swap in an
+error handler that ignores errors, since a window closing mid-read answers
+`BadWindow`, which Xlib's default handler exits on.
+
+The rest of this section is the reasoning it started from.
 
 Check `SDL_GetCurrentVideoDriver()`: one Linux build runs on both X11 and
 Wayland. Get the X11 handles with `SDL_PROP_WINDOW_X11_DISPLAY_POINTER` and
