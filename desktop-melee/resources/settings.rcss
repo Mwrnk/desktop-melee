@@ -1,0 +1,472 @@
+/* Desktop Melee's settings window on Windows and Linux
+ * (docs/desktop-melee/ui-guide.md sections 3 to 8), in the macOS popover's
+ * look: sizes from desktop-melee/ui/Panel.swift and the *Tab.swift files,
+ * the accent the system blue (#0a84ff), as the popover's is. The colours,
+ * sections and notes are in common.rcss. */
+
+body {
+    font-family: "Melee";
+    font-weight: bold;
+    font-size: 15dp;
+    color: #ffffff;
+    background-color: #242424;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---- Header, tabs, footer ----------------------------------------------- */
+
+#header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 14dp 14dp 10dp;
+}
+#emblem { position: relative; width: 30dp; height: 30dp; margin-right: 10dp; }
+#emblem img { position: absolute; left: 0; top: 0; width: 30dp; height: 30dp; }
+.ready #emblem-standin { display: none; }
+#header .title { font-size: 22dp; line-height: 1.1; }
+#header .subtitle { font-size: 13.5dp; color: #ebebf599; }
+
+#tabs {
+    display: flex;
+    flex-direction: row;
+    padding: 0 12dp 10dp;
+    border-bottom: 1dp #ffffff1a;
+}
+.tab {
+    flex: 1;
+    margin: 0 2dp;
+    padding: 6dp 0;
+    text-align: center;
+    font-size: 12.5dp;
+    color: #ebebf599;
+    border-radius: 8dp;
+    cursor: pointer;
+    transition: background-color color 0.15s cubic-out;
+}
+.tab img { display: block; width: 16dp; height: 16dp; margin: 0 auto 3dp; image-color: #ebebf599; }
+.tab:hover { background-color: #ffffff0a; }
+.tab.selected { color: #0a84ff; background-color: #0a84ff2e; }
+.tab.selected img { image-color: #0a84ff; }
+
+#body { flex: 1; min-height: 0; overflow-y: auto; padding: 12dp; }
+.page { display: none; }
+.page.shown { display: block; }
+.page .label { margin: 14dp 0 8dp; }
+.page .box + .note.faint, .page > .note.faint { margin-top: 14dp; }
+
+#footer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 10dp 14dp;
+    border-top: 1dp #ffffff1a;
+}
+#footer .spacer { flex: 1; }
+.link { font-size: 15dp; color: #ffffff; cursor: pointer; }
+.link:hover { color: #0a84ff; }
+.link.disabled { color: #ebebf54d; cursor: arrow; }
+
+/* ---- Rows: an icon, a name, then the control ---------------------------- */
+
+.box .row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-height: 24dp;
+    margin-bottom: 10dp;
+}
+.box .row:last-child { margin-bottom: 0; }
+.box .row + .note, .box #ports + .row, .box .segments + .note, .box #screens + .note { margin-top: 10dp; }
+.box .row.top { align-items: flex-start; }
+.row .icon { width: 16dp; height: 16dp; margin-right: 10dp; image-color: #ebebf599; }
+.row .name { flex: 1; font-size: 16dp; }
+.row .name.short { flex: 0 0 62dp; }
+.row .state { font-size: 16dp; color: #ebebf599; }
+.row .text { flex: 1; font-size: 14dp; }
+.row .desc { flex: 1; font-family: "Noto Sans"; font-size: 14dp; color: #ebebf599; white-space: nowrap; overflow: hidden; }
+.row.dim { opacity: 0.45; }
+
+/* A switch, as macOS's. */
+.toggle {
+    position: relative;
+    width: 32dp;
+    height: 19dp;
+    border-radius: 9.5dp;
+    background-color: #ffffff29;
+    cursor: pointer;
+    transition: background-color 0.18s cubic-out;
+}
+.toggle .knob {
+    position: absolute;
+    left: 1.5dp;
+    top: 1.5dp;
+    width: 16dp;
+    height: 16dp;
+    border-radius: 8dp;
+    background-color: #ffffff;
+    box-shadow: #00000059 0 1dp 2dp 0;
+    transition: left 0.18s cubic-out;
+}
+.toggle.on { background-color: #0a84ff; }
+.toggle.on .knob { left: 14.5dp; }
+.toggle.disabled { opacity: 0.45; cursor: arrow; }
+
+/* A + or - button, whose whole tile is clickable. */
+.step {
+    width: 28dp;
+    height: 24dp;
+    border-radius: 6dp;
+    background-color: #ffffff14;
+    cursor: pointer;
+    transition: background-color transform 0.1s cubic-out;
+}
+.step img { display: block; width: 11dp; height: 11dp; margin: 6.5dp auto 0; }
+.step:hover { background-color: #ffffff26; }
+.step:active { background-color: #ffffff3d; transform: scale(0.92); }
+.step.disabled { background-color: #ffffff0a; cursor: arrow; }
+.step.disabled img { image-color: #ebebf540; }
+.step.disabled:active { transform: none; }
+.value { min-width: 44dp; margin: 0 6dp; text-align: center; font-size: 17dp; }
+
+/* A row of choices in a capsule, the chosen one filled. */
+.segments {
+    display: flex;
+    flex-direction: row;
+    padding: 2dp;
+    border-radius: 14dp;
+    background-color: #ffffff14;
+}
+.segments.short { width: 140dp; }
+.segments .part {
+    flex: 1;
+    padding: 3dp 0;
+    text-align: center;
+    font-size: 15dp;
+    color: #ebebf599;
+    border-radius: 12dp;
+    cursor: pointer;
+    transition: background-color color 0.15s cubic-out;
+}
+.segments .part:hover { color: #ffffff; }
+.segments .part.selected { color: #ffffff; background-color: #0a84ff; }
+.segments.players .part { font-size: 17dp; }
+.segments.players .part.p1.selected { background-color: #e83b38; }
+.segments.players .part.p2.selected { background-color: #3d75f5; }
+
+/* Sliders: a thin track, filled in blue up to a white knob. */
+input.range { flex: 1; height: 20dp; margin: 0 10dp 0 0; cursor: pointer; }
+input.range slidertrack {
+    height: 4dp;
+    margin-top: 8dp;
+    background-color: #ffffff26;
+    border-radius: 2dp;
+}
+input.range sliderprogress {
+    height: 4dp;
+    margin-top: 8dp;
+    background-color: #0a84ff;
+    border-radius: 2dp;
+}
+input.range sliderbar {
+    width: 18dp;
+    height: 18dp;
+    margin-top: 1dp;
+    margin-left: -9dp;
+    margin-right: -9dp;
+    border-radius: 9dp;
+    background-color: #ffffff;
+    box-shadow: #00000066 0 1dp 3dp 0;
+}
+input.range sliderarrowdec, input.range sliderarrowinc { width: 0; height: 0; }
+input.range.disabled sliderprogress { background-color: #ffffff40; }
+.percent { width: 40dp; text-align: right; font-size: 14.5dp; color: #ebebf599; }
+.small-figure { width: 10dp; height: 10dp; margin-right: 8dp; image-color: #ebebf599; }
+.big-figure { width: 17dp; height: 17dp; image-color: #ebebf599; }
+.box .row input.range + .big-figure { margin-left: -2dp; }
+
+/* ---- Match -------------------------------------------------------------- */
+
+.start {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 9dp 0;
+    font-size: 18dp;
+    color: #ffffff;
+    background-color: #0a84ff;
+    border-radius: 10dp;
+    cursor: pointer;
+    transition: background-color transform 0.15s cubic-out;
+}
+.start img { width: 15dp; height: 15dp; margin-right: 8dp; }
+.start:hover { background-color: #2a95ff; }
+.start:active { transform: scale(0.97); }
+.start.running { background-color: #ff9f0a; }
+.start.running:hover { background-color: #ffad2a; }
+#pause-row { display: flex; flex-direction: row; margin-top: 10dp; }
+#pause-row .wide-button { flex: 1; margin-top: 0; }
+/* The shortcut, as the desktop bound it; a click opens its own dialog. */
+.key-cap {
+    margin-left: 10dp;
+    padding: 6dp 10dp;
+    font-family: "Noto Sans";
+    font-size: 14dp;
+    border: 1.5dp #ffffff40;
+    border-radius: 8dp;
+    cursor: pointer;
+}
+.key-cap:hover { border-color: #0a84ff; }
+.key-cap.hidden { display: none; }
+.wide-button {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10dp;
+    padding: 6dp 0;
+    font-size: 16dp;
+    border-radius: 10dp;
+    background-color: #ffffff1a;
+    cursor: pointer;
+    transition: background-color transform 0.15s cubic-out;
+}
+.wide-button img { width: 15dp; height: 15dp; margin-right: 6dp; }
+.wide-button:hover { background-color: #ffffff26; }
+.wide-button:active { transform: scale(0.97); }
+
+/* ---- Players ------------------------------------------------------------ */
+
+#cards { display: flex; flex-direction: row; }
+.card {
+    flex: 1;
+    padding: 10dp;
+    margin-right: 10dp;
+    border: 1dp #ffffff14;
+    border-radius: 12dp;
+    background-color: #ffffff0f;
+    cursor: pointer;
+    transition: border-color 0.15s cubic-out;
+}
+#card-p2 { margin-right: 0; }
+.card.editing { border-width: 2dp; padding: 9dp; }
+.card.p1.editing { border-color: #e83b38; }
+.card.p2.editing { border-color: #3d75f5; }
+.card-top { display: flex; flex-direction: row; align-items: center; margin-bottom: 8dp; }
+.card-top .tag { flex: 1; font-size: 18dp; }
+.card.p1 .tag { color: #e83b38; }
+.card.p2 .tag { color: #3d75f5; }
+.card .hand { width: 12dp; height: 12dp; visibility: hidden; }
+.card.editing .hand { visibility: visible; }
+.card.p1 .hand { image-color: #e83b38; }
+.card.p2 .hand { image-color: #3d75f5; }
+.portrait {
+    position: relative;
+    height: 124dp;
+    border-radius: 8dp;
+    text-align: right;
+}
+.card.p1 .portrait { decorator: linear-gradient(180deg, #e83b38bf, #e83b3833); }
+.card.p2 .portrait { decorator: linear-gradient(180deg, #3d75f5bf, #3d75f533); }
+.portrait img { height: 120dp; margin-top: 4dp; }
+.portrait img.none { position: absolute; left: 0; right: 0; top: 40dp; width: 40dp; height: 40dp; margin: 0 auto; image-color: #ffffff99; }
+.portrait.loaded img.none { display: none; }
+.fighter {
+    margin: 8dp 0;
+    text-align: center;
+    font-size: 16dp;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.costumes { display: flex; flex-direction: row; justify-content: center; height: 26dp; margin-bottom: 8dp; }
+.costume {
+    position: relative;
+    width: 20dp;
+    height: 26dp;
+    margin: 0 2dp;
+    border-radius: 4dp;
+    background-color: #ffffff14;
+    overflow: hidden;
+    cursor: pointer;
+}
+.costume img { width: 20dp; height: 26dp; }
+.costume .ring { position: absolute; left: 0; top: 0; right: 0; bottom: 0; border-radius: 4dp; }
+.card.p1 .costume.selected .ring { border: 2dp #e83b38; }
+.card.p2 .costume.selected .ring { border: 2dp #3d75f5; }
+.costume.taken { opacity: 0.35; cursor: arrow; }
+.costume .x { position: absolute; left: 5dp; top: 8dp; width: 10dp; height: 10dp; }
+.kind { display: flex; flex-direction: row; padding: 2dp; border-radius: 12dp; background-color: #ffffff14; margin-bottom: 8dp; }
+.kind .part {
+    flex: 1;
+    padding: 2dp 0;
+    text-align: center;
+    font-size: 13.5dp;
+    color: #ebebf599;
+    border-radius: 10dp;
+    cursor: pointer;
+    transition: background-color color 0.15s cubic-out;
+}
+.card.p1 .kind .part.selected { color: #ffffff; background-color: #e83b38; }
+.card.p2 .kind .part.selected { color: #ffffff; background-color: #3d75f5; }
+.level { display: flex; flex-direction: row; align-items: center; }
+.level .name { flex: 1; font-size: 14.5dp; color: #ebebf599; }
+.level .value { min-width: 16dp; font-size: 16dp; }
+.level.disabled { visibility: hidden; }
+
+.loading { margin: 24dp 0; text-align: center; font-size: 13.5dp; color: #ebebf599; }
+#roster { display: flex; flex-direction: row; flex-wrap: wrap; margin-top: 12dp; }
+.pick {
+    position: relative;
+    width: 34.6dp;
+    height: 30.3dp;
+    margin: 0 3dp 3dp 0;
+    border-radius: 3dp;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.1s cubic-out;
+}
+.pick.end { margin-right: 0; }
+.pick img { width: 34.6dp; height: 30.3dp; }
+.pick .ring { position: absolute; left: 0; top: 0; right: 0; bottom: 0; border-radius: 3dp; }
+#roster.edit-p1 .pick:hover .ring { border: 2dp #e83b38; }
+#roster.edit-p2 .pick:hover .ring { border: 2dp #3d75f5; }
+.pick:hover { transform: scale(1.06); z-index: 1; }
+.pick .sheik {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 8dp;
+    text-align: center;
+    font-size: 7dp;
+    line-height: 8dp;
+    background-color: #000000;
+}
+.pick .badges { position: absolute; left: 1dp; top: 1dp; display: flex; flex-direction: row; }
+.badges span { margin-right: 1dp; padding: 0 2dp; font-size: 7dp; line-height: 9dp; border-radius: 2dp; }
+.badges .b1 { background-color: #e83b38; }
+.badges .b2 { background-color: #3d75f5; }
+
+/* ---- Controls ----------------------------------------------------------- */
+
+#ctl-cpu-note { margin-top: 10dp; }
+#ports { display: flex; flex-direction: row; }
+.port {
+    position: relative;
+    flex: 1;
+    margin-right: 6dp;
+    padding: 5dp 0;
+    text-align: center;
+    font-size: 15dp;
+    border-radius: 8dp;
+    background-color: #ffffff0f;
+    cursor: pointer;
+    transition: background-color 0.15s cubic-out;
+}
+#port-3 { margin-right: 0; }
+.port img { display: block; width: 14dp; height: 14dp; margin: 0 auto 2dp; }
+.port:hover { background-color: #ffffff1a; }
+.port.empty { color: #ebebf599; }
+.port.empty img { image-color: #ebebf599; }
+#ports.p1 .port.selected { background-color: #e83b38; color: #ffffff; }
+#ports.p2 .port.selected { background-color: #3d75f5; color: #ffffff; }
+#ports .port.selected img { image-color: #ffffff; }
+.port .other { position: absolute; right: 3dp; top: 3dp; padding: 0 2dp; font-size: 7dp; line-height: 9dp; border-radius: 2dp; }
+#ports.p1 .port .other { background-color: #3d75f5; }
+#ports.p2 .port .other { background-color: #e83b38; }
+
+#map-grid { display: flex; flex-direction: row; flex-wrap: wrap; }
+.map-row { display: flex; flex-direction: row; align-items: center; width: 33.3%; margin-bottom: 8dp; }
+.map-row .to { width: 10dp; height: 10dp; margin: 0 4dp; image-color: #ebebf54d; }
+.map {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 2dp 4dp;
+    border-radius: 6dp;
+    cursor: pointer;
+}
+.map.changed { background-color: #ffffff1a; }
+.map:hover { background-color: #ffffff26; }
+.map img { width: 9dp; height: 9dp; margin-left: 4dp; image-color: #ebebf599; }
+.badge {
+    display: block;
+    width: 24dp;
+    height: 22dp;
+    text-align: center;
+    font-size: 14dp;
+    line-height: 22dp;
+    color: #ffffff;
+    border-radius: 11dp;
+    background-color: #8c8c8c;
+}
+.badge.b0 { background-color: #1ab38c; }
+.badge.b1 { background-color: #db383d; }
+.badge.b4 { background-color: #6b52d9; }
+.badge.b7 { background-color: #ffffff26; }
+#map-reset { font-size: 13.5dp; }
+.map.open { background-color: #ffffff26; }
+
+/* The target list: a small menu by the target clicked, as macOS's popover. */
+#map-menu {
+    position: absolute;
+    z-index: 10;
+    width: 150dp;
+    padding: 6dp;
+    border: 1dp #ffffff1f;
+    border-radius: 10dp;
+    background-color: #323232;
+    box-shadow: #00000080 0 6dp 18dp 0;
+}
+#map-menu.hidden { display: none; }
+#map-menu .item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 2dp 6dp;
+    margin-bottom: 2dp;
+    border-radius: 6dp;
+    cursor: pointer;
+}
+#map-menu .item:last-child { margin-bottom: 0; }
+#map-menu .item:hover { background-color: #0a84ff; }
+#map-menu .item .name { flex: 1; margin-left: 8dp; font-size: 13.5dp; }
+#map-menu .item .check { width: 10dp; height: 10dp; visibility: hidden; }
+#map-menu .item.current .check { visibility: visible; }
+@keyframes menu-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+#map-menu.shown { animation: 0.12s cubic-out menu-in; }
+#map-target { margin-top: 2dp; }
+
+/* ---- Display ------------------------------------------------------------ */
+
+.screen {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 6dp 8dp;
+    margin-bottom: 4dp;
+    border-radius: 8dp;
+    cursor: pointer;
+}
+.screen:hover { background-color: #ffffff0f; }
+.screen.selected { background-color: #ffffff1a; }
+.screen .icon { width: 16dp; height: 16dp; margin-right: 10dp; image-color: #ebebf599; }
+.screen .name { flex: 1; font-family: "Noto Sans"; font-size: 14.5dp; white-space: nowrap; overflow: hidden; }
+.screen .main {
+    margin: 0 6dp;
+    padding: 1dp 5dp;
+    font-size: 12dp;
+    color: #ebebf599;
+    border-radius: 8dp;
+    background-color: #ffffff14;
+}
+.screen .check { width: 11dp; height: 11dp; image-color: #0a84ff; visibility: hidden; }
+.screen.selected .check { visibility: visible; }

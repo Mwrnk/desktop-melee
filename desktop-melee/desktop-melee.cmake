@@ -14,9 +14,94 @@ target_include_directories(melee PRIVATE desktop-melee/src)
 # includes our game mode (GM_DESKTOP_MELEE), which is built as game code too.
 target_include_directories(melee_game PRIVATE desktop-melee/src desktop-melee/game)
 target_sources(melee_game PRIVATE desktop-melee/game/gmdesktopmelee.c
-        desktop-melee/game/desktop_melee_assets.c)
+        desktop-melee/game/desktop_melee_assets.c desktop-melee/game/desktop_melee_platforms.c)
 
+# One implementation of desktop-melee/src/platform.h per system
+# (docs/desktop-melee/porting.md). Windows and Linux are skeletons that run
+# the game in a normal window; the Linux one is plain SDL, so every other
+# system (Android, iOS) builds it too.
+set(DESKTOP_MELEE_MACOS OFF)
 if (APPLE AND NOT (IOS OR CMAKE_SYSTEM_NAME STREQUAL "iOS"))
+    set(DESKTOP_MELEE_MACOS ON)
+elseif (WIN32)
+    target_sources(melee PRIVATE desktop-melee/src/platform_windows.c
+            desktop-melee/src/settings_file.c desktop-melee/src/settings_window.cpp desktop-melee/src/welcome_window.cpp
+            desktop-melee/src/rml_dashed.cpp desktop-melee/src/window_icon.c
+            desktop-melee/src/melee_font.cpp)
+else ()
+    target_sources(melee PRIVATE desktop-melee/src/platform_linux.c
+            desktop-melee/src/settings_file.c desktop-melee/src/tray_sdl.c
+            desktop-melee/src/settings_window.cpp desktop-melee/src/welcome_window.cpp
+            desktop-melee/src/rml_dashed.cpp desktop-melee/src/window_icon.c
+            desktop-melee/src/melee_font.cpp)
+    # The Pause and hide shortcut through the GlobalShortcuts portal, where
+    # there is a session bus (desktop Linux; not Android or iOS).
+    find_package(PkgConfig QUIET)
+    if (PKG_CONFIG_FOUND)
+        pkg_check_modules(DESKTOP_MELEE_DBUS QUIET IMPORTED_TARGET dbus-1)
+    endif ()
+    if (DESKTOP_MELEE_DBUS_FOUND)
+        target_sources(melee PRIVATE desktop-melee/src/hotkey_portal.c
+                desktop-melee/src/desktop_entry.c)
+        target_link_libraries(melee PRIVATE PkgConfig::DESKTOP_MELEE_DBUS)
+        target_compile_definitions(melee PRIVATE DESKTOP_MELEE_HOTKEY_PORTAL=1)
+    endif ()
+
+    # The overlay window on X11 (overlay_x11.c), with its Vulkan layer
+    # (vk_overlay_alpha.c) built next to the game: aurora's Dawn makes opaque
+    # Vulkan swap chains, the layer makes them transparent. It uses the Vulkan
+    # headers SDL bundles. Without X11 or them, the game stays a normal window.
+    if (PKG_CONFIG_FOUND)
+        pkg_check_modules(DESKTOP_MELEE_X11 QUIET IMPORTED_TARGET x11)
+    endif ()
+    FetchContent_GetProperties(SDL)
+    set(_desktop_melee_vulkan_headers "")
+    foreach (_dir "${sdl_SOURCE_DIR}" "${SDL3_SOURCE_DIR}")
+        if (_dir AND EXISTS "${_dir}/src/video/khronos/vulkan/vk_layer.h")
+            set(_desktop_melee_vulkan_headers "${_dir}/src/video/khronos")
+            break ()
+        endif ()
+    endforeach ()
+    if (DESKTOP_MELEE_X11_FOUND AND _desktop_melee_vulkan_headers)
+        add_library(desktop_melee_overlay_alpha SHARED desktop-melee/src/vk_overlay_alpha.c)
+        target_include_directories(desktop_melee_overlay_alpha PRIVATE "${_desktop_melee_vulkan_headers}")
+        set_target_properties(desktop_melee_overlay_alpha PROPERTIES
+                C_VISIBILITY_PRESET hidden
+                LIBRARY_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:melee>")
+        file(GENERATE OUTPUT "$<TARGET_FILE_DIR:melee>/desktop_melee_overlay_alpha.json"
+                INPUT "${CMAKE_CURRENT_SOURCE_DIR}/desktop-melee/src/vk_overlay_alpha.json")
+        add_dependencies(melee desktop_melee_overlay_alpha)
+        target_sources(melee PRIVATE desktop-melee/src/overlay_x11.c
+                desktop-melee/src/window_list_linux.c)
+        target_link_libraries(melee PRIVATE PkgConfig::DESKTOP_MELEE_X11)
+        target_compile_definitions(melee PRIVATE DESKTOP_MELEE_X11_OVERLAY=1)
+    else ()
+        message(STATUS "desktop-melee: no X11 or Vulkan headers: the Linux overlay is off")
+    endif ()
+endif ()
+
+# The settings window's documents (settings_window.cpp), next to melee-pc's
+# in resources/desktop-melee/.
+if (NOT DESKTOP_MELEE_MACOS)
+    add_custom_target(desktop_melee_resources ALL
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/desktop-melee/resources"
+            "$<TARGET_FILE_DIR:melee>/resources/desktop-melee")
+    add_dependencies(desktop_melee_resources launcher_resources)
+    add_dependencies(melee desktop_melee_resources)
+endif ()
+
+# The settings file's parser and writer, tested on their own
+# (desktop-melee/tests/settings_file_test.c stubs the game's setters).
+if (NOT DESKTOP_MELEE_MACOS)
+    add_executable(desktop_melee_settings_test EXCLUDE_FROM_ALL
+            desktop-melee/tests/settings_file_test.c desktop-melee/src/settings_file.c)
+    target_include_directories(desktop_melee_settings_test PRIVATE desktop-melee/src)
+    target_link_libraries(desktop_melee_settings_test PRIVATE ${AURORA_SDL3_TARGET})
+    target_compile_options(desktop_melee_settings_test PRIVATE -UNDEBUG)
+endif ()
+
+if (DESKTOP_MELEE_MACOS)
     target_sources(melee PRIVATE desktop-melee/src/overlay_mac.m)
     target_link_libraries(melee PRIVATE "-framework AppKit" "-framework ImageIO")
 

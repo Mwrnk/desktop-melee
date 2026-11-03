@@ -57,7 +57,7 @@ change is tagged `desktop-melee` in a comment and listed in
 
 - Build: `CMakeLists.txt` (includes `desktop-melee/desktop-melee.cmake`), `.gitignore`,
   `cmake/MeleeToolchainCheck.cmake` and `tools/preflight.py` (doc path only).
-- Port code: `src/pc/main.c`, `src/pc/launcher.cpp`.
+- Port code: `src/pc/main.c`, `src/pc/launcher.cpp`, `src/pc/vi.c`.
 - Repository: `.github/workflows/build.yml` (manual only, release job removed),
   `.github/ISSUE_TEMPLATE/`; `.github/RELEASE_NOTES.md` and
   `.github/workflows/pages.yml` removed; melee-pc's `README.md` is now
@@ -71,7 +71,10 @@ change is tagged `desktop-melee` in a comment and listed in
   `extern/aurora/lib/gfx/recording.cpp`,
   `extern/aurora/lib/dolphin/gx/GXFrameBuffer.cpp`,
   `extern/aurora/cmake/AuroraSDL3Provider.cmake`,
-  `extern/aurora/cmake/patches/apply-sdl3-macos-libusb-claim.cmake`.
+  `extern/aurora/cmake/patches/apply-sdl3-macos-libusb-claim.cmake`,
+  `extern/aurora/cmake/aurora_core.cmake`,
+  `extern/aurora/include/aurora/rmlui.hpp`, `extern/aurora/lib/rmlui.cpp`,
+  `extern/aurora/lib/rmlui.hpp`; and adds `extern/aurora/lib/rmlui_window.cpp`.
 - Game code (section 1, still not licensed; the hooks are small and marked):
   `src/melee/cm/camera.c`, `src/melee/ft/fighter.c`,
   `src/melee/ft/kinds/ftCommon/ftCo_Jump.c`,
@@ -94,6 +97,9 @@ change is tagged `desktop-melee` in a comment and listed in
 - `extern/dht/sha1.c`, `extern/dht/sha1.h` — Steve Reid's SHA-1, public domain.
 - `extern/monocypher/` — Monocypher 4.0.3, BSD-2-Clause or CC0 (notice in the
   files).
+- `desktop-melee/resources/icons/` — Phosphor Icons 2.1.1, MIT. See
+  `desktop-melee/resources/icons/PHOSPHOR-LICENSE.txt`. All of them except
+  `device.*` and `emblem.standin`, which are Desktop Melee's own (section 2).
 - Dawn, SDL3, nod, RmlUi and the other dependencies are fetched at build time
   under their own licenses.
 

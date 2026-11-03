@@ -48,6 +48,7 @@
 
 #ifdef TARGET_PC
 #include "desktop_melee_game.h"
+#include "desktop_melee_platforms.h"
 #endif
 
 /* 029AAC */ static void Camera_80029AAC(CameraBounds* bounds,
@@ -1072,6 +1073,7 @@ void Camera_8002A4AC(HSD_GObj* gobj)
             const f32 sy = desktop_melee_shake_enabled() ? game_camera.translation.y : 0.0f;
             desktop_melee_trace_shake(sx, sy);
             desktop_melee_timer_frame();
+            desktop_melee_platforms_frame(); /* window tops as platforms */
             eye.x = ex + sx;
             eye.y = ey + sy;
             eye.z = ez;
@@ -4392,12 +4394,30 @@ bool Camera_80030BBC(Vec3* arg0, S32Vec2* arg1)
         arg1->y = py;
     }
     HSD_CObjGetScissor(cobj, &scissor);
+#ifdef TARGET_PC
+    {
+        /* desktop-melee overlay: the screen shows the widescreen-widened view,
+         * so a fighter is on screen across all of it, not just Melee's 4:3
+         * middle (no magnifying-glass bubble in the extra width). Signed:
+         * the widened left edge goes below 0. */
+        const f32 widen = desktop_melee_onscreen_widen();
+        const f32 center = 0.5f * (scissor.left + scissor.right);
+        const f32 half = 0.5f * (scissor.right - scissor.left) * widen;
+        if ((px < (s32)(center - half)) || (px >= (s32)(center + half)) ||
+            (py < scissor.top) || (py >= scissor.bottom))
+        {
+            return false;
+        }
+        return true;
+    }
+#else
     if ((px < scissor.left) || (px >= scissor.right) || (py < scissor.top) ||
         (py >= scissor.bottom))
     {
         return false;
     }
     return true;
+#endif
 }
 
 bool Camera_80030CD8(CmSubject* arg0, S32Vec2* arg1)

@@ -1,0 +1,242 @@
+<rml>
+<head>
+    <title>Desktop Melee</title>
+    <link type="text/rcss" href="common.rcss" />
+    <link type="text/rcss" href="settings.rcss" />
+</head>
+<!-- Desktop Melee's settings window on Windows and Linux
+     (docs/desktop-melee/ui-guide.md sections 3 to 8), laid out like the macOS
+     popover (desktop-melee/ui/Panel.swift and the *Tab.swift files).
+     desktop-melee/src/settings_window.cpp fills in the values and handles
+     every click by id. -->
+<body>
+    <div id="header">
+        <div id="emblem">
+            <img id="emblem-img" class="hidden" />
+            <img id="emblem-standin" src="icons/emblem.standin.png" />
+        </div>
+        <div class="titles">
+            <p class="title">Desktop Melee</p>
+            <p class="subtitle">Running on your desktop</p>
+        </div>
+    </div>
+    <div id="tabs">
+        <div id="tab-match" class="tab selected"><img src="icons/flag.checkered.png" /><span>Match</span></div>
+        <div id="tab-players" class="tab"><img src="icons/person.2.fill.png" /><span>Players</span></div>
+        <div id="tab-controls" class="tab"><img src="icons/gamecontroller.fill.png" /><span>Controls</span></div>
+        <div id="tab-sound" class="tab"><img src="icons/speaker.wave.2.fill.png" /><span>Sound</span></div>
+        <div id="tab-display" class="tab"><img src="icons/display.png" /><span>Display</span></div>
+    </div>
+
+    <div id="body">
+        <div id="page-match" class="page shown">
+            <div id="match-start" class="start"><img id="match-start-icon" src="icons/play.fill.png" /><span id="match-start-label">Start Match</span></div>
+            <div id="pause-row">
+                <div id="pause-hide" class="wide-button"><img id="pause-hide-icon" src="icons/eye.slash.png" /><span id="pause-hide-label">Pause and hide</span></div>
+                <div id="pause-key" class="key-cap hidden"></div>
+            </div>
+
+            <p class="label">Rules</p>
+            <div class="box">
+                <div class="row">
+                    <img class="icon" src="icons/heart.fill.png" /><span class="name">Stocks</span>
+                    <div id="stocks-minus" class="step"><img src="icons/minus.png" /></div>
+                    <span id="stocks-value" class="value">4</span>
+                    <div id="stocks-plus" class="step"><img src="icons/plus.png" /></div>
+                </div>
+                <div class="row">
+                    <img class="icon" src="icons/timer.png" /><span class="name">Time</span>
+                    <div id="minutes-minus" class="step"><img src="icons/minus.png" /></div>
+                    <span id="minutes-value" class="value">7:00</span>
+                    <div id="minutes-plus" class="step"><img src="icons/plus.png" /></div>
+                </div>
+                <div class="row">
+                    <img class="icon" src="icons/shippingbox.png" /><span class="name">Items</span>
+                    <span class="state">Off</span>
+                </div>
+            </div>
+
+            <p class="label">Time-out</p>
+            <div class="box">
+                <div class="row top">
+                    <img class="icon" src="icons/flag.2.crossed.png" />
+                    <p class="note text">When time runs out, the match ends and Desktop Melee goes back to idle.</p>
+                </div>
+            </div>
+
+            <p class="label">Controllers</p>
+            <div class="box">
+                <div class="row">
+                    <img class="icon" src="icons/gamecontroller.png" /><span class="name">Start starts a match</span>
+                    <div id="start-on-controller" class="toggle"><div class="knob"></div></div>
+                </div>
+                <p class="note">Press Start on any controller to start a match with this setup.</p>
+            </div>
+            <p id="match-note" class="note faint">Rule changes apply to the next match.</p>
+        </div>
+
+        <div id="page-players" class="page">
+            <div id="cards">
+                <div id="card-p1" class="card p1 editing">
+                    <div class="card-top"><span class="tag">P1</span><img class="hand" src="icons/hand.point.up.left.fill.png" /></div>
+                    <div id="portrait-box-p1" class="portrait">
+                        <img id="portrait-p1" class="hidden" />
+                        <img id="portrait-none-p1" class="none" src="icons/person.fill.png" />
+                    </div>
+                    <p id="fighter-p1" class="fighter">Fox</p>
+                    <div id="costumes-p1" class="costumes"></div>
+                    <div class="kind">
+                        <div id="human-p1" class="part selected">Human</div>
+                        <div id="cpu-p1" class="part">CPU</div>
+                    </div>
+                    <div id="level-row-p1" class="level disabled">
+                        <span class="name">Level</span>
+                        <div id="level-minus-p1" class="step"><img src="icons/minus.png" /></div>
+                        <span id="level-p1" class="value">9</span>
+                        <div id="level-plus-p1" class="step"><img src="icons/plus.png" /></div>
+                    </div>
+                </div>
+                <div id="card-p2" class="card p2">
+                    <div class="card-top"><span class="tag">P2</span><img class="hand" src="icons/hand.point.up.left.fill.png" /></div>
+                    <div id="portrait-box-p2" class="portrait">
+                        <img id="portrait-p2" class="hidden" />
+                        <img id="portrait-none-p2" class="none" src="icons/person.fill.png" />
+                    </div>
+                    <p id="fighter-p2" class="fighter">Fox</p>
+                    <div id="costumes-p2" class="costumes"></div>
+                    <div class="kind">
+                        <div id="human-p2" class="part selected">Human</div>
+                        <div id="cpu-p2" class="part">CPU</div>
+                    </div>
+                    <div id="level-row-p2" class="level disabled">
+                        <span class="name">Level</span>
+                        <div id="level-minus-p2" class="step"><img src="icons/minus.png" /></div>
+                        <span id="level-p2" class="value">9</span>
+                        <div id="level-plus-p2" class="step"><img src="icons/plus.png" /></div>
+                    </div>
+                </div>
+            </div>
+            <p id="roster-loading" class="loading">Loading characters...</p>
+            <div id="roster"></div>
+            <p id="players-note" class="note faint">Changes apply when the match starts.</p>
+        </div>
+
+        <div id="page-controls" class="page">
+            <div id="ctl-switch" class="segments players">
+                <div id="ctl-p1" class="part p1 selected">P1</div>
+                <div id="ctl-p2" class="part p2">P2</div>
+            </div>
+            <p id="ctl-cpu-note" class="note hidden"></p>
+
+            <p class="label">Controller</p>
+            <div class="box">
+                <div id="ports" class="p1">
+                    <div id="port-0" class="port"><img id="port-icon-0" src="icons/keyboard.png" /><span>1</span><span id="port-other-0" class="other hidden"></span></div>
+                    <div id="port-1" class="port"><img id="port-icon-1" src="icons/circle.dashed.png" /><span>2</span><span id="port-other-1" class="other hidden"></span></div>
+                    <div id="port-2" class="port"><img id="port-icon-2" src="icons/circle.dashed.png" /><span>3</span><span id="port-other-2" class="other hidden"></span></div>
+                    <div id="port-3" class="port"><img id="port-icon-3" src="icons/circle.dashed.png" /><span>4</span><span id="port-other-3" class="other hidden"></span></div>
+                </div>
+                <div class="row"><img id="port-desc-icon" class="icon" src="icons/keyboard.png" /><span id="port-desc" class="desc">Port 1: keyboard</span></div>
+            </div>
+
+            <p class="label">Jump</p>
+            <div class="box">
+                <div class="row"><img class="icon" src="icons/arrow.up.circle.png" /><span class="name">Tap jump</span><div id="tapjump" class="toggle"><div class="knob"></div></div></div>
+                <div class="row"><img class="icon" src="icons/arrow.up.to.line.png" /><span class="name">Z = jump</span><div id="zjump" class="toggle"><div class="knob"></div></div></div>
+            </div>
+
+            <p class="label">Buttons</p>
+            <div class="box">
+                <div id="map-grid">
+                    <div class="map-row"><span class="badge b0">A</span><img class="to" src="icons/arrow.right.png" /><div id="map-0" class="map"><span id="map-badge-0" class="badge b0">A</span><img src="icons/chevron.up.chevron.down.png" /></div></div>
+                    <div class="map-row"><span class="badge b1">B</span><img class="to" src="icons/arrow.right.png" /><div id="map-1" class="map"><span id="map-badge-1" class="badge b1">B</span><img src="icons/chevron.up.chevron.down.png" /></div></div>
+                    <div class="map-row"><span class="badge b2">X</span><img class="to" src="icons/arrow.right.png" /><div id="map-2" class="map"><span id="map-badge-2" class="badge b2">X</span><img src="icons/chevron.up.chevron.down.png" /></div></div>
+                    <div class="map-row"><span class="badge b3">Y</span><img class="to" src="icons/arrow.right.png" /><div id="map-3" class="map"><span id="map-badge-3" class="badge b3">Y</span><img src="icons/chevron.up.chevron.down.png" /></div></div>
+                    <div class="map-row"><span class="badge b4">Z</span><img class="to" src="icons/arrow.right.png" /><div id="map-4" class="map"><span id="map-badge-4" class="badge b4">Z</span><img src="icons/chevron.up.chevron.down.png" /></div></div>
+                    <div class="map-row"><span class="badge b5">L</span><img class="to" src="icons/arrow.right.png" /><div id="map-5" class="map"><span id="map-badge-5" class="badge b5">L</span><img src="icons/chevron.up.chevron.down.png" /></div></div>
+                    <div class="map-row"><span class="badge b6">R</span><img class="to" src="icons/arrow.right.png" /><div id="map-6" class="map"><span id="map-badge-6" class="badge b6">R</span><img src="icons/chevron.up.chevron.down.png" /></div></div>
+                    <div class="map-row"><div id="map-reset" class="link">Reset</div></div>
+                </div>
+                <p id="map-target" class="note">Click a button's target to change it.</p>
+            </div>
+
+            <p class="label">All players</p>
+            <div class="box">
+                <div class="row"><img class="icon" src="icons/dial.medium.png" /><span class="name">UCF</span><div id="ucf" class="toggle"><div class="knob"></div></div></div>
+                <p id="ucf-note" class="note">Fixes dashback and shield drops on any controller.</p>
+            </div>
+            <p id="controls-note" class="note faint">Buttons and jump apply right away.</p>
+        </div>
+
+        <div id="page-sound" class="page">
+            <p class="label">Volume</p>
+            <div class="box">
+                <div id="row-master" class="row">
+                    <img class="icon" src="icons/speaker.wave.2.fill.png" /><span class="name short">Master</span>
+                    <input type="range" class="range" id="vol-master" min="0" max="100" step="1" value="100" />
+                    <span id="vol-master-value" class="percent">100%</span>
+                </div>
+                <div class="row">
+                    <img class="icon" src="icons/music.note.png" /><span class="name short">Music</span>
+                    <input type="range" class="range" id="vol-music" min="0" max="100" step="1" value="100" />
+                    <span id="vol-music-value" class="percent">100%</span>
+                </div>
+                <div class="row">
+                    <img class="icon" src="icons/burst.fill.png" /><span class="name short">Effects</span>
+                    <input type="range" class="range" id="vol-sfx" min="0" max="100" step="1" value="100" />
+                    <span id="vol-sfx-value" class="percent">100%</span>
+                </div>
+            </div>
+            <p class="label">Options</p>
+            <div class="box">
+                <div class="row"><img class="icon" src="icons/speaker.slash.fill.png" /><span class="name">Mute</span><div id="mute" class="toggle"><div class="knob"></div></div></div>
+                <div class="row"><img class="icon" src="icons/waveform.png" /><span class="name">Reverb</span><div id="reverb" class="toggle"><div class="knob"></div></div></div>
+                <div class="row"><img class="icon" src="icons/hand.tap.fill.png" /><span class="name">Menu sounds</span><div id="menu-sounds" class="toggle"><div class="knob"></div></div></div>
+            </div>
+            <p class="note faint">Volume, mute and reverb are shared with melee-pc's own menus.</p>
+        </div>
+
+        <div id="page-display" class="page">
+            <p class="label">Fighters</p>
+            <div class="box">
+                <div class="row"><img class="icon" src="icons/figure.stand.png" /><span class="name">Size</span><span id="size-value" class="state">100%</span></div>
+                <div class="row">
+                    <img class="small-figure" src="icons/figure.stand.png" />
+                    <input type="range" class="range" id="size" min="50" max="200" step="10" value="100" />
+                    <img class="big-figure" src="icons/figure.stand.png" />
+                </div>
+                <p id="size-note" class="note">The screen edges are the blast zones: bigger fighters are KO'd sooner.</p>
+            </div>
+
+            <p class="label">Effects</p>
+            <div class="box">
+                <div class="row"><img class="icon" src="icons/waveform.path.png" /><span class="name">Screen shake</span><div id="shake" class="toggle"><div class="knob"></div></div></div>
+                <div class="row"><img class="icon" src="icons/timer.png" /><span class="name">Timer</span>
+                    <div class="segments short"><div id="timer-top" class="part">Top</div><div id="timer-hidden" class="part">Hidden</div></div></div>
+                <div class="row"><img class="icon" src="icons/tag.png" /><span class="name">Player tags</span><div id="tags" class="toggle"><div class="knob"></div></div></div>
+            </div>
+
+            <p class="label">Stocks and percents</p>
+            <div class="box">
+                <div class="segments"><div id="hud-bottom" class="part">Bottom</div><div id="hud-hidden" class="part">Hidden</div></div>
+                <p id="hud-note" class="note">Melee's own, at the bottom of the screen.</p>
+            </div>
+
+            <p class="label">Screen</p>
+            <div class="box">
+                <div id="screens"></div>
+                <p id="screen-note" class="note"></p>
+            </div>
+            <p id="display-note" class="note faint">Fighter size, stocks and percents apply when the match starts.</p>
+        </div>
+    </div>
+
+    <div id="footer">
+        <div id="how-to-play" class="link">How to play</div>
+        <span class="spacer"></span>
+        <div id="quit" class="link">Quit</div>
+    </div>
+    <!-- The button map's target list, put by the clicked target. -->
+    <div id="map-menu" class="hidden"></div>
+</body>
+</rml>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 98">
+  <!-- A keyboard, drawn for Desktop Melee: the four arrow keys. -->
+  <rect x="29.4" y="23.4" width="25.2" height="25.2" rx="5" fill="#4b4f60"/>
+  <rect x="31" y="25" width="22" height="22" rx="3.6" fill="#e3e5ec"/>
+  <polygon points="42,31 47.4,39.4 36.6,39.4" fill="#6d7287" transform="rotate(0 42 36)"/>
+  <rect x="3.4" y="49.4" width="25.2" height="25.2" rx="5" fill="#4b4f60"/>
+  <rect x="5" y="51" width="22" height="22" rx="3.6" fill="#e3e5ec"/>
+  <polygon points="16,57 21.4,65.4 10.6,65.4" fill="#6d7287" transform="rotate(270 16 62)"/>
+  <rect x="29.4" y="49.4" width="25.2" height="25.2" rx="5" fill="#4b4f60"/>
+  <rect x="31" y="51" width="22" height="22" rx="3.6" fill="#e3e5ec"/>
+  <polygon points="42,57 47.4,65.4 36.6,65.4" fill="#6d7287" transform="rotate(180 42 62)"/>
+  <rect x="55.4" y="49.4" width="25.2" height="25.2" rx="5" fill="#4b4f60"/>
+  <rect x="57" y="51" width="22" height="22" rx="3.6" fill="#e3e5ec"/>
+  <polygon points="68,57 73.4,65.4 62.6,65.4" fill="#6d7287" transform="rotate(90 68 62)"/>
+</svg>

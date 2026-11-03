@@ -260,11 +260,12 @@ What each hook changes, in one line:
 |---|---|
 | `src/pc/main.c` | Overlay window settings, native disc picker; the overlay stays transparent until the game starts. |
 | `src/pc/launcher.cpp` | melee-pc's launcher still waits for the shaders, but is never shown and can't be skipped; no update check. |
+| `src/pc/vi.c` | Before the frame loop calls `exit()`, Desktop Melee closes its windows (`desktop_melee_before_exit`), while RmlUi is still whole. |
 | `src/melee/gm/gmboot.c` | Boot straight into `GM_DESKTOP_MELEE`, never the title screen. |
 | `src/sysdolphin/baselib/displayfunc.c` | "Clear the screen" clears to transparent, not black. |
 | `src/melee/gr/grdisplay.c`, `src/melee/gr/ground.c` | Don't draw the stage or background models. |
-| `src/melee/cm/camera.c` | Fixed desktop camera instead of Melee's zooming one. |
-| `src/melee/mp/mplib.c` | Stretch Final Destination's floor to the Dock's width. |
+| `src/melee/cm/camera.c` | Fixed desktop camera instead of Melee's zooming one; moves the window platforms each frame; the "on screen" test covers the widescreen width. |
+| `src/melee/mp/mplib.c` | Stretch Final Destination's floor to the Dock's width; add the window platforms. |
 | `src/melee/gr/ground.c` | Blastzones = the screen edges. |
 | `src/melee/if/ifstock.c`, `src/melee/if/ifstatus.c`, `src/melee/if/ifall.c` | Stocks and percents into the notch island, the bottom, or hidden. |
 | `src/melee/if/iftime.c` | Timer at half size at the top, or hidden. |
@@ -273,6 +274,7 @@ What each hook changes, in one line:
 | `src/melee/ft/kinds/ftCommon/ftCo_Jump*.c` | Tap jump on or off per player. |
 | `src/melee/gm/gmvs.c`, `src/melee/gm/gmscdata.c`, `src/melee/gm/forward.h` | Register `GM_DESKTOP_MELEE`, restart a running match. |
 | `extern/aurora/` (several files) | Transparent, borderless, always-on-top window; coverage alpha; premultiplied presentation. |
+| `extern/aurora/lib/rmlui_window.cpp` (new), `rmlui.cpp`, `rmlui.hpp`, `include/aurora/rmlui.hpp`, `aurora.cpp`, `window.cpp`, `cmake/aurora_core.cmake` | A second, normal window with its own RmlUi context, for the Windows and Linux settings and welcome windows, with files dropped on it passed to a callback. |
 
 ---
 
@@ -390,8 +392,9 @@ would make the fighters drift away from the Dock, so `desktop_melee_camera()` in
 
 ### 9.3 The floor: Final Destination, stretched
 
-A match always uses Final Destination: one flat floor, no platforms, no
-hazards. When the stage's collision loads, `src/melee/mp/mplib.c` stretches
+A match always uses Final Destination: one flat floor, no hazards, and no
+platforms of its own (the player's windows can be platforms, section 9.4).
+When the stage's collision loads, `src/melee/mp/mplib.c` stretches
 it horizontally so the floor spans the Dock exactly:
 
 ![Stretching the stage's floor to the Dock](images/dock-floor.svg)
@@ -411,7 +414,35 @@ it horizontally so the floor spans the Dock exactly:
 
 With no Dock on the overlay's screen, Final Destination keeps its own width.
 
-### 9.4 Blastzones
+**On Linux** (`desktop_melee_platform_dock_frame` in `platform_linux.c`) the
+floor is the bottom panel's frame when the panel is an X11 window, so a dock
+like Plank leaves gaps to fall through. A panel as wide as the screen, or one
+that can't be measured, gives a floor across the whole screen less 40 points
+on each side. A floor that wide (90% of the screen or more) has no ledges:
+the stage's own would sit by the side blastzones.
+
+### 9.4 Window platforms
+
+The top edges of the player's other windows are drop-through platforms, as
+Melee's moving platforms are (Yoshi's Story's cloud): fighters land on them,
+drop through them, grab a window's top corners as ledges, and ride a window
+that is dragged. Linux only for now; macOS and Windows list no windows yet
+(`desktop_melee_platform_windows`, porting.md section 3).
+
+- **The stage side** (`desktop-melee/game/desktop_melee_platforms.c`): when
+  the stage's collision loads, `mplib.c` adds 8 joints with one dynamic floor
+  line each, flagged as drop-through and parked far below the screen. Each
+  frame, from the camera hook, each line moves to its window's top or hides.
+  A line that moves more than 40 units in a frame jumped (a window was raised
+  or moved elsewhere), so it doesn't fling its riders.
+- **Choosing the tops** (`desktop_melee.c`, about 30 times a second): only
+  the part of a top that no window above it covers counts; windows narrower
+  than 120 points, maximized, fullscreen, or with their top behind the panel
+  are left out, and so are visible pieces shorter than 60 points. The 8
+  highest pieces win, and each keeps the platform slot it had, so a platform
+  never swaps under a fighter.
+
+### 9.5 Blastzones
 
 `desktop_melee_blastzones()` makes the screen edges the blastzones (`src/melee/gr/ground.c`):
 
@@ -420,9 +451,12 @@ left   = −U / 2              right  = +U / 2
 top    = (H − floor) · u     bottom = −floor · u
 ```
 
-Fly off any edge of your screen and you lose a stock.
+Fly off any edge of your screen and you lose a stock. Under a floor as wide
+as the screen (Linux's panel), nobody can fall past it, so the bottom
+blastzone drops half a screen width lower: a spiked fighter bounces on the
+floor instead of being KO'd just under the panel.
 
-### 9.5 What "latched" means
+### 9.6 What "latched" means
 
 The camera, the floor and the blastzones all depend on the screen and the
 fighter size. Changing them mid-match would teleport the floor under the
@@ -527,7 +561,7 @@ The tabs:
 | Match | Stocks, time, Start/Restart, Pause and hide and its shortcut (default ⌃⌥M). |
 | Players | Character, costume, human/CPU, CPU level, for P1 and P2. Real portraits and announcer callouts from your disc. |
 | Controls | Controller port per player, tap jump, button map (A B X Y Z L R), shared UCF setting. |
-| Display | Screen, fighter size (100–200%), stocks/percents placement, timer, tags, screen shake. |
+| Display | Screen, fighter size (50–200%), stocks/percents placement, timer, tags, screen shake. |
 | Sound | Master, music and effects volume (shared with melee-pc), menu sounds. |
 
 **Pause and hide's shortcut** is a Carbon system hotkey (`RegisterEventHotKey`
@@ -740,7 +774,10 @@ desktop-melee/
 │   ├── desktop_melee.h               hooks main.c calls
 │   ├── desktop_melee_game.h          hooks the game code calls
 │   ├── desktop_melee.c               camera, floor, blastzones, island math, controls
-│   ├── overlay_mac.m                 window, click-through, Dock/notch, island window
+│   ├── platform.h                    what each system implements (porting.md)
+│   ├── overlay_mac.m                 macOS: window, click-through, Dock/notch, island window
+│   ├── platform_windows.c            Windows skeleton: a normal window
+│   ├── platform_linux.c              Linux skeleton (plain SDL): a normal window
 │   ├── assets.c, gctex.c             texture decoding for the menu bar
 │   └── disc_check.cpp                USA 1.02 check (background thread)
 ├── game/
