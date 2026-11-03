@@ -266,8 +266,10 @@ which the compositor honours.
   Most Linux panels span the whole width; GNOME's dash and Plank-style docks
   don't, and they make the best floors.
 
-**The hotkey**: `XGrabKey` on the root window for the keycode and modifiers,
-grabbed four times over to cover Num Lock (`Mod2Mask`) and Caps Lock
+**The hotkey**: where the desktop has the GlobalShortcuts portal (KDE,
+recent GNOME), the Wayland way below works on X11 too, and is what
+`hotkey_portal.c` does. Elsewhere, `XGrabKey` on the root window for the
+keycode and modifiers, grabbed four times over to cover Num Lock (`Mod2Mask`) and Caps Lock
 (`LockMask`), since X11 counts them as modifiers. `KeyPress` events then
 arrive however the focus lies. Read them from the same `Display`, or open a
 second connection and poll it each frame.
@@ -305,6 +307,17 @@ a full-width floor at the bottom edge, which is a reasonable game anyway.
 D-Bus (`CreateSession`, `BindShortcuts`, then the `Activated` signal). The
 user confirms the binding in a system dialog, and may pick a different key,
 so the UI should show what was bound.
+
+Done in `hotkey_portal.c` (libdbus, on a thread of its own; the toggle runs
+on the main thread through `SDL_RunOnMainThread`). The portal serves only
+apps with an installed `.desktop` file, by app id, so the game first
+registers `io.github.mwrnk.DesktopMelee` (`org.freedesktop.host.portal.Registry`)
+after `desktop_entry.c` writes
+`~/.local/share/applications/io.github.mwrnk.DesktopMelee.desktop` from
+`resources/io.github.mwrnk.DesktopMelee.desktop.in`. The same app id
+(`SDL_HINT_APP_ID`) lets the desktop match the windows to that file, for
+their taskbar icon. The settings window shows the bound key; clicking it
+opens the desktop's own dialog (`ConfigureShortcuts`).
 
 **Focus**: a Wayland client can't take focus by itself. `xdg-activation-v1`
 needs a token, which the portal's `Activated` signal can provide.

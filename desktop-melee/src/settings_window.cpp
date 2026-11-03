@@ -23,6 +23,7 @@
 
 extern "C" {
 #include "../ui/bridge/desktop_melee_bridge.h"
+#include "hotkey_portal.h"
 #include "melee_font.h"
 #include "settings_file.h"
 #include "welcome_window.h"
@@ -271,6 +272,17 @@ const char* fighter_name(int ckind) {
 
 /* ---- Match tab ---------------------------------------------------------- */
 
+/* The Pause and hide shortcut, as the desktop bound it (hotkey_portal.h). */
+std::string s_pause_key;
+
+void refresh_pause_key() {
+#ifdef DESKTOP_MELEE_HOTKEY_PORTAL
+    s_pause_key = desktop_melee_hotkey_label();
+#endif
+    set_text("pause-key", s_pause_key);
+    set_class("pause-key", "hidden", s_pause_key.empty());
+}
+
 void refresh_match() {
     const DesktopMeleeMatchSetup& match = settings().match;
     const int minutes = match.time_seconds / 60;
@@ -292,6 +304,7 @@ void refresh_match() {
     s_last_hidden = hidden;
     set_text("pause-hide-label", hidden ? "Show" : "Pause and hide");
     set_attribute("pause-hide-icon", "src", hidden ? "icons/eye.png" : "icons/eye.slash.png");
+    refresh_pause_key();
 }
 
 /* Steps a value within [lo, hi]; the denied sound at the ends. */
@@ -331,6 +344,10 @@ bool click_match(const std::string& clicked) {
     } else if (id == "pause-hide") {
         play_sound(SOUND_CONFIRM);
         desktop_melee_toggle_pause_and_hide();
+    } else if (id == "pause-key") {
+#ifdef DESKTOP_MELEE_HOTKEY_PORTAL
+        play_sound(desktop_melee_hotkey_configure() ? SOUND_CONFIRM : SOUND_DENIED);
+#endif
     } else if (id == "start-on-controller") {
         settings().start_on_controller = !settings().start_on_controller;
         desktop_melee_set_start_starts_match(settings().start_on_controller);
@@ -1033,6 +1050,11 @@ void on_frame(void*) {
         if (desktop_melee_hidden() != s_last_hidden) {
             refresh_match();
         }
+#ifdef DESKTOP_MELEE_HOTKEY_PORTAL
+        if (s_pause_key != desktop_melee_hotkey_label()) {
+            refresh_pause_key(); /* the desktop answered, or the player changed it */
+        }
+#endif
     }
     if (now - s_last_slow_poll >= 1000) {
         s_last_slow_poll = now;
