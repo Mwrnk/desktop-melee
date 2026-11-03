@@ -1,0 +1,67 @@
+# Desktop Melee's Linux AppImage (desktop-melee/package_linux.sh), built on
+# Ubuntu 22.04 so it runs on that and anything newer: Debian 12, Ubuntu
+# 22.04, Linux Mint 21, Fedora, Arch... Started by hand (Actions -> Linux
+# AppImage -> Run workflow); with a release tag, the AppImage is attached to
+# that release beside the macOS zip.
+name: Linux AppImage
+
+on:
+  # Pull requests that change the packaging build it too, without attaching it.
+  pull_request:
+    paths:
+      - .github/workflows/linux-appimage.yml
+      - desktop-melee/package_linux.sh
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release to attach the AppImage to (e.g. v0.1.2); empty for just the artifact"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  appimage:
+    name: AppImage (x86_64)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        # SDL3 isn't in Ubuntu 22.04, so aurora builds it from source; these
+        # are its X11, Wayland and audio dependencies, as in checks.yml. The
+        # project needs CMake 3.25 and C++20 ranges, newer than 22.04's
+        # CMake 3.22 and GCC 11: CMake comes from pip, GCC 12 from Ubuntu.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential gcc-12 g++-12 ninja-build pkg-config python3-pip \
+            libssl-dev libcurl4-openssl-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxfixes-dev libxss-dev libxkbcommon-dev libxtst-dev \
+            libwayland-dev wayland-protocols libdecor-0-dev \
+            libasound2-dev libpulse-dev libdbus-1-dev libudev-dev \
+            libgl1-mesa-dev libegl1-mesa-dev libgbm-dev \
+            libusb-1.0-0-dev file
+          python3 -m pip install --user "cmake>=3.25,<4"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build the AppImage
+        env:
+          CC: gcc-12
+          CXX: g++-12
+        run: desktop-melee/package_linux.sh
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Desktop-Melee-linux-x86_64
+          path: dist/*.AppImage
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.release_tag }}" dist/*.AppImage --clobber
