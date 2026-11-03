@@ -183,6 +183,16 @@ void desktop_melee_platform_ui_before_exit(void) {
      * them here, as platform_linux.c does. */
 }
 
+/* ---- window platforms ---------------------------------------------------- */
+
+int desktop_melee_platform_windows(DesktopMeleeWindow* out, int max) {
+    /* TODO: EnumWindows (top to bottom), visible, not minimized or cloaked
+     * (DwmGetWindowAttribute DWMWA_CLOAKED), DWMWA_EXTENDED_FRAME_BOUNDS. */
+    (void)out;
+    (void)max;
+    return 0;
+}
+
 /* ---- files -------------------------------------------------------------- */
 
 void desktop_melee_platform_write_png(

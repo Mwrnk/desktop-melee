@@ -76,6 +76,18 @@ bool desktop_melee_dock_span(float* left, float* right);
 /* The blastzones (Melee units): the overlay's screen edges, at the size the
  * current match uses. False when not in overlay mode. */
 bool desktop_melee_blastzones(float* left, float* right, float* top, float* bottom);
+/* Window platform `index` (0 to DESKTOP_MELEE_WINDOW_PLATFORMS - 1): the top
+ * edge of one of the player's windows, in stage units, or false for none.
+ * *ledges: both ends are the window's top corners, so they can be grabbed. */
+bool desktop_melee_window_platform(int index, float* left, float* right, float* y, bool* ledges);
+/* How much wider than Melee's 4:3 view the overlay shows (melee-pc's
+ * widescreen widens only what is drawn), or 1 outside the overlay: Melee's
+ * "is the fighter on screen" test widens by it, so fighters in the extra
+ * width get no magnifying-glass bubble. */
+float desktop_melee_onscreen_widen(void);
+/* False when the floor runs the whole width of the screen (Linux's panel):
+ * the stage's own ledges would sit on the side blastzones. */
+bool desktop_melee_floor_ledges(void);
 
 /* HUD camera, reported once when the HUD scene loads: distance from the eye
  * to the HUD plane (Melee units) and vertical field of view (degrees). */

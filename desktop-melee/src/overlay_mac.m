@@ -444,3 +444,9 @@ const char* desktop_melee_platform_ui_choose_disc(const char* candidate) {
 void desktop_melee_platform_ui_assets_ready(void) { desktop_melee_ui_assets_ready(); }
 
 void desktop_melee_platform_ui_before_exit(void) {}
+
+int desktop_melee_platform_windows(DesktopMeleeWindow* out, int max) {
+    (void)out;
+    (void)max;
+    return 0; /* window platforms: not on macOS yet */
+}

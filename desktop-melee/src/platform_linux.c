@@ -24,6 +24,7 @@
 #include "melee_font.h"
 #ifdef DESKTOP_MELEE_X11_OVERLAY
 #include "overlay_x11.h"
+#include "window_list_linux.h"
 #endif
 #include "welcome_window.h"
 #include "window_icon.h"
@@ -140,19 +141,25 @@ void desktop_melee_platform_screen_geometry(
 
 bool desktop_melee_platform_dock_frame(
     float screen_w, float screen_h, float* left, float* right, float* top, bool* exact) {
-    /* TODO: the bottom panel's frame. X11: find the window with
-     * _NET_WM_WINDOW_TYPE_DOCK along the bottom edge (XQueryTree on the
-     * root, then XGetWindowAttributes) and use its geometry, exact. A
-     * full-width panel makes the whole bottom edge a floor, which is fine.
-     * Wayland: other clients' surfaces are not visible to us; the most a
-     * port can do is assume a full-width floor at the usable bounds. */
-    (void)screen_w;
+    /* The overlay: Linux panels run the full width of the screen, so the
+     * floor does too (the stage stretched edge to edge): no gaps to fall
+     * through, the blastzones only up and to the sides. Its top stays where
+     * screen_geometry put it (*top comes in as that floor).
+     * TODO: docks narrower than the screen (GNOME's dash, Plank) would make
+     * better floors: X11's _NET_WM_WINDOW_TYPE_DOCK windows along the bottom. */
     (void)screen_h;
-    (void)left;
-    (void)right;
     (void)top;
-    *exact = false;
-    return false;
+    if (!s_overlay) {
+        *exact = false;
+        return false;
+    }
+    /* A little inside the screen's sides, where the blastzones are: a fighter
+     * at the very edge would already be past one. */
+    const float margin = 40.0f;
+    *left = margin;
+    *right = screen_w - margin;
+    *exact = true;
+    return true;
 }
 
 void desktop_melee_platform_notch(float* left, float* right, float* height) {
@@ -234,6 +241,25 @@ void desktop_melee_platform_ui_before_exit(void) {
 #ifdef DESKTOP_MELEE_HOTKEY_PORTAL
     desktop_melee_hotkey_remove();
 #endif
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    desktop_melee_linux_windows_stop(); /* unloads the KWin script */
+#endif
+}
+
+/* ---- window platforms ---------------------------------------------------- */
+
+int desktop_melee_platform_windows(DesktopMeleeWindow* out, int max) {
+#ifdef DESKTOP_MELEE_X11_OVERLAY
+    if (s_overlay && s_window != NULL) {
+        int x = 0;
+        int y = 0;
+        SDL_GetWindowPosition(s_window, &x, &y);
+        return desktop_melee_linux_windows(out, max, (float)x, (float)y);
+    }
+#endif
+    (void)out;
+    (void)max;
+    return 0;
 }
 
 /* ---- files -------------------------------------------------------------- */
