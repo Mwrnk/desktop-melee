@@ -35,12 +35,13 @@ system implements it in one file:
 |---|---|---|
 | macOS | [`overlay_mac.m`](../../desktop-melee/src/overlay_mac.m), plus the SwiftUI app in [`desktop-melee/ui/`](../../desktop-melee/ui/) | complete |
 | Windows | [`platform_windows.c`](../../desktop-melee/src/platform_windows.c) | skeleton |
-| Linux | [`platform_linux.c`](../../desktop-melee/src/platform_linux.c) | skeleton; plain SDL, so CMake also uses it for any other system |
+| Linux | [`platform_linux.c`](../../desktop-melee/src/platform_linux.c) | overlay (X11, through XWayland on Wayland), tray, settings, welcome window, hotkey; plain SDL elsewhere, so CMake also uses it for any other system |
 
 [`desktop-melee.cmake`](../../desktop-melee/desktop-melee.cmake) picks the
 file. Every pull request builds all three (`.github/workflows/checks.yml`).
 
-The skeletons compile and run, with fallbacks:
+The Windows skeleton, and Linux where it can't make its overlay (section 5),
+compile and run with fallbacks:
 
 - **A normal window.** aurora's overlay mode makes a borderless, topmost
   window that covers the screen. Until it lets clicks through, that window
@@ -54,8 +55,9 @@ The skeletons compile and run, with fallbacks:
   blastzones keep the old size until a port watches `SDL_EVENT_WINDOW_RESIZED`
   and calls `desktop_melee_relayout()`.
 - **No notch island.** Stocks and percents stay in Melee's own HUD.
-- **Pause and hide only pauses.** The window doesn't hide yet, and there's
-  no hotkey; on Linux the tray menu presses it.
+- **Pause and hide only pauses** on Windows: the window doesn't hide yet, and
+  there's no hotkey. Linux fades its overlay, with Ctrl+Alt+M through the
+  GlobalShortcuts portal (section 6).
 - **Settings.** On Linux, a tray icon (`tray_sdl.c`) starts matches, pauses,
   quits and opens the settings window (`settings_window.cpp`), which saves
   `settings.cfg` (ui-guide.md section 14). The Windows skeleton builds the
@@ -221,6 +223,33 @@ SDL's window coordinates are both in pixels. Don't mix in DPI-scaled values
 from elsewhere.
 
 ## 5. Linux on X11
+
+**What's built** (`overlay_x11.c`): the Linux overlay is an X11 window on
+every desktop, through XWayland on Wayland ones, because X11 lets a window
+stay above the others, let clicks through and keep out of the taskbar, and a
+plain Wayland window can't stay above. `desktop_melee_x11_overlay_prepare`
+(in `configure`) picks SDL's X11 driver unless the player set
+`SDL_VIDEO_DRIVER`, checks for a compositor and a 32-bit visual, and falls
+back to a normal window without them. Two things this section's plan didn't
+expect:
+
+- SDL picks an ARGB visual only for OpenGL windows, so the game names one
+  with `SDL_HINT_VIDEO_X11_WINDOW_VISUALID`.
+- aurora's Dawn (Google's `main` of 2026-08-07) creates every Vulkan swap
+  chain opaque and refuses surfaces that can't be, whatever alpha mode aurora
+  asks for; Google fixed it on 2026-09-15 ("Honor the surface's alphaMode on
+  the Vulkan swapchain"). Until aurora's Dawn has that, a Vulkan layer of
+  Desktop Melee's own (`vk_overlay_alpha.c`, built next to the game with its
+  manifest, loaded through `VK_ADD_LAYER_PATH` and `VK_INSTANCE_LAYERS`)
+  turns the swap chain premultiplied (Wayland) or inherit (X11) and tells
+  Dawn the surface can be opaque. Delete it once Dawn honours the mode.
+
+Click-through is `SDL_SetWindowShape` with a fully transparent surface, which
+SDL turns into an empty `ShapeInput` shape; `_NET_WM_STATE_SKIP_TASKBAR`,
+`_SKIP_PAGER` and `_STICKY` keep it out of the taskbar and on every desktop;
+Pause and hide is `SDL_SetWindowOpacity` (`_NET_WM_WINDOW_OPACITY`). The floor
+is the bottom gap of `SDL_GetDisplayUsableBounds`. The rest of this section is
+the reasoning it started from.
 
 Check `SDL_GetCurrentVideoDriver()`: one Linux build runs on both X11 and
 Wayland. Get the X11 handles with `SDL_PROP_WINDOW_X11_DISPLAY_POINTER` and
