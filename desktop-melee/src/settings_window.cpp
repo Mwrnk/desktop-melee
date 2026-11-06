@@ -28,6 +28,9 @@ extern "C" {
 #ifdef DESKTOP_MELEE_X11_OVERLAY
 #include "overlay_x11.h"
 #endif
+#ifdef _WIN32
+#include "overlay_windows.h"
+#endif
 #include "settings_file.h"
 #include "welcome_window.h"
 #include "window_icon.h"
@@ -288,6 +291,9 @@ std::string pause_key_label() {
     if (label.empty()) {
         label = desktop_melee_x11_hotkey_label();
     }
+#endif
+#ifdef _WIN32
+    label = desktop_melee_win_hotkey_label();
 #endif
     return label;
 }

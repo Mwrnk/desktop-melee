@@ -516,6 +516,10 @@ bool desktop_melee_camera(float* eye_x, float* eye_y, float* eye_z, float* inter
     return true;
 }
 
+/* Off-screen room beside the screen, as a share of its width, where the floor
+ * runs on past the edges (desktop_melee_blastzones). */
+#define OFFSCREEN_ROOM 0.2f
+
 /* The floor runs (nearly) the whole width of the screen: a panel, not a Dock
  * with gaps beside it (Linux and Windows). */
 static bool floor_across_screen(void) {
@@ -548,6 +552,18 @@ bool desktop_melee_blastzones(float* left, float* right, float* top, float* bott
          * blastzone goes well under it: a spiked fighter bounces on the
          * ground instead of being KO'd just under the panel. */
         *bottom -= 0.5f * screen_units();
+    }
+    if (s_dock_left < 0.0f && s_dock_right > s_screen_w) {
+        /* The floor runs on past the screen's edges (Windows' taskbar): a
+         * fighter may go a little way off screen, where Melee shows them in
+         * its magnifying-glass bubble and deals its off-screen damage, before
+         * the side blastzones. They stay inside the floor's ends, so nobody
+         * drops off an end before being KO'd. */
+        const float floor_left = (s_dock_left - 0.5f * s_screen_w) * units_per_pt;
+        const float floor_right = (s_dock_right - 0.5f * s_screen_w) * units_per_pt;
+        const float room = OFFSCREEN_ROOM * screen_units();
+        *left = fmaxf(*left - room, floor_left + 10.0f);
+        *right = fminf(*right + room, floor_right - 10.0f);
     }
     SDL_Log("desktop-melee: blastzones x %.0f..%.0f, y %.0f..%.0f units (screen edges)", *left,
         *right, *bottom, *top);

@@ -4,7 +4,8 @@
  * Each system implements every function here, in one file:
  *   macOS    desktop-melee/src/overlay_mac.m (the reference; the menu bar app
  *            it forwards to is SwiftUI, in desktop-melee/ui)
- *   Windows  desktop-melee/src/platform_windows.c (skeleton)
+ *   Windows  desktop-melee/src/platform_windows.c (the overlay itself is
+ *            overlay_windows.cpp)
  *   Linux    desktop-melee/src/platform_linux.c (skeleton; also the plain SDL
  *            fallback for any other system)
  * desktop-melee/desktop-melee.cmake picks the file. docs/desktop-melee/porting.md
@@ -82,8 +83,8 @@ void desktop_melee_platform_overlay_set_faded(bool faded);
  * overlay changes screens, and when the player asks to measure again.
  *   macOS: NSScreen.frame for the size; the floor is how far
  *   visibleFrame's bottom sits above frame's.
- *   Skeletons: the window's own size; floor 0 on Windows, 15% of the
- *   height on Linux. The bottom blastzone is the screen's bottom edge, so a
+ *   Normal windows (no overlay): the window's own size; the floor 15% of the
+ *   height. The bottom blastzone is the window's bottom edge, so a
  *   floor of 0 KOs fighters as they land. */
 void desktop_melee_platform_screen_geometry(
     SDL_Window* window, float* width_pt, float* height_pt, float* floor_pt);
@@ -185,7 +186,7 @@ typedef struct DesktopMeleeWindow {
  * tops into platforms: normal app windows on the current desktop, not
  * minimized, never Desktop Melee's own. Returns how many it wrote (at most
  * max), 0 when the system doesn't say. Called about 30 times a second.
- *   macOS, Windows: not yet (0).
+ *   macOS: not yet (0). Windows: EnumWindows, at their DWM frames.
  *   Linux: KWin's window list on KDE, else X11's _NET_CLIENT_LIST_STACKING. */
 int desktop_melee_platform_windows(DesktopMeleeWindow* out, int max);
 

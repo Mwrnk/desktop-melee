@@ -34,38 +34,37 @@ system implements it in one file:
 | System | File | State |
 |---|---|---|
 | macOS | [`overlay_mac.m`](../../desktop-melee/src/overlay_mac.m), plus the SwiftUI app in [`desktop-melee/ui/`](../../desktop-melee/ui/) | complete |
-| Windows | [`platform_windows.c`](../../desktop-melee/src/platform_windows.c) | skeleton |
+| Windows | [`platform_windows.c`](../../desktop-melee/src/platform_windows.c), [`overlay_windows.cpp`](../../desktop-melee/src/overlay_windows.cpp) | overlay (a DirectComposition swap chain), the taskbar floor, tray, settings, welcome window, hotkey, window platforms |
 | Linux | [`platform_linux.c`](../../desktop-melee/src/platform_linux.c) | overlay (X11, through XWayland on Wayland), tray, settings, welcome window, hotkey; plain SDL elsewhere, so CMake also uses it for any other system |
 
 [`desktop-melee.cmake`](../../desktop-melee/desktop-melee.cmake) picks the
 file. Every pull request builds all three (`.github/workflows/checks.yml`).
 
-The Windows skeleton, and Linux where it can't make its overlay (section 5),
-compile and run with fallbacks:
+Where a system can't make its overlay (Linux without X11, a compositor or a
+32-bit visual, section 5; Windows when the swap chain can't be made for
+composition, section 4), the game runs with fallbacks:
 
 - **A normal window.** aurora's overlay mode makes a borderless, topmost
-  window that covers the screen. Until it lets clicks through, that window
-  would lock you out of your own desktop, so the skeletons turn overlay mode
-  off (`desktop_melee_platform_configure`). The game runs in a normal,
-  resizable window, with the fighters on a plain background.
-- **The floor is near the window's bottom edge.** No taskbar measuring yet.
-  On Linux it sits 15% of the window's height up, since the bottom edge is
-  the bottom blastzone; the Windows skeleton still puts it at the edge, which
-  KOs fighters as they land. The window is measured once, at startup: resize it and the camera and
-  blastzones keep the old size until a port watches `SDL_EVENT_WINDOW_RESIZED`
-  and calls `desktop_melee_relayout()`.
-- **No notch island.** Stocks and percents stay in Melee's own HUD.
-- **Pause and hide only pauses** on Windows: the window doesn't hide yet, and
-  there's no hotkey. Linux fades its overlay, with Ctrl+Alt+M through the
-  GlobalShortcuts portal (section 6), or an X11 key grab on X11 sessions
-  without it (section 5).
-- **Settings.** On Linux, a tray icon (`tray_sdl.c`) starts matches, pauses,
-  quits and opens the settings window (`settings_window.cpp`), which saves
-  `settings.cfg` (ui-guide.md section 14). The Windows skeleton builds the
-  window and the file but doesn't install the tray or load the file yet, so
-  every setting keeps its default there (Fox vs Fox, 4 stocks, 7 minutes).
-- **The disc comes from the command line**, and must pass the same check as
-  on macOS: a clean Melee USA 1.02 image.
+  window that covers the screen. Without click-through and transparency,
+  that window would lock you out of your own desktop, so overlay mode is off
+  (Linux: `desktop_melee_platform_configure`; Windows turns the window back
+  into a normal one once it knows). The game runs in a normal, resizable
+  window, with the fighters on a plain background.
+- **The floor is near the window's bottom edge**, 15% of the window's height
+  up, since the bottom edge is the bottom blastzone. The window is measured
+  once, at startup: resize it and the camera and blastzones keep the old size
+  until a port watches `SDL_EVENT_WINDOW_RESIZED` and calls
+  `desktop_melee_relayout()`.
+- **No notch island**, on either system. Stocks and percents stay in Melee's
+  own HUD.
+
+Both systems have the rest whether or not the overlay works: a tray icon
+(`tray_sdl.c`) that starts matches, pauses, quits and opens the settings
+window (`settings_window.cpp`), which saves `settings.cfg` (ui-guide.md
+section 14); the welcome window; and Pause and hide on Ctrl+Alt+M (Windows:
+`RegisterHotKey`; Linux: the GlobalShortcuts portal, section 6, or an X11 key
+grab, section 5). The disc must pass the same check as on macOS: a clean
+Melee USA 1.02 image.
 
 Each function in the skeletons has a TODO naming the system APIs a port would
 use. The rest of this page goes through them.
@@ -93,8 +92,24 @@ DESKTOP_MELEE_OVERLAY=1 build/linux/melee --dvd /path/to/melee.iso
 
 **Windows**: CI cross-compiles from Linux with MinGW-w64
 (`TARGET_ARCH=x86_64 tools/package_windows.sh`, which also builds libusb),
-and the result lands in `dist/`. Building on Windows itself follows melee-pc's
-instructions. Run it with:
+and the result lands in `dist/`. To build on Windows itself, install
+[MSYS2](https://www.msys2.org) and, in its UCRT64 shell:
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-python mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-libusb
+```
+
+```bash
+D='-DNTDDI_VERSION=0x0A000000 -D_WIN32_WINNT=0x0A00 -DWINVER=0x0A00'
+cmake -B build/win -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAURORA_SDL3_PROVIDER=vendor -DAURORA_SDL3_LINKAGE=shared -DAURORA_DAWN_PROVIDER=package -DAURORA_NOD_PROVIDER=package "-DCMAKE_C_FLAGS=$D" "-DCMAKE_CXX_FLAGS=$D"
+ninja -C build/win melee
+cp /ucrt64/bin/{libbz2-1,libsqlite3-0,libusb-1.0,zlib1}.dll build/win/
+```
+
+The defines target Windows 10, as `cmake/x86_64-w64-mingw32.cmake` does for
+CI (abseil needs them with MSYS2's headers). The last line puts the MSYS2
+libraries the game links next to it; without them it exits with
+`0xC0000135`. Run it with:
 
 ```bat
 set DESKTOP_MELEE_OVERLAY=1
@@ -102,10 +117,10 @@ melee.exe --dvd C:\path\to\melee.iso
 ```
 
 Without `DESKTOP_MELEE_OVERLAY=1` you get plain melee-pc, with its own
-launcher. With it, the log should show `desktop-melee: Linux skeleton: a
-normal window` (or Windows), the disc check, then the idle scene, which
-draws nothing. Press Start on a controller (or the keyboard's Start key) to
-start a match.
+launcher. With it, the log should show `desktop-melee: overlay: premultiplied
+swap chain on a composition visual` on Windows (or, on Linux, the overlay's
+own lines), the disc check, then the idle scene, which draws nothing. Start a
+match from the tray icon, or with Start on a controller.
 
 Useful environment variables, from `desktop_melee.c` and the platform file:
 
@@ -151,7 +166,7 @@ does, and what's required of a port. In short:
 | `ui_assets_ready` | builds the UI's images | the UI may draw portraits | same | same |
 | `ui_before_exit` | nothing | close the RmlUi windows and tray (`platform_linux.c` does) | same | same |
 | `write_png` | ImageIO | `SDL_SavePNG` (done) | `SDL_SavePNG` (done) | `SDL_SavePNG` (done) |
-| `windows` (window platforms) | not yet: `CGWindowListCopyWindowInfo` | not yet: `EnumWindows`, `DWMWA_CLOAKED`, `DWMWA_EXTENDED_FRAME_BOUNDS` | `_NET_CLIENT_LIST_STACKING`, re-read on `PropertyNotify` / `ConfigureNotify` (done) | KDE: a KWin script over D-Bus (done); others: not visible to clients |
+| `windows` (window platforms) | not yet: `CGWindowListCopyWindowInfo` | `EnumWindows`, `DWMWA_CLOAKED`, `DWMWA_EXTENDED_FRAME_BOUNDS` (done) | `_NET_CLIENT_LIST_STACKING`, re-read on `PropertyNotify` / `ConfigureNotify` (done) | KDE: a KWin script over D-Bus (done); others: not visible to clients |
 
 The macOS-only Accessibility calls (`desktop_melee_ax_trusted`,
 `desktop_melee_ax_request`) are not part of the interface: only the Swift UI
@@ -159,6 +174,42 @@ calls them, to measure the Dock exactly. Windows and Linux can measure the
 taskbar without asking.
 
 ## 4. Windows
+
+**What's built** (`overlay_windows.cpp`, `platform_windows.c`). Per-pixel
+alpha came out the way the Linux overlay's did: aurora's Dawn creates every
+D3D swap chain with `DXGI_ALPHA_MODE_IGNORE`, through
+`IDXGIFactory2::CreateSwapChainForHwnd`, and a swap chain made for a window
+can't be anything else. So `desktop_melee_platform_configure` patches that
+one slot of DXGI's factory vtable (every factory `dxgi.dll` makes shares it)
+before aurora creates the window. For the overlay's window only (the SDL
+window aurora made transparent), the patch makes a premultiplied swap chain
+with `CreateSwapChainForComposition` instead and shows it on the window
+through a DirectComposition visual; Dawn presents to it as to any other, on
+D3D12 or D3D11. If that fails, the overlay turns back into a normal window.
+The rest follows the plan below:
+
+- **Click-through**: `WS_EX_LAYERED | WS_EX_TRANSPARENT`, plus
+  `WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE`, set while the window is briefly
+  hidden so the taskbar notices.
+- **Pause and hide**: the composition visual's opacity (an effect group).
+  Not `SDL_SetWindowOpacity`: at 1.0 it takes `WS_EX_LAYERED` off, and with
+  it click-through.
+- **The floor** is the taskbar (`SHAppBarMessage`). The Windows 11 taskbar
+  spans the screen, so the floor runs on past both edges, out of sight: the
+  side blastzones sit just beyond the screen's edges, with room between
+  (`OFFSCREEN_ROOM` in `desktop_melee.c`) where Melee shows a fighter in its
+  magnifying-glass bubble, and a floor ending at an edge would let fighters
+  drop down its side to the bottom blastzone.
+- **Window platforms**: `EnumWindows`, bottom to top, keeping shown,
+  unminimized, uncloaked app windows with a title, at their DWM frame
+  (`DWMWA_EXTENDED_FRAME_BOUNDS`, without the invisible resize border).
+- **The hotkey**: Ctrl+Alt+M through `RegisterHotKey` and
+  `SDL_SetWindowsMessageHook`; the settings window shows it.
+- **The trace timer**: `SetTimer`, which SDL's message loop dispatches.
+
+Not done: an island (no notch), taskbars on other monitors
+(`Shell_SecondaryTrayWnd`), packaging, and a log file for a run without a
+console. The rest of this section is the plan it started from.
 
 **The window** (`overlay_setup`). Get the `HWND` with
 `SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL)`.

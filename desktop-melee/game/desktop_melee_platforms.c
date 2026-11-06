@@ -27,7 +27,8 @@ static int s_first_joint = -1; /* the platforms' joints, lines and vertices */
 static int s_first_line = -1;
 static bool s_shown[PLATFORMS];
 
-MapCollData* desktop_melee_platforms_extend(MapCollData* coll_data, float scale) {
+MapCollData* desktop_melee_platforms_extend(
+    MapCollData* coll_data, float scale, float stretch_k, float stretch_c) {
     s_first_joint = -1;
     if (coll_data == NULL || !desktop_melee_overlay_enabled() || scale == 0.0f) {
         return coll_data;
@@ -49,6 +50,18 @@ MapCollData* desktop_melee_platforms_extend(MapCollData* coll_data, float scale)
     memcpy(new_verts, DP(DiscVec2, coll_data->verts), sizeof(DiscVec2) * verts);
     memcpy(new_lines, DP(MapLine, coll_data->lines), sizeof(MapLine) * lines);
     memcpy(new_joints, DP(MapJoint, coll_data->joints), sizeof(MapJoint) * joints);
+    /* The stage's joints get the floor's stretch in their bounds too. A
+     * joint with a model has its bounding box rebuilt from these every frame
+     * (mpLib_80055E9C), and Melee skips the lines of a joint whose box misses
+     * the fighter: left as on the disc, the box would shrink back to Final
+     * Destination's own width and the stretched floor's far parts would let
+     * fighters fall through. Only this copy changes, never the disc's. */
+    for (int i = 0; i < joints; i++) {
+        new_joints[i].left_bound =
+            (stretch_c + stretch_k * scale * new_joints[i].left_bound) / scale;
+        new_joints[i].right_bound =
+            (stretch_c + stretch_k * scale * new_joints[i].right_bound) / scale;
+    }
     /* A floor from screen edge to screen edge: the stage's own ledges would
      * hang fighters past the side blastzones, so the ground has none. */
     if (!desktop_melee_floor_ledges()) {
