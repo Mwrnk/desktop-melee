@@ -67,8 +67,19 @@ HRESULT attach(HWND hwnd, IDXGISwapChain1* swap_chain) {
          * don't declare it for __uuidof. */
         static const IID kIDCompositionDevice = {
             0xc37ea93a, 0xe7aa, 0x450d, {0xb1, 0x6f, 0x97, 0x46, 0xcb, 0x04, 0x07, 0xf3}};
-        hr = DCompositionCreateDevice(
-            nullptr, kIDCompositionDevice, reinterpret_cast<void**>(&s_dcomp));
+        /* dcomp.dll is loaded here, not linked: it ships with every Windows
+         * since 8, but melee-pc's packaging only lets the game import the
+         * system DLLs it lists (tools/package_windows.sh). */
+        using CreateDevice = HRESULT(WINAPI*)(IDXGIDevice*, REFIID, void**);
+        HMODULE dcomp = LoadLibraryExW(L"dcomp.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+        const auto create = dcomp == nullptr ?
+                                nullptr :
+                                reinterpret_cast<CreateDevice>(reinterpret_cast<void*>(
+                                    GetProcAddress(dcomp, "DCompositionCreateDevice")));
+        if (create == nullptr) {
+            return HRESULT_FROM_WIN32(GetLastError());
+        }
+        hr = create(nullptr, kIDCompositionDevice, reinterpret_cast<void**>(&s_dcomp));
         if (FAILED(hr)) {
             return hr;
         }

@@ -32,7 +32,7 @@ elseif (WIN32)
             desktop-melee/src/melee_font.cpp)
     # The overlay's composition swap chain (overlay_windows.cpp), the
     # taskbar's frame (SHAppBarMessage) and the windows' frames (DWM).
-    target_link_libraries(melee PRIVATE dxgi dcomp shell32 dwmapi)
+    target_link_libraries(melee PRIVATE dxgi shell32 dwmapi)
 else ()
     target_sources(melee PRIVATE desktop-melee/src/platform_linux.c
             desktop-melee/src/settings_file.c desktop-melee/src/tray_sdl.c
