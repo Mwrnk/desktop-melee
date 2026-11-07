@@ -49,7 +49,7 @@ The full text is in [`COPYING`](COPYING).
 `desktop-melee/` is Desktop Melee, the desktop overlay built on melee-pc. It is under
 the same GPL-3.0-or-later terms.
 
-    Copyright (C) 2026 Mateus Werneck
+    Copyright (C) 2026 Mwrnk
 
 Desktop Melee also changes these melee-pc files (GPL-3.0 section 5a). Each
 change is tagged `desktop-melee` in a comment and listed in

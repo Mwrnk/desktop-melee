@@ -14,8 +14,12 @@
 #define DESKTOP_MELEE_WINDOW_PLATFORMS 8
 
 /* mpLibLoad: the stage's collision with the platforms added, or `coll_data`
- * itself outside the overlay. `scale` is the stage's collision scale. */
-MapCollData* desktop_melee_platforms_extend(MapCollData* coll_data, float scale);
+ * itself outside the overlay. `scale` is the stage's collision scale;
+ * `stretch_k` and `stretch_c` are mpLibLoad's stretch of the floor to the
+ * Dock (x' = stretch_c + stretch_k * x), which the stage's joint bounds get
+ * too. */
+MapCollData* desktop_melee_platforms_extend(
+    MapCollData* coll_data, float scale, float stretch_k, float stretch_c);
 
 /* Once a match frame: each platform to its window's top, or hidden. */
 void desktop_melee_platforms_frame(void);

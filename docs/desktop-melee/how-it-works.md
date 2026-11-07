@@ -404,6 +404,11 @@ it horizontally so the floor spans the Dock exactly:
   and `c = (dock_left + dock_right) / 2`. y is untouched.
 - The ledges sit at the floor's corners, so they move with it: you can grab
   the Dock's edges.
+- The stage's joints get the same stretch in their stored bounds
+  (`desktop_melee_platforms_extend`, on its copy of the collision). Melee
+  rebuilds a moving joint's bounding box from those every frame and skips
+  the lines of a joint whose box misses a fighter, so with the disc's bounds
+  the floor's far parts let fighters fall through.
 
 **Measuring the Dock** (`desktop-melee/src/overlay_mac.m`):
 
@@ -420,6 +425,14 @@ like Plank leaves gaps to fall through. A panel as wide as the screen, or one
 that can't be measured, gives a floor across the whole screen less 40 points
 on each side. A floor that wide (90% of the screen or more) has no ledges:
 the stage's own would sit by the side blastzones.
+
+**On Windows** (`platform_windows.c`) the floor is the taskbar, which spans
+the screen, so the floor runs on past both edges, out of sight. The side
+blastzones then move a little way past the edges (`OFFSCREEN_ROOM` in
+`desktop_melee.c`, 20% of the screen's width, inside the floor's ends):
+there Melee shows a fighter in its magnifying-glass bubble and deals its
+off-screen damage. macOS and Linux floors end on screen, so theirs stay at
+the screen's edges.
 
 ### 9.4 Window platforms
 
