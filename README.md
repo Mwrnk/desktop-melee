@@ -7,7 +7,7 @@ play.
 
 ![Desktop Melee on a Mac desktop](docs/desktop-melee/images/overlay.svg)
 
-**Beta (0.1.2), for macOS and Linux.** Windows is in progress.
+**Beta (0.1.3), for macOS, Linux and Windows.**
 
 **You need your own Melee disc image (USA 1.02). No game data is included.**
 Desktop Melee is a fan project. It is not affiliated with or endorsed by
@@ -53,8 +53,10 @@ Each [release](https://github.com/Mwrnk/desktop-melee/releases) has:
 - `Desktop-Melee-<version>-linux-x86_64.AppImage`: a 64-bit PC with Linux,
   Ubuntu 24.04 or newer (Debian 13, Mint 22, Fedora 40, Arch...). See
   [On Linux](#on-linux).
+- `Desktop-Melee-<version>-windows-x86_64.zip`: a 64-bit PC with Windows 10
+  or 11. See [On Windows](#on-windows).
 
-Neither contains game data; you still need your own disc (see
+None contains game data; you still need your own disc (see
 [Requirements](#requirements)).
 
 ### On macOS
@@ -87,6 +89,23 @@ matches, pauses and opens the settings; GNOME shows it only with the
 AppIndicator extension, and otherwise the settings window opens instead.
 Pause and hide is **Ctrl+Alt+M**: the desktop may ask you to confirm it once.
 
+### On Windows
+
+1. Right-click the zip and choose **Extract All**.
+2. Open the **Desktop Melee** folder and run **Desktop Melee.exe** (the game
+   itself is in the `game` folder; start it from here). The app isn't
+   signed, so Windows may say "Windows protected your PC": click **More
+   info**, then **Run anyway**.
+
+The fighters stand on the taskbar, your stocks and percents sit on the
+taskbar beside its buttons, and the tops of your other windows are
+platforms. An icon in the notification area starts matches, pauses and opens
+the settings. Pause and hide is **Ctrl+Alt+M**.
+
+If Steam is running, its Desktop Layout can turn your controller into a
+mouse and keyboard while you play, since Desktop Melee never takes the focus
+from your other apps. Turn it off in Steam's **Settings → Controller**.
+
 ### Disc setup
 
 On first launch, a welcome window asks for your disc image and checks it, then
@@ -105,6 +124,8 @@ lives in the menu bar:
   graphics drivers. Tested on KDE Plasma 6.8 (Wayland) with an AMD GPU only;
   GNOME, X11 sessions and NVIDIA are untested. Building on Linux is in
   [porting.md section 2](docs/desktop-melee/porting.md).
+- Or a 64-bit PC with Windows 10 or 11. Tested on Windows 11 only. Building
+  on Windows (MSYS2) is in [porting.md section 2](docs/desktop-melee/porting.md).
 - Xcode (for Swift, `actool` and the macOS SDK) and these
   [Homebrew](https://brew.sh) packages:
   `brew install gcc cmake ninja sdl3 zstd libpng freetype`. GCC is required:
@@ -210,8 +231,8 @@ Desktop Melee stands on the work of:
 
 ## Status
 
-Version 0.1.2, a beta: [download the app](#download) or build it
-yourself. macOS and Linux; Windows is in progress.
+Version 0.1.3, a beta: [download the app](#download) or build it
+yourself. macOS, Linux and Windows.
 
 Works: two-player VS matches (human or CPU) on the Dock, every character and
 costume, the menu bar app, the welcome window, the notch island and
@@ -234,12 +255,6 @@ They are tracked in the [issues](https://github.com/Mwrnk/desktop-melee/issues).
 
 ### Roadmap
 
-- Windows and Linux (issues #11 and #12, help wanted). melee-pc already runs
-  there; the desktop layer (the transparent window, a floor on the taskbar, a
-  tray app) is the work. Skeletons build today:
-  [docs/desktop-melee/porting.md](docs/desktop-melee/porting.md) is the guide,
-  and [docs/desktop-melee/ui-guide.md](docs/desktop-melee/ui-guide.md)
-  describes the UI to match.
 - Window tops as platforms you can drop through.
 - More than two players.
 - Other stages.
