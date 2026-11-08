@@ -29,6 +29,9 @@ using CreateSwapChainForHwnd = HRESULT(STDMETHODCALLTYPE*)(IDXGIFactory2* factor
 
 CreateSwapChainForHwnd s_original = nullptr;
 bool s_transparent = false;
+/* Composition failed once: the overlay became a normal window
+ * (platform_windows.c), so its later swap chains are normal ones too. */
+bool s_gave_up = false;
 
 /* The composition tree on the overlay: a visual showing the swap chain, with
  * an effect group for Pause and hide's opacity. */
@@ -36,6 +39,22 @@ IDCompositionDevice* s_dcomp = nullptr;
 IDCompositionTarget* s_target = nullptr;
 IDCompositionVisual* s_visual = nullptr;
 IDCompositionEffectGroup* s_effect = nullptr;
+
+template <typename T>
+void release(T*& object) {
+    if (object != nullptr) {
+        object->Release();
+        object = nullptr;
+    }
+}
+
+/* All of the tree, or what a failed attach() made of it. */
+void release_tree() {
+    release(s_effect);
+    release(s_visual);
+    release(s_target);
+    release(s_dcomp);
+}
 
 HWND window_hwnd(SDL_Window* window) {
     return static_cast<HWND>(SDL_GetPointerProperty(
@@ -77,7 +96,8 @@ HRESULT attach(HWND hwnd, IDXGISwapChain1* swap_chain) {
                                 reinterpret_cast<CreateDevice>(reinterpret_cast<void*>(
                                     GetProcAddress(dcomp, "DCompositionCreateDevice")));
         if (create == nullptr) {
-            return HRESULT_FROM_WIN32(GetLastError());
+            const DWORD error = GetLastError();
+            return error != 0 ? HRESULT_FROM_WIN32(error) : E_FAIL;
         }
         hr = create(nullptr, kIDCompositionDevice, reinterpret_cast<void**>(&s_dcomp));
         if (FAILED(hr)) {
@@ -101,7 +121,7 @@ HRESULT attach(HWND hwnd, IDXGISwapChain1* swap_chain) {
 HRESULT STDMETHODCALLTYPE create_swap_chain_for_hwnd(IDXGIFactory2* factory, IUnknown* device,
     HWND hwnd, const DXGI_SWAP_CHAIN_DESC1* desc, const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* fullscreen,
     IDXGIOutput* output, IDXGISwapChain1** swap_chain) {
-    if (desc == nullptr || swap_chain == nullptr || !is_overlay(hwnd)) {
+    if (s_gave_up || desc == nullptr || swap_chain == nullptr || !is_overlay(hwnd)) {
         return s_original(factory, device, hwnd, desc, fullscreen, output, swap_chain);
     }
     DXGI_SWAP_CHAIN_DESC1 composed = *desc;
@@ -123,6 +143,10 @@ HRESULT STDMETHODCALLTYPE create_swap_chain_for_hwnd(IDXGIFactory2* factory, IUn
     SDL_Log("desktop-melee: overlay: no composition swap chain (0x%08lx); the overlay will be "
             "opaque",
         (unsigned long)hr);
+    /* A half-built tree would be reused by the next attach() and its
+     * effect by set_faded(): drop it, and stop trying. */
+    release_tree();
+    s_gave_up = true;
     s_transparent = false;
     return s_original(factory, device, hwnd, desc, fullscreen, output, swap_chain);
 }
