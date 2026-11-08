@@ -177,11 +177,12 @@ bool desktop_melee_platform_dock_frame(
     return true;
 }
 
-void desktop_melee_platform_notch(float* left, float* right, float* height) {
+void desktop_melee_platform_notch(float* left, float* right, float* top, float* height) {
     /* No island: Linux laptops with a notch are rare. A port could still put
      * one in the middle of the top edge, as macOS does without a notch. */
     *left = 0.0f;
     *right = 0.0f;
+    *top = 0.0f;
     *height = 0.0f;
 }
 

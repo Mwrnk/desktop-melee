@@ -280,9 +280,10 @@ bool desktop_melee_platform_dock_frame(float screen_w, float screen_h, float* le
     return true;
 }
 
-void desktop_melee_platform_notch(float* left, float* right, float* height) {
+void desktop_melee_platform_notch(float* left, float* right, float* top, float* height) {
     NSScreen* screen = overlay_screen();
     const NSRect frame = screen.frame;
+    *top = 0.0f;
     if (@available(macOS 12.0, *)) {
         const NSRect l = screen.auxiliaryTopLeftArea;
         const NSRect r = screen.auxiliaryTopRightArea;

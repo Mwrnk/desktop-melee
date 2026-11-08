@@ -28,6 +28,9 @@ extern "C" {
 #ifdef DESKTOP_MELEE_X11_OVERLAY
 #include "overlay_x11.h"
 #endif
+#ifdef _WIN32
+#include "overlay_windows.h"
+#endif
 #include "settings_file.h"
 #include "welcome_window.h"
 #include "window_icon.h"
@@ -288,6 +291,9 @@ std::string pause_key_label() {
     if (label.empty()) {
         label = desktop_melee_x11_hotkey_label();
     }
+#endif
+#ifdef _WIN32
+    label = desktop_melee_win_hotkey_label();
 #endif
     return label;
 }
@@ -892,13 +898,25 @@ void refresh_display() {
     set_toggle("tags", settings().tags);
     set_class("timer-top", "selected", settings().timer_mode == DESKTOP_MELEE_TIMER_TOP);
     set_class("timer-hidden", "selected", settings().timer_mode == DESKTOP_MELEE_TIMER_HIDDEN);
-    /* No notch island on these systems: Island shows as Melee's own HUD,
-     * which is what the game falls back to. */
-    const bool hidden = settings().hud_mode == DESKTOP_MELEE_HUD_HIDDEN;
-    set_class("hud-bottom", "selected", !hidden);
+    /* On Windows the island is the taskbar. Linux has none: Island shows as
+     * Melee's own HUD, which is what the game falls back to. */
+#ifdef _WIN32
+    const bool taskbar = true;
+#else
+    const bool taskbar = false;
+#endif
+    const int hud = settings().hud_mode;
+    const bool island = taskbar && hud == DESKTOP_MELEE_HUD_ISLAND;
+    const bool hidden = hud == DESKTOP_MELEE_HUD_HIDDEN;
+    set_class("hud-island", "hidden", !taskbar);
+    set_class("hud-island", "selected", island);
+    set_class("hud-bottom", "selected", !island && !hidden);
     set_class("hud-hidden", "selected", hidden);
     set_text("hud-note",
-        hidden ? "No stocks or percents on screen." : "Melee's own, at the bottom of the screen.");
+        island ? "On the taskbar, beside its buttons. Melee's own at the bottom when there's no "
+                 "room, or the taskbar hides." :
+        hidden ? "No stocks or percents on screen." :
+                 "Melee's own, at the bottom of the screen.");
     set_text("display-note", desktop_melee_match_active() ?
                                  "Fighter size, stocks and percents apply at the next match, "
                                  "and so does a new screen." :
@@ -929,8 +947,10 @@ bool click_display(const std::string& id) {
     } else if (id == "timer-top" || id == "timer-hidden") {
         s.timer_mode = id == "timer-top" ? DESKTOP_MELEE_TIMER_TOP : DESKTOP_MELEE_TIMER_HIDDEN;
         desktop_melee_set_timer_mode(s.timer_mode);
-    } else if (id == "hud-bottom" || id == "hud-hidden") {
-        s.hud_mode = id == "hud-bottom" ? DESKTOP_MELEE_HUD_BOTTOM : DESKTOP_MELEE_HUD_HIDDEN;
+    } else if (id == "hud-island" || id == "hud-bottom" || id == "hud-hidden") {
+        s.hud_mode = id == "hud-island" ? DESKTOP_MELEE_HUD_ISLAND :
+                     id == "hud-bottom" ? DESKTOP_MELEE_HUD_BOTTOM :
+                                          DESKTOP_MELEE_HUD_HIDDEN;
         desktop_melee_set_hud_mode(s.hud_mode);
     } else if (starts_with(id, "screen-")) {
         int count = 0;

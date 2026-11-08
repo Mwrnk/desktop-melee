@@ -4,7 +4,8 @@
  * Each system implements every function here, in one file:
  *   macOS    desktop-melee/src/overlay_mac.m (the reference; the menu bar app
  *            it forwards to is SwiftUI, in desktop-melee/ui)
- *   Windows  desktop-melee/src/platform_windows.c (skeleton)
+ *   Windows  desktop-melee/src/platform_windows.c (the overlay itself is
+ *            overlay_windows.cpp)
  *   Linux    desktop-melee/src/platform_linux.c (skeleton; also the plain SDL
  *            fallback for any other system)
  * desktop-melee/desktop-melee.cmake picks the file. docs/desktop-melee/porting.md
@@ -82,8 +83,8 @@ void desktop_melee_platform_overlay_set_faded(bool faded);
  * overlay changes screens, and when the player asks to measure again.
  *   macOS: NSScreen.frame for the size; the floor is how far
  *   visibleFrame's bottom sits above frame's.
- *   Skeletons: the window's own size; floor 0 on Windows, 15% of the
- *   height on Linux. The bottom blastzone is the screen's bottom edge, so a
+ *   Normal windows (no overlay): the window's own size; the floor 15% of the
+ *   height. The bottom blastzone is the window's bottom edge, so a
  *   floor of 0 KOs fighters as they land. */
 void desktop_melee_platform_screen_geometry(
     SDL_Window* window, float* width_pt, float* height_pt, float* floor_pt);
@@ -102,15 +103,20 @@ bool desktop_melee_platform_dock_frame(
     float screen_w, float screen_h, float* left, float* right, float* top, bool* exact);
 
 /* The notch (camera housing) at the top of the overlay's screen, where the
- * island showing stocks and percents goes. *left and *right are measured
- * from the screen's left edge; *height is the island's height, down from
- * the top edge. Height 0 means no island: stocks and percents stay where
- * Melee puts them.
+ * island showing stocks and percents goes: P1's run leftwards from *left,
+ * P2's rightwards from *right, each desktop_melee_island_side(*height)
+ * wide. *left and *right are measured from the screen's left edge, *top
+ * (the island's top edge) down from its top edge, and *height is the
+ * island's height. Height 0 means no island: stocks and percents stay where
+ * Melee puts them. Asked at startup, on a new screen, and when a match
+ * starts with stocks and percents in the island.
  *   macOS: NSScreen.auxiliaryTopLeftArea / auxiliaryTopRightArea and
  *   safeAreaInsets.top; on a screen without a notch, left == right at the
- *   centre and the height is the menu bar's.
+ *   centre and the height is the menu bar's. *top is 0.
+ *   Windows: no notch; the island is the taskbar, P1 in the free space
+ *   nearest its left end and P2 nearest its right end (taskbar_windows.h).
  *   Skeletons: height 0. */
-void desktop_melee_platform_notch(float* left, float* right, float* height);
+void desktop_melee_platform_notch(float* left, float* right, float* top, float* height);
 
 /* The island: a black shape around the notch, behind the overlay, that
  * stocks and percents are drawn on. Created on the first call, moved by
@@ -120,6 +126,8 @@ void desktop_melee_platform_notch(float* left, float* right, float* height);
  * and fades it in or out.
  *   macOS: a borderless window just below the overlay and the menu bar,
  *   square top, rounded bottom corners (45% of its height), 0.25 s fades.
+ *   Windows: no window, the taskbar is the backdrop; while the island is
+ *   wanted, the overlay is kept above the taskbar.
  *   Skeletons: nothing. */
 void desktop_melee_platform_island_place(float left, float right, float height);
 
@@ -185,7 +193,7 @@ typedef struct DesktopMeleeWindow {
  * tops into platforms: normal app windows on the current desktop, not
  * minimized, never Desktop Melee's own. Returns how many it wrote (at most
  * max), 0 when the system doesn't say. Called about 30 times a second.
- *   macOS, Windows: not yet (0).
+ *   macOS: not yet (0). Windows: EnumWindows, at their DWM frames.
  *   Linux: KWin's window list on KDE, else X11's _NET_CLIENT_LIST_STACKING. */
 int desktop_melee_platform_windows(DesktopMeleeWindow* out, int max);
 

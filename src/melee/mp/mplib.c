@@ -951,10 +951,16 @@ void mpLibLoad(MapCollData* coll_data)
     /* desktop-melee overlay: drop-through platforms for the tops of the
      * player's windows (desktop_melee_platforms.c), added after the stretch
      * is measured, so their parked vertices don't change it. */
-    coll_data = desktop_melee_platforms_extend(coll_data, scale);
+    MapCollData* const desktop_melee_disc = coll_data;
+    coll_data = desktop_melee_platforms_extend(coll_data, scale,
+                                               desktop_melee_k, desktop_melee_c);
+    /* Its copy's joint bounds are stretched already. */
+    const bool desktop_melee_joints_done = coll_data != desktop_melee_disc;
 #define DESKTOP_MELEE_X(x) (desktop_melee_c + desktop_melee_k * (x))
+#define DESKTOP_MELEE_JX(x) (desktop_melee_joints_done ? (x) : DESKTOP_MELEE_X(x))
 #else
 #define DESKTOP_MELEE_X(x) (x)
+#define DESKTOP_MELEE_JX(x) (x)
 #endif
     mpLib_80458868[0].right = F32_MAX;
     mpLib_80458868[0].top = F32_MAX;
@@ -965,11 +971,11 @@ void mpLibLoad(MapCollData* coll_data)
         joint->inner = DP(MapJoint, coll_data->joints) + i;
         joint->flags = CollJoint_Enabled;
         joint->bounding_min.x =
-            DESKTOP_MELEE_X(scale * DP(MapJoint, coll_data->joints)[i].left_bound);
+            DESKTOP_MELEE_JX(scale * DP(MapJoint, coll_data->joints)[i].left_bound);
         joint->bounding_min.y =
             scale * DP(MapJoint, coll_data->joints)[i].bottom_bound;
         joint->bounding_max.x =
-            DESKTOP_MELEE_X(scale * DP(MapJoint, coll_data->joints)[i].right_bound);
+            DESKTOP_MELEE_JX(scale * DP(MapJoint, coll_data->joints)[i].right_bound);
         joint->bounding_max.y =
             scale * DP(MapJoint, coll_data->joints)[i].top_bound;
         joint->jobj = NULL;
@@ -1026,6 +1032,7 @@ void mpLibLoad(MapCollData* coll_data)
         }
     }
 #undef DESKTOP_MELEE_X
+#undef DESKTOP_MELEE_JX
     mpLib_804D64B4 = coll_data;
     if (coll_data != NULL) {
         mpIsland_8005A728();
