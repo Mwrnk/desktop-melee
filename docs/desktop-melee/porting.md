@@ -55,8 +55,8 @@ composition, section 4), the game runs with fallbacks:
   once, at startup: resize it and the camera and blastzones keep the old size
   until a port watches `SDL_EVENT_WINDOW_RESIZED` and calls
   `desktop_melee_relayout()`.
-- **No notch island**, on either system. Stocks and percents stay in Melee's
-  own HUD.
+- **No notch island.** On Windows, stocks and percents go on the taskbar
+  instead; on Linux they stay in Melee's own HUD.
 
 Both systems have the rest whether or not the overlay works: a tray icon
 (`tray_sdl.c`) that starts matches, pauses, quits and opens the settings
@@ -157,8 +157,8 @@ does, and what's required of a port. In short:
 | `overlay_set_faded` | `alphaValue` | `SetLayeredWindowAttributes(..., LWA_ALPHA)` | `_NET_WM_WINDOW_OPACITY` / `SDL_SetWindowOpacity` | draw nothing (no opacity protocol everywhere) |
 | `screen_geometry` | `NSScreen.frame`, `visibleFrame` | `GetMonitorInfoW`: `rcMonitor`, `rcWork` | `SDL_GetDisplayUsableBounds` (`_NET_WORKAREA`), panel struts | output size; exclusive zones or 0 |
 | `dock_frame` | the Dock through Accessibility | `SHAppBarMessage(ABM_GETTASKBARPOS)` | the `_NET_WM_WINDOW_TYPE_DOCK` window's geometry | not visible to clients; assume a full-width floor |
-| `notch` | `auxiliaryTopLeftArea`, `safeAreaInsets` | none: height 0 | none: height 0 | none: height 0 |
-| `island_place` | a borderless black window | (only with an island) | (only with an island) | (only with an island) |
+| `notch` | `auxiliaryTopLeftArea`, `safeAreaInsets` | the taskbar's free space, through UI Automation | none: height 0 | none: height 0 |
+| `island_place` | a borderless black window | none (the taskbar is the backdrop); keeps the overlay above the taskbar | (only with an island) | (only with an island) |
 | `ui_install` | the SwiftUI menu bar app, Carbon hotkey | tray, settings, `RegisterHotKey` | tray, settings, `XGrabKey` | tray, settings, GlobalShortcuts portal |
 | `ui_focus_game` | activate, `makeKey` | `SetForegroundWindow` | `SDL_RaiseWindow` / `_NET_ACTIVE_WINDOW` | xdg-activation token |
 | `ui_loading_begin` / `_end` | a small progress window | a progress window | same | same |
@@ -206,10 +206,24 @@ The rest follows the plan below:
 - **The hotkey**: Ctrl+Alt+M through `RegisterHotKey` and
   `SDL_SetWindowsMessageHook`; the settings window shows it.
 - **The trace timer**: `SetTimer`, which SDL's message loop dispatches.
+- **Stocks and percents on the taskbar** (`notch`, `taskbar_windows.cpp`).
+  The Windows 11 taskbar draws its buttons itself, so they have no windows:
+  UI Automation lists them (Start, search, widgets, the apps, the
+  notification area), and P1's stocks and percent go at the left end of the
+  leftmost free space wide enough for them, P2's at the right end of the
+  rightmost. It is measured again at each match start, since apps come and
+  go. No island window: the taskbar is the backdrop, and a 200 ms timer puts
+  the overlay back above the taskbar when clicking it brought the taskbar
+  in front. No room, or a taskbar that hides or sits on a side: Melee's own
+  HUD.
+- **Packaging**: `desktop-melee/package_windows.sh`, in MSYS2's UCRT64
+  shell, makes `dist/Desktop-Melee-<version>-windows-x86_64.zip`: a
+  launcher (`desktop-melee/windows/launcher.c`, which sets
+  `DESKTOP_MELEE_OVERLAY=1` and hides the console) beside a `game` folder
+  with `melee.exe`, its DLLs and resources.
 
-Not done: an island (no notch), taskbars on other monitors
-(`Shell_SecondaryTrayWnd`), packaging, and a log file for a run without a
-console. The rest of this section is the plan it started from.
+Not done: taskbars on other monitors (`Shell_SecondaryTrayWnd`), and a log
+file for a run without a console. The rest of this section is the plan it started from.
 
 **The window** (`overlay_setup`). Get the `HWND` with
 `SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL)`.

@@ -9,7 +9,8 @@
  * opens the settings window (settings_window.h). Pause and hide is
  * Ctrl+Alt+M. When the overlay can't be made transparent, the game falls
  * back to a normal window with the floor a little above its bottom edge.
- * There is no notch island.
+ * Stocks and percents go on the taskbar, in the space its buttons leave
+ * (taskbar_windows.h).
  *
  * docs/desktop-melee/porting.md section 4 explains each part. SDL's window
  * and display coordinates on Windows are pixels, like the Win32 rectangles
@@ -28,11 +29,13 @@
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_surface.h>
 
+#include "desktop_melee.h"
 #include "desktop_melee_game.h"
 #include "melee_font.h"
 #include "overlay_windows.h"
 #include "settings_file.h"
 #include "settings_window.h"
+#include "taskbar_windows.h"
 #include "tray_sdl.h"
 #include "welcome_window.h"
 #include "window_icon.h"
@@ -203,22 +206,114 @@ bool desktop_melee_platform_dock_frame(
     return true;
 }
 
-void desktop_melee_platform_notch(float* left, float* right, float* height) {
-    /* No island: Windows laptops have no notch. A port could still put one
-     * in the middle of the top edge, as macOS does without a notch. */
+#define TASKBAR_MAX_BUTTONS 128
+
+void desktop_melee_platform_notch(float* left, float* right, float* top, float* height) {
+    /* No notch on Windows: the island is the taskbar, as tall as it is. P1's
+     * stocks and percent go at the left end of the leftmost free space wide
+     * enough for them, P2's at the right end of the rightmost, so on the
+     * default centred taskbar they sit either side of the apps, and P2 just
+     * left of the clock. Without a taskbar we can measure (it hides, sits on
+     * a side or on another monitor) or room for both, there is no island. */
     *left = 0.0f;
     *right = 0.0f;
+    *top = 0.0f;
     *height = 0.0f;
+    SDL_Rect monitor;
+    float bar_left = 0.0f;
+    float bar_right = 0.0f;
+    float bar_h = 0.0f;
+    if (!s_overlay || s_window == NULL ||
+        !SDL_GetDisplayBounds(SDL_GetDisplayForWindow(s_window), &monitor) ||
+        !taskbar_frame(&monitor, &bar_left, &bar_right, &bar_h))
+    {
+        return;
+    }
+    DesktopMeleeWinSpan buttons[TASKBAR_MAX_BUTTONS];
+    const int count = desktop_melee_win_taskbar_buttons(buttons, TASKBAR_MAX_BUTTONS);
+    if (count == 0) {
+        SDL_Log("desktop-melee: Windows: can't read the taskbar's buttons");
+        return;
+    }
+    /* Sorted by left end, in the monitor's frame. */
+    for (int i = 0; i < count; i++) {
+        buttons[i].left -= (float)monitor.x;
+        buttons[i].right -= (float)monitor.x;
+        for (int j = i; j > 0 && buttons[j].left < buttons[j - 1].left; j--) {
+            const DesktopMeleeWinSpan swap = buttons[j];
+            buttons[j] = buttons[j - 1];
+            buttons[j - 1] = swap;
+        }
+    }
+    /* The free spans between them; the island's own margins keep the stocks
+     * and percents off the buttons. */
+    DesktopMeleeWinSpan free_spans[TASKBAR_MAX_BUTTONS + 1];
+    int spans = 0;
+    float cursor = bar_left;
+    for (int i = 0; i <= count; i++) {
+        const float end = i < count ? buttons[i].left : bar_right;
+        if (end > cursor) {
+            free_spans[spans++] = (DesktopMeleeWinSpan){cursor, end};
+        }
+        if (i < count && buttons[i].right > cursor) {
+            cursor = buttons[i].right;
+        }
+    }
+    const float side = desktop_melee_island_side(bar_h);
+    int p1 = -1;
+    int p2 = -1;
+    for (int i = 0; i < spans; i++) {
+        if (free_spans[i].right - free_spans[i].left >= side) {
+            p1 = p1 < 0 ? i : p1;
+            p2 = i;
+        }
+    }
+    if (p1 < 0 || (p1 == p2 && free_spans[p1].right - free_spans[p1].left < 2.0f * side)) {
+        SDL_Log("desktop-melee: Windows: no room on the taskbar for stocks and percents");
+        return;
+    }
+    *left = free_spans[p1].left + side;
+    *right = free_spans[p2].right - side;
+    *top = (float)monitor.h - bar_h;
+    *height = bar_h;
+}
+
+/* The taskbar comes in front of the overlay when it is clicked; while
+ * stocks and percents are drawn on it, put the overlay back in front. */
+static void CALLBACK island_timer(HWND unused, UINT message, UINT_PTR id, DWORD time) {
+    (void)unused;
+    (void)message;
+    (void)id;
+    (void)time;
+    if (!s_overlay || s_window == NULL || !desktop_melee_island_wanted()) {
+        return;
+    }
+    HWND hwnd = (HWND)SDL_GetPointerProperty(
+        SDL_GetWindowProperties(s_window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+    HWND bar = FindWindowW(L"Shell_TrayWnd", NULL);
+    if (hwnd == NULL || bar == NULL) {
+        return;
+    }
+    for (HWND above = GetWindow(hwnd, GW_HWNDPREV); above != NULL;
+         above = GetWindow(above, GW_HWNDPREV))
+    {
+        if (above == bar) {
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+            return;
+        }
+    }
 }
 
 void desktop_melee_platform_island_place(float left, float right, float height) {
-    /* Never called while desktop_melee_platform_notch reports height 0.
-     * TODO, with an island: a second layered, click-through window just
-     * below the overlay, black with rounded bottom corners, polling
-     * desktop_melee_island_wanted() to fade. */
+    /* No window of its own: the taskbar is the island's backdrop. */
     (void)left;
     (void)right;
     (void)height;
+    static bool s_timer = false;
+    if (!s_timer) {
+        s_timer = SetTimer(NULL, 0, 200, island_timer) != 0;
+    }
 }
 
 /* ---- the settings UI ---------------------------------------------------- */

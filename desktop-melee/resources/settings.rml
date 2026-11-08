@@ -218,7 +218,7 @@
 
             <p class="label">Stocks and percents</p>
             <div class="box">
-                <div class="segments"><div id="hud-bottom" class="part">Bottom</div><div id="hud-hidden" class="part">Hidden</div></div>
+                <div class="segments"><div id="hud-island" class="part hidden">Taskbar</div><div id="hud-bottom" class="part">Bottom</div><div id="hud-hidden" class="part">Hidden</div></div>
                 <p id="hud-note" class="note">Melee's own, at the bottom of the screen.</p>
             </div>
 

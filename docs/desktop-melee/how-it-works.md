@@ -501,6 +501,10 @@ flowchart LR
 - The island only shows while the HUD is actually rendering (checked every
   250 ms), so it vanishes between matches.
 - On a screen without a notch the island is centered in the menu bar strip.
+- On Windows there is no notch: the taskbar is the island. P1's stocks and
+  percent sit at the left end of the taskbar's free space, P2's just left of
+  the notification area, measured through UI Automation at each match start
+  (`taskbar_windows.cpp`).
 - The Display tab can instead keep Melee's HUD at the bottom of the screen, or
   hide it.
 

@@ -103,15 +103,20 @@ bool desktop_melee_platform_dock_frame(
     float screen_w, float screen_h, float* left, float* right, float* top, bool* exact);
 
 /* The notch (camera housing) at the top of the overlay's screen, where the
- * island showing stocks and percents goes. *left and *right are measured
- * from the screen's left edge; *height is the island's height, down from
- * the top edge. Height 0 means no island: stocks and percents stay where
- * Melee puts them.
+ * island showing stocks and percents goes: P1's run leftwards from *left,
+ * P2's rightwards from *right, each desktop_melee_island_side(*height)
+ * wide. *left and *right are measured from the screen's left edge, *top
+ * (the island's top edge) down from its top edge, and *height is the
+ * island's height. Height 0 means no island: stocks and percents stay where
+ * Melee puts them. Asked at startup, on a new screen, and when a match
+ * starts with stocks and percents in the island.
  *   macOS: NSScreen.auxiliaryTopLeftArea / auxiliaryTopRightArea and
  *   safeAreaInsets.top; on a screen without a notch, left == right at the
- *   centre and the height is the menu bar's.
+ *   centre and the height is the menu bar's. *top is 0.
+ *   Windows: no notch; the island is the taskbar, P1 in the free space
+ *   nearest its left end and P2 nearest its right end (taskbar_windows.h).
  *   Skeletons: height 0. */
-void desktop_melee_platform_notch(float* left, float* right, float* height);
+void desktop_melee_platform_notch(float* left, float* right, float* top, float* height);
 
 /* The island: a black shape around the notch, behind the overlay, that
  * stocks and percents are drawn on. Created on the first call, moved by
@@ -121,6 +126,8 @@ void desktop_melee_platform_notch(float* left, float* right, float* height);
  * and fades it in or out.
  *   macOS: a borderless window just below the overlay and the menu bar,
  *   square top, rounded bottom corners (45% of its height), 0.25 s fades.
+ *   Windows: no window, the taskbar is the backdrop; while the island is
+ *   wanted, the overlay is kept above the taskbar.
  *   Skeletons: nothing. */
 void desktop_melee_platform_island_place(float left, float right, float height);
 

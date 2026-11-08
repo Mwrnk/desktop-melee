@@ -31,6 +31,7 @@ static float s_floor = 0.0f;
 /* Notch island, in points from the screen's left/top edges. */
 static float s_notch_left = 0.0f;
 static float s_notch_right = 0.0f;
+static float s_island_top = 0.0f;
 static float s_island_h = 0.0f;
 /* HUD camera (see desktop_melee_set_hud_camera) and the last HUD frame. */
 static float s_hud_distance = 0.0f;
@@ -137,6 +138,8 @@ bool desktop_melee_dock_exact(void) {
     return s_dock_exact;
 }
 
+static void place_island(void);
+
 /* Screen size, floor, Dock and notch island for the screen the overlay is
  * on. Run at startup and whenever the overlay changes screens. */
 static void layout(void) {
@@ -160,15 +163,27 @@ static void layout(void) {
         SDL_Log("desktop-melee: no Dock on this screen: Final Destination's own floor");
     }
 
-    desktop_melee_platform_notch(&s_notch_left, &s_notch_right, &s_island_h);
+    place_island();
+}
+
+float desktop_melee_island_side(float height) {
+    return height * ISLAND_SIDE;
+}
+
+/* The island, around the platform's notch. Run by layout, and again when a
+ * match starts with stocks and percents in the island: on Windows it is the
+ * taskbar, whose free space changes as apps open and close. */
+static void place_island(void) {
+    desktop_melee_platform_notch(&s_notch_left, &s_notch_right, &s_island_top, &s_island_h);
     if (s_island_h <= 0.0f) {
         SDL_Log("desktop-melee: no notch island: stocks and percents stay in Melee's HUD");
         return;
     }
-    const float side = s_island_h * ISLAND_SIDE;
+    const float side = desktop_melee_island_side(s_island_h);
     desktop_melee_platform_island_place(s_notch_left - side, s_notch_right + side, s_island_h);
-    SDL_Log("desktop-melee: notch %.0f..%.0f pt, island %.0f..%.0f x %.0f pt", s_notch_left,
-        s_notch_right, s_notch_left - side, s_notch_right + side, s_island_h);
+    SDL_Log("desktop-melee: notch %.0f..%.0f pt, island %.0f..%.0f x %.0f..%.0f pt", s_notch_left,
+        s_notch_right, s_notch_left - side, s_notch_right + side, s_island_top,
+        s_island_top + s_island_h);
 }
 
 /* Moves the overlay onto the chosen screen (by name; the primary when it is
@@ -448,7 +463,7 @@ bool desktop_melee_hud_stock_anchor(int player, float* x, float* y, float* scale
     const float s = pitch_pt / (STOCK_PITCH * ppu);
     *scale = s;
     *x = hud_x(first_pt, ppu) - STOCK_X0 * s;
-    *y = hud_y(0.5f * h, ppu) - STOCK_Y * s;
+    *y = hud_y(s_island_top + 0.5f * h, ppu) - STOCK_Y * s;
     return true;
 }
 
@@ -471,7 +486,7 @@ bool desktop_melee_hud_percent_anchor(int player, float* x, float* y, float* sca
     }
     *scale = s;
     *x = hud_x(origin_pt, ppu);
-    *y = hud_y(0.5f * h, ppu) - PCT_Y * s;
+    *y = hud_y(s_island_top + 0.5f * h, ppu) - PCT_Y * s;
     return true;
 }
 
@@ -873,6 +888,9 @@ void desktop_melee_match_began(void) {
     const float env = env_units();
     s_units = env > 0.0f ? env : s_units_next;
     s_hud = s_hud_next;
+    if (s_hud == DESKTOP_MELEE_HUD_ISLAND && s_window != NULL) {
+        place_island();
+    }
     SDL_Log("desktop-melee: match display: %.0f units across (size %.0f%%), island %s", s_units,
         100.0f * DEFAULT_UNITS / s_units,
         s_hud == DESKTOP_MELEE_HUD_ISLAND ? "island" :

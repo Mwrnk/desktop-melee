@@ -32,6 +32,9 @@ void desktop_melee_set_screen_geometry(float width_pt, float height_pt, float fl
 /* Polled on the main thread: whether the island should be showing
  * (desktop_melee_platform_island_place). */
 bool desktop_melee_island_wanted(void);
+/* How wide one player's stocks and percent are in an island this tall: the
+ * span left of the notch, and the span right of it. */
+float desktop_melee_island_side(float height);
 
 /* Menu bar side of the match flow. */
 void desktop_melee_set_match_setup(const DesktopMeleeMatchSetup* setup);
