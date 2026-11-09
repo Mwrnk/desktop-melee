@@ -106,6 +106,22 @@ If Steam is running, its Desktop Layout can turn your controller into a
 mouse and keyboard while you play, since Desktop Melee never takes the focus
 from your other apps. Turn it off in Steam's **Settings → Controller**.
 
+**GameCube controller adapter.** Windows needs the WinUSB driver on the
+adapter before the game can read it, the same setup Dolphin uses. Do this
+once:
+
+1. Set the adapter's switch to **Wii U** (Mayflash and other adapters with a
+   PC/Wii U switch) and plug in both USB cables.
+2. Download [Zadig](https://zadig.akeo.ie) and run it.
+3. Choose **Options → List All Devices**, then pick **WUP-028** in the list.
+   Check that the USB ID reads `057E 0337`: on an adapter in PC mode it reads
+   `0079 1843`, which is the wrong device.
+4. Set the driver on the right of the green arrow to **WinUSB** and click
+   **Replace Driver**.
+5. Unplug the adapter and plug it back in.
+
+Keep the switch on Wii U while you play.
+
 ### Disc setup
 
 On first launch, a welcome window asks for your disc image and checks it, then
@@ -135,7 +151,8 @@ lives in the menu bar:
   unmodified** (`.iso`, `.gcm`, `.ciso` or `.rvz`). Desktop Melee checks it on first
   launch and refuses other versions.
 - A controller is recommended: an official GameCube controller with a USB
-  adapter, or any gamepad macOS supports. The keyboard works too.
+  adapter (on Windows, see [GameCube controller adapter](#on-windows)), or
+  any gamepad your system supports. The keyboard works too.
 
 ## Build and run
 
