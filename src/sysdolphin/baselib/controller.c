@@ -5,6 +5,9 @@
 #include "rumble.h"
 #include <dolphin/os.h>
 #include <dolphin/pad.h>
+#ifdef TARGET_PC
+#include "desktop_melee_game.h" /* desktop-melee: desktop_melee_before_pad_read */
+#endif
 
 HSD_PadStatus default_status_data = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
@@ -66,6 +69,10 @@ void HSD_PadRenewRawStatus(bool err_check)
     PADStatus now[4];
 
     HSD_PadRumbleInterpret();
+#ifdef TARGET_PC
+    /* desktop-melee: the GC adapter's newest report, sampled at this tick. */
+    desktop_melee_before_pad_read();
+#endif
     PADRead(now);
     if (err_check) {
         for (i = 0; i < 4; i++) {

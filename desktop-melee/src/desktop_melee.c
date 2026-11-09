@@ -962,6 +962,18 @@ bool desktop_melee_tap_jump(int player) {
     return false;
 }
 
+/* The game samples the pads on its own 60 Hz timer and runs one tick per
+ * sample. The GC adapter otherwise reaches the pads only once per drawn frame
+ * (pc_keyboard_apply), a clock that drifts against that timer, so every so
+ * often a tick saw the same stick as the one before or a frame of input was
+ * never seen, and one-frame inputs like pivots and dashbacks came out wrong.
+ * Publishing the adapter's newest report here gives each tick its own
+ * sample. Runs on the game thread, like the frame boundary. */
+void desktop_melee_before_pad_read(void) {
+    pc_gcadapter_apply();
+    pc_keyboard_refresh_gc();
+}
+
 unsigned desktop_melee_map_buttons(int player, unsigned held, int* analog_mask) {
     *analog_mask = 3;
     if (player < 0 || player >= DESKTOP_MELEE_PLAYERS) {

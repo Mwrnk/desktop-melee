@@ -57,7 +57,8 @@ change is tagged `desktop-melee` in a comment and listed in
 
 - Build: `CMakeLists.txt` (includes `desktop-melee/desktop-melee.cmake`), `.gitignore`,
   `cmake/MeleeToolchainCheck.cmake` and `tools/preflight.py` (doc path only).
-- Port code: `src/pc/main.c`, `src/pc/launcher.cpp`, `src/pc/vi.c`.
+- Port code: `src/pc/main.c`, `src/pc/launcher.cpp`, `src/pc/vi.c`,
+  `src/pc/keyboard.c`, `src/pc/pc.h`.
 - Repository: `.github/workflows/build.yml` (manual only, release job removed),
   `.github/ISSUE_TEMPLATE/`; `.github/RELEASE_NOTES.md` and
   `.github/workflows/pages.yml` removed; melee-pc's `README.md` is now
@@ -85,7 +86,7 @@ change is tagged `desktop-melee` in a comment and listed in
   `src/melee/gr/grdisplay.c`, `src/melee/gr/ground.c`, `src/melee/if/ifall.c`,
   `src/melee/if/ifnametag.c`, `src/melee/if/ifstatus.c`,
   `src/melee/if/ifstock.c`, `src/melee/if/iftime.c`, `src/melee/mp/mplib.c`,
-  `src/sysdolphin/baselib/displayfunc.c`.
+  `src/sysdolphin/baselib/controller.c`, `src/sysdolphin/baselib/displayfunc.c`.
 
 ## 3. Third-party components
 

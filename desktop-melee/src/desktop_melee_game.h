@@ -161,6 +161,9 @@ bool desktop_melee_tap_jump(int player);
  * Also says which analog triggers still shield: bit 0 the physical L, bit 1
  * the physical R (a trigger mapped to another button no longer does). */
 unsigned desktop_melee_map_buttons(int player, unsigned held, int* analog_mask);
+/* src/sysdolphin/baselib/controller.c: called right before the game samples
+ * the pads, to hand it the GC adapter's newest report. */
+void desktop_melee_before_pad_read(void);
 
 /* ---- game assets (desktop-melee/game/desktop_melee_assets.c) ----------------------------- */
 
