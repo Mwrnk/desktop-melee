@@ -12,7 +12,8 @@
 #
 # DESKTOP_MELEE_RELEASE=1: an app to hand out. It leaves out Melee's font (the
 # one file from your disc), refuses to finish if any other game file is inside,
-# signs ad hoc, doesn't install, and zips the app to dist/.
+# signs ad hoc, doesn't install, and writes it to dist/ twice: a zip, and a
+# DMG made from that zip.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
@@ -22,6 +23,18 @@ DEST="/Applications/Desktop Melee.app"
 RELEASE="${DESKTOP_MELEE_RELEASE:-0}"
 # Homebrew's gcc bottle can point at an SDK that isn't installed (see build.sh).
 export SDKROOT="${SDKROOT:-$(xcrun --show-sdk-path)}"
+
+# Nothing from a disc may ship: Melee's font, disc images, or the game's own
+# file types (models and stages .dat/.usd, music .hps, sound .ssm/.sem, movies
+# .thp). Prints any such file under $1. find doesn't follow symbolic links, so
+# a DMG's Applications link is not searched.
+find_game_data() {
+    find "$1" -type f \( -name 'melee-font.bin' \
+        -o -iname '*.iso' -o -iname '*.gcm' -o -iname '*.ciso' -o -iname '*.rvz' \
+        -o -iname '*.gcz' -o -iname '*.wia' -o -iname '*.dat' -o -iname '*.usd' \
+        -o -iname '*.hps' -o -iname '*.ssm' -o -iname '*.sem' -o -iname '*.thp' \
+        -o -iname '*.mth' \)
+}
 
 BUILD_DIR="${BUILD_DIR}" tools/package_macos.sh
 
@@ -80,15 +93,8 @@ mkdir -p "${APP}/Contents/Resources/licenses"
 cp licenses/COPYING licenses/LICENSE.md "${APP}/Contents/Resources/licenses/"
 
 if [[ "${RELEASE}" == "1" ]]; then
-    # Nothing from a disc may ship: Melee's font, disc images, or the game's
-    # own file types (models and stages .dat/.usd, music .hps, sound .ssm/.sem,
-    # movies .thp).
     echo "=== Checking for game data ==="
-    GAME_DATA="$(find "${APP}" -type f \( -name 'melee-font.bin' \
-        -o -iname '*.iso' -o -iname '*.gcm' -o -iname '*.ciso' -o -iname '*.rvz' \
-        -o -iname '*.gcz' -o -iname '*.wia' -o -iname '*.dat' -o -iname '*.usd' \
-        -o -iname '*.hps' -o -iname '*.ssm' -o -iname '*.sem' -o -iname '*.thp' \
-        -o -iname '*.mth' \))"
+    GAME_DATA="$(find_game_data "${APP}")"
     if [[ -n "${GAME_DATA}" ]]; then
         echo "error: game data in the release app:" >&2
         echo "${GAME_DATA}" >&2
@@ -140,8 +146,46 @@ if [[ "${RELEASE}" == "1" ]]; then
     mkdir -p dist
     rm -f "${ZIP}"
     ditto -c -k --norsrc --keepParent "${APP}" "${ZIP}"
-    echo "Release: ${ZIP} (opens on macOS ${MIN_MACOS} and later, Apple silicon)"
-    ls -lh "${ZIP}"
+
+    # The DMG is made from the zip, so both downloads hold the same app. The
+    # Applications link lets the player drag the app across in the window
+    # that opens.
+    DMG="${ZIP%.zip}.dmg"
+    echo "=== Making ${DMG} ==="
+    DMG_STAGE="$(mktemp -d)"
+    DMG_MOUNT="$(mktemp -d)"
+    # rmdir, not rm -rf: if the detach failed, the image's files stay put.
+    trap 'hdiutil detach -quiet "${DMG_MOUNT}" 2> /dev/null || true
+        rmdir "${DMG_MOUNT}" 2> /dev/null || true
+        rm -rf "${DMG_STAGE}"' EXIT
+    ditto -x -k "${ZIP}" "${DMG_STAGE}"
+    ln -s /Applications "${DMG_STAGE}/Applications"
+    hdiutil create -quiet -volname "Desktop Melee" -srcfolder "${DMG_STAGE}" -ov \
+        -format UDZO "${DMG}"
+
+    # The same checks as the app above, on the app as the player gets it.
+    echo "=== Checking ${DMG} ==="
+    hdiutil attach -quiet -readonly -nobrowse -noautoopen -mountpoint "${DMG_MOUNT}" "${DMG}"
+    codesign --verify --deep --strict "${DMG_MOUNT}/Desktop Melee.app"
+    GAME_DATA="$(find_game_data "${DMG_MOUNT}/Desktop Melee.app")"
+    if [[ -n "${GAME_DATA}" ]]; then
+        echo "error: game data in ${DMG}:" >&2
+        echo "${GAME_DATA}" >&2
+        exit 1
+    fi
+    # Nothing else at the top of the image: just the app and the link (and
+    # .fseventsd, which macOS may add to any volume).
+    TOP="$(ls -A "${DMG_MOUNT}" |
+        grep -v -x -e 'Desktop Melee.app' -e 'Applications' -e '.fseventsd' || true)"
+    if [[ -n "${TOP}" || ! -L "${DMG_MOUNT}/Applications" ]]; then
+        echo "error: ${DMG} should hold only Desktop Melee.app and an Applications link:" >&2
+        ls -lA "${DMG_MOUNT}" >&2
+        exit 1
+    fi
+    hdiutil detach -quiet "${DMG_MOUNT}" || hdiutil detach -quiet -force "${DMG_MOUNT}"
+
+    echo "Release: ${ZIP} and ${DMG} (open on macOS ${MIN_MACOS} and later, Apple silicon)"
+    ls -lh "${ZIP}" "${DMG}"
     exit 0
 fi
 
