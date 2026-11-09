@@ -35,6 +35,8 @@ void pc_log_line(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 typedef union SDL_Event SDL_Event;
 void pc_keyboard_event(const SDL_Event* e);
 void pc_keyboard_apply(void);
+/* desktop-melee: re-merge port 1 with the GC adapter's newest report. */
+void pc_keyboard_refresh_gc(void);
 int pc_get_key_binding(int slot);
 void pc_touch_apply(void);
 

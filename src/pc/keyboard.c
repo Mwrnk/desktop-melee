@@ -195,6 +195,59 @@ static void trace_locked(const PADStatus* st) {
         fifo_held ? 1 : 0);
 }
 
+/* desktop-melee: port 1's keyboard and touch input as of the last frame
+ * boundary, kept so the GC adapter can be merged in again right before each
+ * PADRead (pc_keyboard_refresh_gc) without consuming the latch twice. */
+static PADStatus s_local_st;
+static bool s_local_active;
+static bool s_published0;
+
+/* Port 1 carries a real GC-adapter controller too (gcadapter.c leaves this
+ * slot to us). Keyboard/touch layer on top: dominant stick, OR buttons,
+ * max triggers -- the same merge aurora does for virtual pads. Clear once
+ * when every source goes quiet so a released button does not stick. Call
+ * with s_key_mutex held. */
+static void publish_port0_locked(void) {
+    PADStatus st = s_local_st;
+    bool any_active = s_local_active;
+    PADStatus gc_st;
+    if (pc_gcadapter_status(0, &gc_st)) {
+        st.button |= gc_st.button;
+        if (i8abs(gc_st.stickX) > i8abs(st.stickX))
+            st.stickX = gc_st.stickX;
+        if (i8abs(gc_st.stickY) > i8abs(st.stickY))
+            st.stickY = gc_st.stickY;
+        if (i8abs(gc_st.substickX) > i8abs(st.substickX))
+            st.substickX = gc_st.substickX;
+        if (i8abs(gc_st.substickY) > i8abs(st.substickY))
+            st.substickY = gc_st.substickY;
+        if (gc_st.triggerLeft > st.triggerLeft)
+            st.triggerLeft = gc_st.triggerLeft;
+        if (gc_st.triggerRight > st.triggerRight)
+            st.triggerRight = gc_st.triggerRight;
+        any_active = true;
+    }
+
+    if (any_active) {
+        if (s_trace) {
+            trace_locked(&st);
+        }
+        PADSetVirtualStatus(0, &st);
+        s_published0 = true;
+    } else if (s_published0) {
+        PADClearVirtualStatus(0);
+        s_published0 = false;
+    }
+}
+
+/* desktop-melee: re-merge port 1 with the adapter's newest report, for the
+ * read-time refresh (desktop_melee_before_pad_read). Game thread only. */
+void pc_keyboard_refresh_gc(void) {
+    lock_keys();
+    publish_port0_locked();
+    unlock_keys();
+}
+
 /* Merge the three sources - polled SDL keyboard state (focus-gated), fifo keys
  * and the latch - into port 0's virtual pad. Call with s_key_mutex held. */
 static void publish_locked(void) {
@@ -285,39 +338,9 @@ static void publish_locked(void) {
         any_active = true;
     }
 
-    /* Port 1 carries a real GC-adapter controller too (gcadapter.c leaves this
-     * slot to us). Keyboard/touch layer on top: dominant stick, OR buttons,
-     * max triggers -- the same merge aurora does for virtual pads. Clear once
-     * when every source goes quiet so a released button does not stick. */
-    PADStatus gc_st;
-    if (pc_gcadapter_status(0, &gc_st)) {
-        st.button |= gc_st.button;
-        if (i8abs(gc_st.stickX) > i8abs(st.stickX))
-            st.stickX = gc_st.stickX;
-        if (i8abs(gc_st.stickY) > i8abs(st.stickY))
-            st.stickY = gc_st.stickY;
-        if (i8abs(gc_st.substickX) > i8abs(st.substickX))
-            st.substickX = gc_st.substickX;
-        if (i8abs(gc_st.substickY) > i8abs(st.substickY))
-            st.substickY = gc_st.substickY;
-        if (gc_st.triggerLeft > st.triggerLeft)
-            st.triggerLeft = gc_st.triggerLeft;
-        if (gc_st.triggerRight > st.triggerRight)
-            st.triggerRight = gc_st.triggerRight;
-        any_active = true;
-    }
-
-    static bool s_published0;
-    if (any_active) {
-        if (s_trace) {
-            trace_locked(&st);
-        }
-        PADSetVirtualStatus(0, &st);
-        s_published0 = true;
-    } else if (s_published0) {
-        PADClearVirtualStatus(0);
-        s_published0 = false;
-    }
+    s_local_st = st; /* desktop-melee: see publish_port0_locked */
+    s_local_active = any_active;
+    publish_port0_locked();
 }
 
 /* Frame boundary, on the thread that pumps SDL events (pc_frame_boundary,

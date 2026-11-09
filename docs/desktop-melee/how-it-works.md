@@ -263,6 +263,7 @@ What each hook changes, in one line:
 | `src/pc/vi.c` | Before the frame loop calls `exit()`, Desktop Melee closes its windows (`desktop_melee_before_exit`), while RmlUi is still whole. |
 | `src/melee/gm/gmboot.c` | Boot straight into `GM_DESKTOP_MELEE`, never the title screen. |
 | `src/sysdolphin/baselib/displayfunc.c` | "Clear the screen" clears to transparent, not black. |
+| `src/sysdolphin/baselib/controller.c`, `src/pc/keyboard.c`, `src/pc/pc.h` | Right before each pad read, put the GC adapter's newest report into the pads (`desktop_melee_before_pad_read`), so every game tick gets its own sample. melee-pc only did this once per drawn frame, which can repeat or skip a frame of input and break pivots. |
 | `src/melee/gr/grdisplay.c`, `src/melee/gr/ground.c` | Don't draw the stage or background models. |
 | `src/melee/cm/camera.c` | Fixed desktop camera instead of Melee's zooming one; moves the window platforms each frame; the "on screen" test covers the widescreen width. |
 | `src/melee/mp/mplib.c` | Stretch Final Destination's floor to the Dock's width; add the window platforms. |
