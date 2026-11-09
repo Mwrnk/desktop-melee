@@ -48,8 +48,8 @@ into Melee's world, the menu bar app, and every file.
 
 Each [release](https://github.com/Mwrnk/desktop-melee/releases) has:
 
-- `Desktop-Melee-<version>-macOS-arm64.zip`: a Mac with Apple silicon and
-  **macOS 27 or later**.
+- `Desktop-Melee-<version>-macOS-arm64.dmg` or `.zip` (the same app): a Mac
+  with Apple silicon and **macOS 27 or later**. See [On macOS](#on-macos).
 - `Desktop-Melee-<version>-linux-x86_64.AppImage`: a 64-bit PC with Linux,
   Ubuntu 24.04 or newer (Debian 13, Mint 22, Fedora 40, Arch...). See
   [On Linux](#on-linux).
@@ -63,7 +63,9 @@ None contains game data; you still need your own disc (see
 
 The app isn't notarized by Apple, so macOS stops it the first time:
 
-1. Unzip it and move **Desktop Melee** to `/Applications`.
+1. Open the DMG and drag **Desktop Melee** onto the **Applications** folder
+   next to it. With the zip instead, unzip it and move **Desktop Melee** to
+   `/Applications`.
 2. Open it. macOS says it can't check the app for malware; click **Done**.
 3. Open **System Settings → Privacy & Security**, scroll down to "Desktop
    Melee was blocked", and click **Open Anyway**. Confirm with your password.
@@ -192,7 +194,7 @@ desktop-melee/run-overlay.sh path/to/melee.iso
   so that app (or a zip of it) contains Nintendo's data. To make an app you
   can hand out, run `DESKTOP_MELEE_RELEASE=1 desktop-melee/package.sh`: it
   leaves the font out, stops if any other game file is inside, signs ad hoc
-  and writes the zip to `dist/`.
+  and writes a zip and a DMG to `dist/`.
 - **Never commit game data:** no disc images, no extracted textures, no
   `DESKTOP_MELEE_DUMP` output.
 - **Bug reports:** don't attach or link disc images.

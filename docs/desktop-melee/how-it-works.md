@@ -734,8 +734,10 @@ flowchart LR
   the app for the releases page: no font from your disc, a check that fails
   if any game file is inside, the license texts in `Contents/Resources/licenses`,
   ad-hoc signing (it isn't notarized, so players use "Open Anyway" once), no
-  install, and a zip in `dist/`. It opens on the macOS it was built on and
-  later.
+  install, and a zip and a DMG in `dist/`. The DMG is made from the zip, with
+  an `Applications` link to drag the app onto; the script mounts it and checks
+  the signature and the game-data rule again. It opens on the macOS it was
+  built on and later.
 
 ---
 
